@@ -7,6 +7,7 @@ export type ExerciseType = "multiple_choice" | "free_text";
 
 export const labExercisesTable = pgTable("lab_exercises", {
   id: text("id").primaryKey(), // uuid
+  sourceMaterialId: text("source_material_id"), // nullable for legacy catalog rows
   subject: text("subject").notNull(), // e.g. "Ingegneria Informatica"
   topic: text("topic").notNull(), // e.g. "Algoritmi"
   title: text("title").notNull(),

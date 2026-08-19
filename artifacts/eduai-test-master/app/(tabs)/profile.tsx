@@ -31,6 +31,7 @@ export default function ProfileScreen() {
     { label: 'Assistenza', icon: 'support', action: () => setModal('ticket') },
     { label: 'Avvisi', icon: 'bell', action: () => setModal('avvisi') },
     { label: 'Privacy e dati', icon: 'shield', action: () => setModal('privacy') },
+    { label: 'Impostazioni account', icon: 'book', action: () => router.push('/account-settings') },
     { label: 'Esci dall’account', icon: 'logout', action: () => setModal('uscita') },
   ];
   if (isAdmin) preferences.splice(2, 0, { label: 'Console assistenza', icon: 'shield', action: () => router.push('/admin') });

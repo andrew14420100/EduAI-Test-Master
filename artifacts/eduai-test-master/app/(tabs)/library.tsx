@@ -2,7 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
@@ -77,7 +77,7 @@ function automaticTitle(materials: Array<{ name: string }>) {
 export default function LibraryScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { materials, studyGroups, uploadMaterials, removeMaterial, retryMaterialAnalysis } = useApp();
+  const { materials, studyGroups, uploadMaterials, removeMaterial, retryMaterialAnalysis, generateLabsForMaterial } = useApp();
   const mounted = useRef(true);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -416,6 +416,28 @@ export default function LibraryScreen() {
                       {failed ? (
                         <Pressable accessibilityLabel={`Riprova analisi ${item.name}`} onPress={() => void retryAnalysis(item)} hitSlop={8}>
                           <Text style={[styles.retryText, { color: c.primary }]}>Riprova analisi</Text>
+                        </Pressable>
+                      ) : null}
+                      {ready ? (
+                        <Pressable
+                          accessibilityLabel={`Crea laboratori da ${item.name}`}
+                          onPress={() => {
+                            Alert.alert('Crea laboratori pratici', `Genera 15 esercizi basati su ${item.name}?`, [
+                              { text: 'Annulla', style: 'cancel' },
+                              {
+                                text: 'Crea',
+                                onPress: () => {
+                                  void generateLabsForMaterial(item.id).then((result) => {
+                                    if (!result.ok) Alert.alert('Generazione non riuscita', result.message);
+                                    else Alert.alert('Laboratori creati', 'I 15 esercizi pratici sono ora disponibili nella sezione Laboratori.');
+                                  });
+                                },
+                              },
+                            ]);
+                          }}
+                          hitSlop={8}
+                        >
+                          <Text style={[styles.retryText, { color: c.primary }]}>Crea laboratori (15)</Text>
                         </Pressable>
                       ) : null}
                     </View>

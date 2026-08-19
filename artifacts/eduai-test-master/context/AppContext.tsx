@@ -160,6 +160,7 @@ type AppState = {
   generateFlashcards: (materialIds: string[]) => Promise<{ ok: true; flashcards: StudyFlashcard[] } | { ok: false; message: string }>;
   uploadMaterials: (files: UploadMaterialInput[], groupTitle: string, onProgress: UploadProgress) => Promise<ActionResult>;
   retryMaterialAnalysis: (id: string) => Promise<ActionResult>;
+  generateLabsForMaterial: (id: string) => Promise<ActionResult>;
   removeMaterial: (id: string) => Promise<ActionResult>;
   buyItem: (id: string) => Promise<ActionResult>;
   equipItem: (id: string) => Promise<ActionResult>;
@@ -285,7 +286,7 @@ function initialStoredTheme(): AppTheme | null {
 const AppContext = createContext<AppState | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const { signOut } = useClerk();
   const { user } = useUser();
   const queryClient = useQueryClient();
@@ -694,6 +695,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
+      }
+    },
+    generateLabsForMaterial: async (id) => {
+      try {
+        const token = await getToken();
+        const base = process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : '';
+        const response = await fetch(`${base}/api/materials/${id}/labs`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token ?? ''}` },
+        });
+        const body = await response.json() as { error?: string };
+        if (!response.ok) return { ok: false, message: body.error ?? 'Impossibile creare i laboratori.' };
+        await labExercisesQuery.refetch();
+        return { ok: true };
+      } catch {
+        return { ok: false, message: 'Impossibile creare i laboratori. Controlla la connessione.' };
       }
     },
     removeMaterial: async (id) => {

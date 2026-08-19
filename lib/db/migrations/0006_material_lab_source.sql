@@ -1,0 +1,1 @@
+ALTER TABLE "lab_exercises" ADD COLUMN IF NOT EXISTS "source_material_id" text;

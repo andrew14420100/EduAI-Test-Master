@@ -1,11 +1,12 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, exists } from "drizzle-orm";
 import {
   db,
   labExercisesTable,
   labAttemptsTable,
   profilesTable,
+  materialsTable,
 } from "@workspace/db";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 import { openai } from "@workspace/integrations-openai-ai-server";
@@ -15,6 +16,43 @@ const router: IRouter = Router();
 
 // Points fraction for partial AI-graded answers
 const PARTIAL_SCORE = 0.5;
+
+router.post("/materials/:materialId/labs", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthedRequest).clerkUserId;
+  const materialId = req.params.materialId as string;
+  try {
+    const [material] = await db.select().from(materialsTable)
+      .where(and(eq(materialsTable.id, materialId), eq(materialsTable.ownerId, userId)));
+    if (!material) { res.status(404).json({ error: "Materiale non trovato" }); return; }
+    if (material.extractionStatus !== "ready" || !material.extractedText?.trim()) {
+      res.status(409).json({ error: "Il materiale non è ancora pronto per creare i laboratori." }); return;
+    }
+    const response = await openai.chat.completions.create({
+      model: "gpt-5-mini",
+      max_completion_tokens: 9000,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: "Sei un docente italiano. Crea esattamente 15 laboratori pratici originali basati solo sul materiale fornito. Non creare domande teoriche o a scelta multipla. Ogni esercizio deve richiedere calcoli, dati, procedimenti, pseudocodice o applicazione concreta. Rispondi solo JSON con {\"exercises\":[{\"topic\":\"...\",\"title\":\"...\",\"prompt\":\"...\",\"solution\":\"...\",\"difficulty\":\"base|medio|avanzato\",\"points\":number}]}." },
+        { role: "user", content: `Materiale: ${material.title}\n\nCONTENUTO:\n${material.extractedText.slice(0, 180000)}` },
+      ],
+    });
+    const parsed = JSON.parse(response.choices[0]?.message?.content ?? "{}") as { exercises?: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> };
+    const exercises = (parsed.exercises ?? []).filter((item) => item.topic && item.title && item.prompt && item.solution).slice(0, 15);
+    if (exercises.length < 15) { res.status(502).json({ error: "L'IA non ha prodotto 15 esercizi validi. Riprova." }); return; }
+    const rows = exercises.map((item) => ({
+      id: randomUUID(), sourceMaterialId: materialId, subject: material.title,
+      topic: item.topic!, title: item.title!, prompt: item.prompt!,
+      exerciseType: "free_text" as const, options: null, correctIndex: null,
+      correctAnswer: item.solution!, difficultyLevel: (["base", "medio", "avanzato"].includes(item.difficulty ?? "") ? item.difficulty : "medio") as "base" | "medio" | "avanzato",
+      points: Math.max(5, Math.min(25, Math.round(item.points ?? 10))),
+    }));
+    await db.insert(labExercisesTable).values(rows);
+    res.status(201).json({ created: rows.length, materialId });
+  } catch (err) {
+    req.log.error({ err, materialId }, "Generazione laboratori da materiale fallita");
+    res.status(500).json({ error: "Impossibile creare i laboratori. Riprova più tardi." });
+  }
+});
 
 // ── AI grading for free_text exercises ────────────────────────────────────────
 
@@ -137,7 +175,11 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
           // Never expose correctIndex or correctAnswer
         })
         .from(labExercisesTable)
-        .where(inArray(labExercisesTable.subject, subjects))
+        .where(and(
+          inArray(labExercisesTable.subject, subjects),
+          sql`${labExercisesTable.sourceMaterialId} IS NOT NULL`,
+          exists(db.select({ id: materialsTable.id }).from(materialsTable).where(eq(materialsTable.id, labExercisesTable.sourceMaterialId))),
+        ))
         .orderBy(labExercisesTable.subject, labExercisesTable.topic);
     } else {
       // Unknown path or no subjects — return a varied sample
@@ -154,6 +196,10 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
           points: labExercisesTable.points,
         })
         .from(labExercisesTable)
+        .where(and(
+          sql`${labExercisesTable.sourceMaterialId} IS NOT NULL`,
+          exists(db.select({ id: materialsTable.id }).from(materialsTable).where(eq(materialsTable.id, labExercisesTable.sourceMaterialId))),
+        ))
         .orderBy(labExercisesTable.subject, labExercisesTable.topic)
         .limit(30);
     }
