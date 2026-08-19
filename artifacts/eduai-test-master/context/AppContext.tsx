@@ -8,6 +8,7 @@ export type Material = { id: string; name: string; uri: string; kind: 'documento
 
 type AppState = {
   level: Level | null;
+  ready: boolean;
   wallet: number;
   streak: number;
   quizzes: QuizRecord[];
@@ -52,7 +53,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if (hydrated) AsyncStorage.setItem('eduai-state-v3', JSON.stringify({ level, wallet, quizzes, materials, shop })); }, [hydrated, level, wallet, quizzes, materials, shop]);
 
   const value = useMemo<AppState>(() => ({
-    level, wallet, streak, quizzes, materials, shop,
+    level, ready: hydrated, wallet, streak, quizzes, materials, shop,
     completeOnboarding: (next) => setLevel(next),
     addQuiz: (record) => {
       setQuizzes((items) => [record, ...items]);
@@ -62,7 +63,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     removeMaterial: (id) => setMaterials((items) => items.filter((item) => item.id !== id)),
     buyItem: (id) => { const item = shop.find((entry) => entry.id === id); if (!item || item.owned || wallet < item.cost) return; setWallet((value) => value - item.cost); setShop((items) => items.map((entry) => entry.id === id ? { ...entry, owned: true } : entry)); },
     equipItem: (id) => setShop((items) => items.map((item) => ({ ...item, equipped: item.id === id ? true : item.equipped }))),
-  }), [level, wallet, streak, quizzes, shop]);
+  }), [level, wallet, streak, quizzes, materials, shop, hydrated]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

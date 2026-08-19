@@ -1,21 +1,65 @@
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import React from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { IconButton, Pill, PrimaryButton } from '@/components/Ui';
-const questions = [{ q: 'Which structure is primarily responsible for oxygen exchange in the lungs?', options: ['Bronchi', 'Alveoli', 'Pleura', 'Diaphragm'], answer: 1, explanation: 'Alveoli are tiny air sacs where oxygen diffuses into the blood and carbon dioxide diffuses out.' }, { q: 'What is the role of mitochondria in a human cell?', options: ['Store genetic information', 'Produce cellular energy', 'Digest proteins', 'Control cell division'], answer: 1, explanation: 'Mitochondria convert nutrients into ATP, the usable energy currency of the cell.' }, { q: 'Which blood cells are best known for fighting infection?', options: ['Platelets', 'Red blood cells', 'White blood cells', 'Plasma cells'], answer: 2, explanation: 'White blood cells identify and help eliminate pathogens and other foreign material.' }, { q: 'What does homeostasis describe?', options: ['Cell growth', 'Internal balance', 'Muscle contraction', 'Genetic mutation'], answer: 1, explanation: 'Homeostasis is the body’s ability to keep internal conditions within a stable range.' }, { q: 'Which system carries hormones through the body?', options: ['Endocrine system', 'Skeletal system', 'Lymphatic system', 'Integumentary system'], answer: 0, explanation: 'The endocrine system releases hormones into the bloodstream to coordinate body functions.' }]; 
-export default function QuizScreen() { const c = useColors(); const insets = useSafeAreaInsets(); const { addQuiz } = useApp(); const [current, setCurrent] = useState(0); const [selected, setSelected] = useState<number | null>(null); const [answers, setAnswers] = useState<(number | null)[]>([]); const [seconds, setSeconds] = useState(600); const [loading, setLoading] = useState(true); const [complete, setComplete] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 1100); return () => clearTimeout(t); }, []);
-  useEffect(() => { if (loading || complete) return; const t = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000); return () => clearInterval(t); }, [loading, complete]);
-  const score = useMemo(() => answers.reduce<number>((sum, answer, index) => sum + (answer === questions[index]?.answer ? 3 : answer === null || answer === undefined ? 0 : -1), 0), [answers]);
-  const finish = (finalAnswers: (number | null)[]) => { const finalScore = finalAnswers.reduce<number>((sum, answer, index) => sum + (answer === questions[index].answer ? 3 : answer == null ? 0 : -1), 0); addQuiz({ id: Date.now().toString(), title: 'Human Anatomy · Foundations', score: finalScore, passed: finalScore >= 9, date: 'Just now' }); setComplete(true); };
-  const next = () => { const nextAnswers = [...answers]; nextAnswers[current] = selected; setAnswers(nextAnswers); if (current === questions.length - 1) finish(nextAnswers); else { setCurrent((v) => v + 1); setSelected(null); } };
-  if (loading) return <View style={[styles.loading, { backgroundColor: c.background, paddingTop: insets.top }]}><View style={[styles.loadingIcon, { backgroundColor: c.primary }]}><Feather name="cpu" size={26} color={c.primaryForeground} /></View><Text style={[styles.loadingTitle, { color: c.foreground }]}>Building your exam</Text><Text style={[styles.loadingBody, { color: c.mutedForeground }]}>Calibrating questions to your study track…</Text><View style={[styles.loadingTrack, { backgroundColor: c.secondary }]}><View style={[styles.loadingFill, { backgroundColor: c.primary }]} /></View></View>;
-  if (complete) { const passed = score >= 9; return <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={[styles.result, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 30 }]}><IconButton name="x" label="Close results" onPress={() => router.back()} /><View style={[styles.resultBadge, { backgroundColor: passed ? c.primary : c.secondary }]}><Feather name={passed ? 'check' : 'book-open'} size={30} color={passed ? c.primaryForeground : c.foreground} /></View><Pill>{passed ? 'PASSED' : 'KEEP GOING'}</Pill><Text style={[styles.resultTitle, { color: c.foreground }]}>{passed ? 'You cleared the bar.' : 'A useful rep, not a failure.'}</Text><Text style={[styles.resultBody, { color: c.mutedForeground }]}>You scored {score} out of 15. {passed ? 'Your reward points have been added to your wallet.' : 'Review the explanations and take another run when you are ready.'}</Text><View style={[styles.resultCard, { backgroundColor: c.card }]}><Text style={[styles.resultLabel, { color: c.mutedForeground }]}>ANSWER KEY</Text>{questions.map((item, index) => <View key={item.q} style={styles.answerRow}><Feather name={answers[index] === item.answer ? 'check-circle' : 'x-circle'} size={17} color={answers[index] === item.answer ? c.primary : c.destructive} /><Text style={[styles.answerText, { color: c.foreground }]}>{item.explanation}</Text></View>)}</View><PrimaryButton onPress={() => router.back()}>Back to dashboard</PrimaryButton></ScrollView>; }
-  const item = questions[current]; const mins = Math.floor(seconds / 60).toString().padStart(2, '0'); const secs = (seconds % 60).toString().padStart(2, '0');
-  return <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 28 }]}><View style={styles.top}><IconButton name="x" label="Exit quiz" onPress={() => Alert.alert('Leave exam?', 'Your current answers will be lost.', [{ text: 'Stay' }, { text: 'Leave', onPress: () => router.back() }])} /><View style={[styles.timer, { backgroundColor: c.card }]}><Feather name="clock" size={15} color={seconds < 60 ? c.destructive : c.primary} /><Text style={[styles.timerText, { color: c.foreground }]}>{mins}:{secs}</Text></View></View><View style={styles.progressHeader}><View><Text style={[styles.kicker, { color: c.primary }]}>HUMAN ANATOMY · AI EXAM</Text><Text style={[styles.progressText, { color: c.foreground }]}>Question {current + 1} <Text style={{ color: c.mutedForeground }}>of 5</Text></Text></View><Text style={[styles.scoreText, { color: c.primary }]}>{score} pts</Text></View><View style={[styles.questionCard, { backgroundColor: c.card, borderColor: c.border }]}><Text style={[styles.question, { color: c.foreground }]}>{item.q}</Text><View style={{ gap: 10 }}>{item.options.map((option, index) => <Pressable key={option} testID={`answer-${index}`} onPress={() => setSelected(index)} style={({ pressed }) => [styles.option, { borderColor: selected === index ? c.primary : c.border, backgroundColor: selected === index ? c.accent : c.background, opacity: pressed ? 0.75 : 1 }]}><Text style={[styles.optionLetter, { color: selected === index ? c.accentForeground : c.mutedForeground }]}>{String.fromCharCode(65 + index)}</Text><Text style={[styles.optionText, { color: c.foreground }]}>{option}</Text>{selected === index ? <Feather name="check" size={18} color={c.primary} /> : null}</Pressable>)}</View></View><Text style={[styles.hint, { color: c.mutedForeground }]}>+3 correct · −1 incorrect · 0 skipped</Text><PrimaryButton onPress={next}>{current === 4 ? 'Finish exam' : 'Next question'}</PrimaryButton></ScrollView>;
+import { IconButton, PrimaryButton } from '@/components/Ui';
+
+export default function QuizScreen() {
+  const c = useColors();
+  const insets = useSafeAreaInsets();
+  const { materialId } = useLocalSearchParams<{ materialId: string }>();
+  const { materials } = useApp();
+  const material = materials.find((item) => item.id === materialId);
+
+  return (
+    <ScrollView
+      style={{ backgroundColor: c.background }}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 28 }]}
+    >
+      <View style={styles.top}>
+        <IconButton name="x" label="Chiudi" onPress={() => router.back()} />
+      </View>
+
+      <View style={[styles.icon, { backgroundColor: c.accent }]}>
+        <Feather name="file-text" size={28} color={c.accentForeground} />
+      </View>
+      <Text style={[styles.kicker, { color: c.primary }]}>MATERIALE SELEZIONATO</Text>
+      <Text style={[styles.heading, { color: c.foreground }]}>{material?.name ?? 'Materiale non trovato'}</Text>
+      <Text style={[styles.body, { color: c.mutedForeground }]}>
+        Il file è stato aggiunto alla tua libreria. La verifica verrà generata a partire dal suo contenuto quando collegheremo il motore AI sicuro.
+      </Text>
+
+      <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
+        <View style={styles.row}>
+          <Feather name="check-circle" size={18} color={c.primary} />
+          <Text style={[styles.rowText, { color: c.foreground }]}>Il file è disponibile nella libreria</Text>
+        </View>
+        <View style={styles.row}>
+          <Feather name="shield" size={18} color={c.primary} />
+          <Text style={[styles.rowText, { color: c.foreground }]}>Nessuna domanda dimostrativa viene mostrata</Text>
+        </View>
+      </View>
+
+      <PrimaryButton onPress={() => {
+        Alert.alert('Materiale salvato', 'Puoi aggiungere altri file oppure tornare alla libreria.');
+        router.replace('/(tabs)/library');
+      }}>
+        Torna alla libreria
+      </PrimaryButton>
+    </ScrollView>
+  );
 }
-const styles = StyleSheet.create({ loading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }, loadingIcon: { width: 64, height: 64, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 22 }, loadingTitle: { fontFamily: 'Inter_700Bold', fontSize: 24 }, loadingBody: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 8 }, loadingTrack: { width: 190, height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 25 }, loadingFill: { width: '68%', height: '100%' }, content: { paddingHorizontal: 20, gap: 18 }, top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, timer: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 15 }, timerText: { fontFamily: 'Inter_700Bold', fontSize: 14, letterSpacing: 0.7 }, progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 }, kicker: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.4 }, progressText: { fontFamily: 'Inter_700Bold', fontSize: 20, marginTop: 6 }, scoreText: { fontFamily: 'Inter_700Bold', fontSize: 15 }, questionCard: { borderWidth: 1, borderRadius: 22, padding: 17, gap: 22 }, question: { fontFamily: 'Inter_700Bold', fontSize: 22, lineHeight: 29, letterSpacing: -0.4 }, option: { minHeight: 55, borderWidth: 1, borderRadius: 15, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, optionLetter: { fontFamily: 'Inter_700Bold', fontSize: 12, width: 22, textAlign: 'center' }, optionText: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 19 }, hint: { fontFamily: 'Inter_500Medium', textAlign: 'center', fontSize: 12 }, result: { paddingHorizontal: 20, gap: 16 }, resultBadge: { width: 68, height: 68, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginTop: 22 }, resultTitle: { fontFamily: 'Inter_700Bold', fontSize: 30, lineHeight: 36, letterSpacing: -0.8 }, resultBody: { fontFamily: 'Inter_500Medium', fontSize: 15, lineHeight: 22 }, resultCard: { borderRadius: 20, padding: 16, gap: 13, marginTop: 6 }, resultLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5 }, answerRow: { flexDirection: 'row', gap: 9, alignItems: 'flex-start' }, answerText: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 13, lineHeight: 19 } });
+
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: 20, gap: 16 }, top: { alignItems: 'flex-start' },
+  icon: { width: 70, height: 70, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginTop: 22 },
+  kicker: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, marginTop: 8 },
+  heading: { fontFamily: 'Inter_700Bold', fontSize: 28, lineHeight: 34, letterSpacing: -0.8 },
+  body: { fontFamily: 'Inter_500Medium', fontSize: 15, lineHeight: 22 },
+  card: { borderWidth: 1, borderRadius: 20, padding: 17, gap: 14, marginVertical: 8 },
+  row: { flexDirection: 'row', gap: 11, alignItems: 'flex-start' },
+  rowText: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 20 },
+});
