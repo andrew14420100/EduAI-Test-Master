@@ -1,0 +1,25 @@
+Aggiorna e correggi l'applicazione "EduAI Test Master" applicando le seguenti modifiche e risolvendo i bug segnalati. L'intera applicazione e l'interfaccia utente devono essere rigorosamente in LINGUA ITALIANA.
+
+1. SCHERMATA DI ACCESSO (AUTENTICAZIONE UTENTE):
+- Crea una schermata di Login / Registrazione iniziale obbligatoria.
+- Gli utenti devono poter creare un account con Email, Password e Nome Utente.
+- Se l'utente è già loggato, salta la schermata e mostragli direttamente la Dashboard (Dashboard principale). Usa Firebase Auth, un backend Node.js/Python o LocalStorage per simulare la persistenza dell'accesso in questa fase.
+
+2. ELENCO COMPLETO DELLE SCUOLE E UNIVERSITÀ (SELEZIONE ONBOARDING):
+- Nella fase di registrazione o impostazione profilo, sostituisci il vecchio menu con un elenco esaustivo e dettagliato suddiviso in macro-categorie:
+  * SCUOLE SUPERIORI: Liceo Scientifico, Liceo Classico, Liceo Linguistico, Liceo delle Scienze Umane, Liceo Artistico, Liceo Musicale, Istituto Tecnico Tecnologico (Informatica, Elettronica, Meccanica), Istituto Tecnico Economico (Amministrazione, Marketing), Istituto Professionale (Alberghiero, Servizi Socio-Sanitari, Manutenzione).
+  * UNIVERSITÀ (FACOLTÀ): Medicina e Chirurgia, Professioni Sanitarie, Ingegneria (Informatica, Meccanica, Civile, Gestionale), Economia e Commercio, Giurisprudenza, Psicologia, Lettere e Filosofia, Scienze Matematiche, Fisiche e Naturali, Scienze Politiche, Architettura, Lingue e Letterature Straniere.
+
+3. RISOLUZIONE BUG DELLE ICONE (COMPATIBILITÀ MOBILE):
+- Le icone attualmente non vengono visualizzate sullo smartphone. Sostituisci il sistema di icone attuale integrando FontAwesome o Lucide Icons tramite CDN nel tag <head> (es. inserisci il link a FontAwesome o Lucide nell'HTML).
+- Assicurati che tutte le icone nella barra di navigazione inferiore (Home, Genera, Shop, Profilo) e nei pulsanti usino i tag corretti (es. <i class="fa-solid fa-home"></i> o lucide-react) affinché siano visibili su qualsiasi browser mobile (iOS/Android).
+
+4. POP-UP INTEGRATI NELL'APPLICAZIONE (IN ITALIANO):
+- Non usare i pop-up nativi del browser (come alert() o confirm() di JavaScript).
+- Crea dei componenti Modali/Pop-up personalizzati integrati nel codice HTML/CSS dell'app, con angoli arrotondati, overlay scuro sullo sfondo e animazioni fluide di comparsa.
+- Tutti i testi di questi pop-up (es. "Complimenti! Hai superato il test", "Punti insufficienti per sbloccare questo premio", "Sei sicuro di voler uscire?") devono essere interamente in italiano.
+
+5. RISOLUZIONE BUG CARICAMENTO MULTIPLO (UPLOAD FILE E VIDEO CONTEMPORANEAMENTE):
+- Risolvi il bug per cui i file vengono solo selezionati ma non importati nel sistema.
+- Modifica gli input di tipo file (<input type="file">) aggiungendo l'attributo 'multiple' per consentire all'utente di selezionare più immagini, documenti (PDF/DOCX) e video/audio locali CONTEMPORANEAMENTE dalla galleria o dalla memoria del telefono.
+- Non appena i file vengono selezionati, avvia immediatamente il processo di caricamento (Upload), mostrando una lista visiva dei file in caricamento con una barra di avanzamento per ciascuno. Una volta caricati, l'IA deve analizzarli tutti insieme per generare il quiz o le flashcard unificate, creando automaticamente il titolo dell'argomento basandosi sul mix di materiali caricati.
