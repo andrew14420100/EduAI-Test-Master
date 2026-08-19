@@ -5,6 +5,7 @@ import {
   getGetInventoryQueryKey,
   getGetInviteSummaryQueryKey,
   getGetLeaderboardQueryKey,
+  getGetRecoverySummaryQueryKey,
   getListGroupsQueryKey,
   getListMaterialsQueryKey,
   getListQuizAttemptsQueryKey,
@@ -26,7 +27,10 @@ import {
   useStartQuizSession,
   useCompleteQuizSession,
   useGenerateFlashcards,
+  useGetQuickExplanation,
+  useGetRecoverySummary,
   useRequestUploadUrl,
+  useStartRecoverySession,
   useUpdateLevel,
   useUpsertProfile,
   useUseInviteCode,
@@ -39,6 +43,8 @@ import {
   type Flashcard,
   type MaterialExtractionStatus,
 } from '@workspace/api-client-react';
+import { File } from 'expo-file-system';
+import { fetch as expoFetch } from 'expo/fetch';
 import React, { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export type Level = string;
@@ -130,7 +136,10 @@ type AppState = {
   logout: () => Promise<void>;
   completeOnboarding: (level: Level) => Promise<ActionResult>;
   startQuizSession: (materialIds: string[], totalQuestions: 10 | 20 | 30) => Promise<{ ok: true; session: StartQuizResult } | { ok: false; message: string }>;
+  startRecoverySession: () => Promise<{ ok: true; session: StartQuizResult } | { ok: false; message: string }>;
   completeQuizSession: (sessionId: string, answers: (number | null)[], idempotencyKey: string) => Promise<{ ok: true; attempt: CompleteQuizResult } | { ok: false; message: string }>;
+  recoveryCount: number;
+  getQuickExplanation: (sessionId: string, questionIndex: number) => Promise<{ ok: true; explanation: string; chargedPoints: number } | { ok: false; message: string }>;
   generateFlashcards: (materialIds: string[]) => Promise<{ ok: true; flashcards: StudyFlashcard[] } | { ok: false; message: string }>;
   uploadMaterials: (files: UploadMaterialInput[], groupTitle: string, onProgress: UploadProgress) => Promise<ActionResult>;
   removeMaterial: (id: string) => Promise<ActionResult>;
@@ -203,6 +212,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const quizzesQuery = useListQuizAttempts({
     query: { queryKey: getListQuizAttemptsQueryKey(), enabled: dataEnabled },
   });
+  const recoveryQuery = useGetRecoverySummary({
+    query: { queryKey: getGetRecoverySummaryQueryKey(), enabled: dataEnabled },
+  });
   const inventoryQuery = useGetInventory({
     query: { queryKey: getGetInventoryQueryKey(), enabled: dataEnabled },
   });
@@ -224,6 +236,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const startQuizSessionMutation = useStartQuizSession();
   const completeQuizSessionMutation = useCompleteQuizSession();
   const generateFlashcardsMutation = useGenerateFlashcards();
+  const startRecoverySessionMutation = useStartRecoverySession();
+  const quickExplanationMutation = useGetQuickExplanation();
   const buyItemMutation = useBuyShopItem();
   const equipItemMutation = useEquipShopItem();
   const createTicketMutation = useCreateTicketMutation();
@@ -329,6 +343,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       materialsQuery.refetch(),
       groupsQuery.refetch(),
       quizzesQuery.refetch(),
+      recoveryQuery.refetch(),
       inventoryQuery.refetch(),
       ticketsQuery.refetch(),
       leaderboardQuery.refetch(),
@@ -396,14 +411,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return { ok: false, message: messageFromError(error) };
       }
     },
+    startRecoverySession: async () => {
+      try {
+        const session = await startRecoverySessionMutation.mutateAsync();
+        return { ok: true, session };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
+      }
+    },
     completeQuizSession: async (sessionId, answers, idempotencyKey) => {
       try {
         const attempt = await completeQuizSessionMutation.mutateAsync({
           sessionId,
           data: { answers, idempotencyKey },
         });
-        await Promise.all([quizzesQuery.refetch(), profileQuery.refetch(), leaderboardQuery.refetch()]);
+        await Promise.all([quizzesQuery.refetch(), recoveryQuery.refetch(), profileQuery.refetch(), leaderboardQuery.refetch()]);
         return { ok: true, attempt };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
+      }
+    },
+    recoveryCount: recoveryQuery.data?.pendingCount ?? 0,
+    getQuickExplanation: async (sessionId, questionIndex) => {
+      try {
+        const result = await quickExplanationMutation.mutateAsync({ data: { sessionId, questionIndex } });
+        await profileQuery.refetch();
+        return { ok: true, explanation: result.explanation, chargedPoints: result.chargedPoints };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
       }
@@ -423,23 +456,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const group = await createGroupMutation.mutateAsync({ data: { name: groupTitle } });
         await Promise.all(files.map(async (file) => {
           onProgress(file.clientId, 8);
-          const blob = await (await fetch(file.uri)).blob();
+          const nativeFile = new File(file.uri);
           onProgress(file.clientId, 24);
-          const size = Math.max(file.size ?? blob.size, 1);
+          const size = Math.max(file.size ?? nativeFile.size, 1);
           const upload = await requestUploadMutation.mutateAsync({
             data: { name: file.name, size, contentType: file.contentType },
           });
           onProgress(file.clientId, 42);
-          const response = await fetch(upload.uploadURL, {
+          const response = await expoFetch(upload.uploadURL, {
             method: 'PUT',
             headers: { 'Content-Type': file.contentType },
-            body: blob,
+            body: nativeFile,
           });
           if (!response.ok) throw new Error(`Caricamento di ${file.name} non riuscito.`);
           onProgress(file.clientId, 88);
           await finalizeMaterialMutation.mutateAsync({
             data: {
-              title: file.name,
               contentType: file.contentType,
               objectPath: upload.objectPath,
               size,

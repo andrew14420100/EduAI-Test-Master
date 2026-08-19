@@ -91,8 +91,11 @@ export interface Material {
 }
 
 export interface FinalizeMaterialRequest {
-  /** @minLength 1 */
-  title: string;
+  /**
+     * Ignored by the server; the saved title is generated from the uploaded content.
+     * @minLength 1
+     */
+  title?: string;
   description?: string;
   contentType: string;
   objectPath: string;
@@ -192,6 +195,31 @@ export interface Flashcard {
 
 export interface FlashcardsResponse {
   flashcards: Flashcard[];
+}
+
+export interface RecoveryItem {
+  id: string;
+  materialId: string;
+  question: string;
+  timesMissed: number;
+  lastWrongAt: string;
+}
+
+export interface RecoverySummary {
+  pendingCount: number;
+  items: RecoveryItem[];
+}
+
+export interface QuickExplanationRequest {
+  sessionId: string;
+  /** @minimum 0 */
+  questionIndex: number;
+}
+
+export interface QuickExplanationResponse {
+  explanation: string;
+  chargedPoints: number;
+  remainingPoints: number;
 }
 
 export interface OwnedShopItem {

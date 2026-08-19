@@ -7,8 +7,11 @@
  */
 
 export interface FinalizeMaterialRequest {
-  /** @minLength 1 */
-  title: string;
+  /**
+     * Ignored by the server; the saved title is generated from the uploaded content.
+     * @minLength 1
+     */
+  title?: string;
   description?: string;
   contentType: string;
   objectPath: string;

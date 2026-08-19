@@ -35,8 +35,11 @@ import type {
   Material,
   OwnedShopItem,
   Profile,
+  QuickExplanationRequest,
+  QuickExplanationResponse,
   QuizAttempt,
   QuizSessionResponse,
+  RecoverySummary,
   StartQuizSessionRequest,
   StudyGroup,
   Ticket,
@@ -1186,6 +1189,225 @@ export const useGenerateFlashcards = <TError = ErrorType<ErrorEnvelope>,
         TContext
       > => {
       return useMutation(getGenerateFlashcardsMutationOptions(options));
+    }
+
+export const getGetRecoverySummaryUrl = () => {
+
+
+
+
+  return `/api/study/recovery`
+}
+
+/**
+ * @summary List unanswered concepts from previous incorrect quiz answers
+ */
+export const getRecoverySummary = async ( options?: Parameters<typeof customFetch>[1]): Promise<RecoverySummary> => {
+
+  return customFetch<RecoverySummary>(getGetRecoverySummaryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRecoverySummaryQueryKey = () => {
+    return [
+    `/api/study/recovery`
+    ] as const;
+    }
+
+
+export const getGetRecoverySummaryQueryOptions = <TData = Awaited<ReturnType<typeof getRecoverySummary>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecoverySummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRecoverySummaryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRecoverySummary>>> = ({ signal }) => getRecoverySummary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRecoverySummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRecoverySummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getRecoverySummary>>>
+export type GetRecoverySummaryQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary List unanswered concepts from previous incorrect quiz answers
+ */
+
+export function useGetRecoverySummary<TData = Awaited<ReturnType<typeof getRecoverySummary>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecoverySummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRecoverySummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStartRecoverySessionUrl = () => {
+
+
+
+
+  return `/api/study/recovery/sessions`
+}
+
+/**
+ * @summary Start a targeted quiz with unresolved incorrect answers only
+ */
+export const startRecoverySession = async ( options?: Parameters<typeof customFetch>[1]): Promise<QuizSessionResponse> => {
+
+  return customFetch<QuizSessionResponse>(getStartRecoverySessionUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStartRecoverySessionMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startRecoverySession>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startRecoverySession>>, TError,void, TContext> => {
+
+const mutationKey = ['startRecoverySession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startRecoverySession>>, void> = () => {
+
+
+          return  startRecoverySession(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartRecoverySessionMutationResult = NonNullable<Awaited<ReturnType<typeof startRecoverySession>>>
+
+    export type StartRecoverySessionMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Start a targeted quiz with unresolved incorrect answers only
+ */
+export const useStartRecoverySession = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startRecoverySession>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startRecoverySession>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getStartRecoverySessionMutationOptions(options));
+    }
+
+export const getGetQuickExplanationUrl = () => {
+
+
+
+
+  return `/api/study/explanations`
+}
+
+/**
+ * @summary Buy a concise AI concept explanation for one quiz question
+ */
+export const getQuickExplanation = async (quickExplanationRequest: QuickExplanationRequest, options?: Parameters<typeof customFetch>[1]): Promise<QuickExplanationResponse> => {
+
+  return customFetch<QuickExplanationResponse>(getGetQuickExplanationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(quickExplanationRequest)
+  }
+);}
+
+
+
+
+
+export const getGetQuickExplanationMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getQuickExplanation>>, TError,{data: BodyType<QuickExplanationRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getQuickExplanation>>, TError,{data: BodyType<QuickExplanationRequest>}, TContext> => {
+
+const mutationKey = ['getQuickExplanation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getQuickExplanation>>, {data: BodyType<QuickExplanationRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  getQuickExplanation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetQuickExplanationMutationResult = NonNullable<Awaited<ReturnType<typeof getQuickExplanation>>>
+    export type GetQuickExplanationMutationBody = BodyType<QuickExplanationRequest>
+    export type GetQuickExplanationMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Buy a concise AI concept explanation for one quiz question
+ */
+export const useGetQuickExplanation = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getQuickExplanation>>, TError,{data: BodyType<QuickExplanationRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getQuickExplanation>>,
+        TError,
+        {data: BodyType<QuickExplanationRequest>},
+        TContext
+      > => {
+      return useMutation(getGetQuickExplanationMutationOptions(options));
     }
 
 export const getCompleteQuizSessionUrl = (sessionId: string,) => {

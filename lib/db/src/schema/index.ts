@@ -7,3 +7,4 @@ export * from "./shopItems";
 export * from "./tickets";
 export * from "./friends";
 export * from "./pendingUploads";
+export * from "./studyRecovery";

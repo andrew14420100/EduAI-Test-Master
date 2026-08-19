@@ -167,7 +167,7 @@ export const ListMaterialsResponse = zod.array(ListMaterialsResponseItem)
 
 
 export const FinalizeMaterialBody = zod.object({
-  "title": zod.string().min(1),
+  "title": zod.string().min(1).optional().describe('Ignored by the server; the saved title is generated from the uploaded content.'),
   "description": zod.string().optional(),
   "contentType": zod.string(),
   "objectPath": zod.string(),
@@ -307,6 +307,58 @@ export const GenerateFlashcardsResponse = zod.object({
   "back": zod.string(),
   "materialTitle": zod.string()
 }))
+})
+
+
+/**
+ * @summary List unanswered concepts from previous incorrect quiz answers
+ */
+export const GetRecoverySummaryResponse = zod.object({
+  "pendingCount": zod.number().int(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "materialId": zod.string(),
+  "question": zod.string(),
+  "timesMissed": zod.number().int(),
+  "lastWrongAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Start a targeted quiz with unresolved incorrect answers only
+ */
+export const startRecoverySessionResponseQuestionsItemOptionsMin = 4;
+export const startRecoverySessionResponseQuestionsItemOptionsMax = 4;
+
+
+
+export const StartRecoverySessionResponse = zod.object({
+  "sessionId": zod.string(),
+  "questions": zod.array(zod.object({
+  "question": zod.string(),
+  "options": zod.array(zod.string()).min(startRecoverySessionResponseQuestionsItemOptionsMin).max(startRecoverySessionResponseQuestionsItemOptionsMax)
+})),
+  "expiresAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Buy a concise AI concept explanation for one quiz question
+ */
+export const getQuickExplanationBodyQuestionIndexMin = 0;
+
+
+
+export const GetQuickExplanationBody = zod.object({
+  "sessionId": zod.string(),
+  "questionIndex": zod.number().int().min(getQuickExplanationBodyQuestionIndexMin)
+})
+
+export const GetQuickExplanationResponse = zod.object({
+  "explanation": zod.string(),
+  "chargedPoints": zod.number().int(),
+  "remainingPoints": zod.number().int()
 })
 
 

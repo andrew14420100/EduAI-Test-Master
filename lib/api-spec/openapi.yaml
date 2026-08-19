@@ -527,6 +527,93 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
 
+  /study/recovery:
+    get:
+      operationId: getRecoverySummary
+      tags: [quiz]
+      summary: List unanswered concepts from previous incorrect quiz answers
+      responses:
+        "200":
+          description: Recovery queue for the current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecoverySummary"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /study/recovery/sessions:
+    post:
+      operationId: startRecoverySession
+      tags: [quiz]
+      summary: Start a targeted quiz with unresolved incorrect answers only
+      responses:
+        "201":
+          description: Recovery quiz session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizSessionResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: No unresolved errors exist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /study/explanations:
+    post:
+      operationId: getQuickExplanation
+      tags: [quiz]
+      summary: Buy a concise AI concept explanation for one quiz question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuickExplanationRequest"
+      responses:
+        "200":
+          description: Explanation generated or already purchased for this question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuickExplanationResponse"
+        "400":
+          description: Invalid request or insufficient points
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Quiz session or question not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: AI explanation temporarily unavailable; no points charged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   /quiz/sessions/{sessionId}/complete:
     post:
       operationId: completeQuizSession
@@ -965,11 +1052,12 @@ components:
 
     FinalizeMaterialRequest:
       type: object
-      required: [title, contentType, objectPath, size]
+      required: [contentType, objectPath, size]
       properties:
         title:
           type: string
           minLength: 1
+          description: Ignored by the server; the saved title is generated from the uploaded content.
         description:
           type: string
         contentType:
@@ -1125,6 +1213,54 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Flashcard"
+
+    RecoveryItem:
+      type: object
+      required: [id, materialId, question, timesMissed, lastWrongAt]
+      properties:
+        id:
+          type: string
+        materialId:
+          type: string
+        question:
+          type: string
+        timesMissed:
+          type: integer
+        lastWrongAt:
+          type: string
+          format: date-time
+
+    RecoverySummary:
+      type: object
+      required: [pendingCount, items]
+      properties:
+        pendingCount:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecoveryItem"
+
+    QuickExplanationRequest:
+      type: object
+      required: [sessionId, questionIndex]
+      properties:
+        sessionId:
+          type: string
+        questionIndex:
+          type: integer
+          minimum: 0
+
+    QuickExplanationResponse:
+      type: object
+      required: [explanation, chargedPoints, remainingPoints]
+      properties:
+        explanation:
+          type: string
+        chargedPoints:
+          type: integer
+        remainingPoints:
+          type: integer
 
     OwnedShopItem:
       type: object

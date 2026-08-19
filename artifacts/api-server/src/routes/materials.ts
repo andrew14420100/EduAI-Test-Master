@@ -20,6 +20,7 @@ import {
   MAX_EXTRACT_BYTES,
   type ExtractionResult,
 } from "../lib/contentStudy";
+import { generateMaterialTitle } from "../lib/studyAi";
 import type { File } from "@google-cloud/storage";
 
 const router: IRouter = Router();
@@ -167,9 +168,8 @@ function normalizeContentType(value: string): string {
  */
 router.post("/materials", requireAuth, async (req: Request, res: Response) => {
   const userId = (req as AuthedRequest).clerkUserId;
-  const { title, contentType, objectPath, description, size, groupId } =
+    const { contentType, objectPath, description, size, groupId } =
     req.body as {
-      title?: string;
       contentType?: string;
       objectPath?: string;
       description?: string;
@@ -177,10 +177,10 @@ router.post("/materials", requireAuth, async (req: Request, res: Response) => {
       groupId?: string;
     };
 
-  if (!title || !contentType || !objectPath) {
+    if (!contentType || !objectPath) {
     res
       .status(400)
-      .json({ error: "title, contentType e objectPath sono obbligatori" });
+        .json({ error: "contentType e objectPath sono obbligatori" });
     return;
   }
 
@@ -290,6 +290,22 @@ router.post("/materials", requireAuth, async (req: Request, res: Response) => {
         "Estrazione testo materiale non riuscita",
       );
     }
+    let generatedTitle = "Materiale di studio importato";
+    try {
+      generatedTitle = await generateMaterialTitle({
+        extractedText: extraction.text,
+        contentType,
+      });
+    } catch (error) {
+      req.log.warn({ err: error }, "Titolo IA non disponibile: uso titolo sicuro di importazione");
+      generatedTitle = contentType.startsWith("image/")
+        ? "Immagine di studio importata"
+        : contentType.startsWith("audio/")
+          ? "Registrazione di studio importata"
+          : contentType.startsWith("video/")
+            ? "Video di studio importato"
+            : "Materiale di studio importato";
+    }
 
     // 7. Atomically consume the pending row and insert the material.
     //    Deleting the pending row inside the transaction with a RETURNING guard
@@ -319,7 +335,7 @@ router.post("/materials", requireAuth, async (req: Request, res: Response) => {
           .values({
             id: randomUUID(),
             ownerId: userId,
-            title,
+            title: generatedTitle,
             description: description ?? null,
             contentType,
             objectPath,

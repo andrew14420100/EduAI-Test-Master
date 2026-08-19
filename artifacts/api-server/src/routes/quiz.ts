@@ -1,12 +1,14 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { eq, sql, and, inArray } from "drizzle-orm";
 import {
   db,
   quizAttemptsTable,
   quizSessionsTable,
   materialsTable,
+  mistakeItemsTable,
   profilesTable,
+  quickExplanationsTable,
 } from "@workspace/db";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 import type { QuizQuestionWithKey, QuizQuestion } from "@workspace/db";
@@ -17,6 +19,7 @@ import {
   isMeaningfulText,
   type SourceMaterial,
 } from "../lib/contentStudy";
+import { generateQuickExplanation } from "../lib/studyAi";
 
 const router: IRouter = Router();
 
@@ -27,6 +30,8 @@ const FLASHCARDS_PER_MATERIAL = 4;
 
 // Coins earned per correct answer
 const COINS_PER_CORRECT = 5;
+const RECOVERY_COINS_PER_CORRECT = 2;
+const QUICK_EXPLANATION_COST = 2;
 
 // Valid session duration (1 hour)
 const SESSION_TTL_MS = 60 * 60 * 1000;
@@ -297,12 +302,22 @@ router.post(
       // Score against the stored answer key.
       const questionsWithKey = session.questionsWithKey as unknown as QuizQuestionWithKey[];
       let score = 0;
+      const resolvedRecoveryIds: string[] = [];
+      const missedStandardQuestions: Array<QuizQuestionWithKey & { materialId: string }> = [];
       for (let i = 0; i < questionsWithKey.length; i++) {
-        if (answers[i] !== null && answers[i] === questionsWithKey[i]!.correctIndex) {
+        const question = questionsWithKey[i]!;
+        const isCorrect = answers[i] !== null && answers[i] === question.correctIndex;
+        if (isCorrect) {
           score++;
+          if (question.recoveryItemId) resolvedRecoveryIds.push(question.recoveryItemId);
+        } else if (!question.recoveryItemId) {
+          missedStandardQuestions.push({ ...question, materialId: session.materialId });
         }
       }
-      const earnedCoins = score * COINS_PER_CORRECT;
+      const isRecoverySession = questionsWithKey.some((question) => Boolean(question.recoveryItemId));
+      const earnedCoins = isRecoverySession
+        ? resolvedRecoveryIds.length * RECOVERY_COINS_PER_CORRECT
+        : score * COINS_PER_CORRECT;
       const attemptId = randomUUID();
 
       // Atomically CLAIM the session inside the transaction: only the request
@@ -342,6 +357,47 @@ router.post(
           earnedCoins,
         });
 
+        if (missedStandardQuestions.length > 0) {
+          for (const question of missedStandardQuestions) {
+            const fingerprint = createHash("sha256")
+              .update(`${session.materialId}|${question.question}|${question.options.join("\u0001")}`)
+              .digest("hex");
+            await tx
+              .insert(mistakeItemsTable)
+              .values({
+                id: randomUUID(),
+                ownerId: userId,
+                materialId: question.materialId,
+                fingerprint,
+                question: question.question,
+                options: question.options,
+                correctIndex: question.correctIndex,
+                timesMissed: 1,
+                lastWrongAt: new Date(),
+              })
+              .onConflictDoUpdate({
+                target: [mistakeItemsTable.ownerId, mistakeItemsTable.fingerprint],
+                set: {
+                  options: question.options,
+                  correctIndex: question.correctIndex,
+                  timesMissed: sql`${mistakeItemsTable.timesMissed} + 1`,
+                  lastWrongAt: new Date(),
+                },
+              });
+          }
+        }
+
+        if (resolvedRecoveryIds.length > 0) {
+          await tx
+            .delete(mistakeItemsTable)
+            .where(
+              and(
+                eq(mistakeItemsTable.ownerId, userId),
+                inArray(mistakeItemsTable.id, resolvedRecoveryIds),
+              ),
+            );
+        }
+
         await tx
           .update(profilesTable)
           .set({
@@ -373,6 +429,181 @@ router.post(
     } catch (err) {
       req.log.error({ err }, "Errore completamento sessione quiz");
       res.status(500).json({ error: "Errore interno del server" });
+    }
+  },
+);
+
+/**
+ * GET /study/recovery — questions currently waiting for a targeted retry.
+ */
+router.get(
+  "/study/recovery",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthedRequest).clerkUserId;
+    try {
+      const items = await db
+        .select({
+          id: mistakeItemsTable.id,
+          materialId: mistakeItemsTable.materialId,
+          question: mistakeItemsTable.question,
+          timesMissed: mistakeItemsTable.timesMissed,
+          lastWrongAt: mistakeItemsTable.lastWrongAt,
+        })
+        .from(mistakeItemsTable)
+        .where(eq(mistakeItemsTable.ownerId, userId));
+      res.json({ pendingCount: items.length, items });
+    } catch (err) {
+      req.log.error({ err }, "Errore elenco recupero errori");
+      res.status(500).json({ error: "Errore interno del server" });
+    }
+  },
+);
+
+/**
+ * POST /study/recovery/sessions — starts a short quiz using only unresolved errors.
+ */
+router.post(
+  "/study/recovery/sessions",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthedRequest).clerkUserId;
+    try {
+      const items = await db
+        .select()
+        .from(mistakeItemsTable)
+        .where(eq(mistakeItemsTable.ownerId, userId))
+        .limit(10);
+      if (items.length === 0) {
+        res.status(422).json({ error: "Non hai ancora errori da ripassare." });
+        return;
+      }
+
+      const questionsWithKey: QuizQuestionWithKey[] = items.map((item) => ({
+        question: item.question,
+        options: item.options as string[],
+        correctIndex: item.correctIndex,
+        recoveryItemId: item.id,
+      }));
+      const sessionId = randomUUID();
+      const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+      await db.insert(quizSessionsTable).values({
+        id: sessionId,
+        ownerId: userId,
+        materialId: items[0]!.materialId,
+        materialIds: [...new Set(items.map((item) => item.materialId))] as unknown as Record<string, unknown>[],
+        totalQuestions: questionsWithKey.length,
+        questionsWithKey: questionsWithKey as unknown as Record<string, unknown>[],
+        status: "active",
+        expiresAt,
+      });
+      res.status(201).json({
+        sessionId,
+        questions: toPublicQuestions(questionsWithKey),
+        expiresAt: expiresAt.toISOString(),
+      });
+    } catch (err) {
+      req.log.error({ err }, "Errore creazione recupero errori");
+      res.status(500).json({ error: "Errore interno del server" });
+    }
+  },
+);
+
+/**
+ * POST /study/explanations — a short AI concept explanation, charged once per question.
+ */
+router.post(
+  "/study/explanations",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthedRequest).clerkUserId;
+    const { sessionId, questionIndex } = req.body as {
+      sessionId?: unknown;
+      questionIndex?: unknown;
+    };
+    if (typeof sessionId !== "string" || !Number.isInteger(questionIndex) || (questionIndex as number) < 0) {
+      res.status(400).json({ error: "sessionId e questionIndex validi sono obbligatori" });
+      return;
+    }
+    try {
+      const [session] = await db
+        .select()
+        .from(quizSessionsTable)
+        .where(and(eq(quizSessionsTable.id, sessionId), eq(quizSessionsTable.ownerId, userId)));
+      const questions = session?.questionsWithKey as QuizQuestionWithKey[] | undefined;
+      const question = questions?.[questionIndex as number];
+      if (!session || !question) {
+        res.status(404).json({ error: "Domanda della verifica non trovata" });
+        return;
+      }
+
+      const [alreadyGenerated] = await db
+        .select()
+        .from(quickExplanationsTable)
+        .where(
+          and(
+            eq(quickExplanationsTable.ownerId, userId),
+            eq(quickExplanationsTable.sessionId, sessionId),
+            eq(quickExplanationsTable.questionIndex, questionIndex as number),
+          ),
+        );
+      if (alreadyGenerated) {
+        const [profile] = await db.select().from(profilesTable).where(eq(profilesTable.userId, userId));
+        res.json({
+          explanation: alreadyGenerated.explanation,
+          chargedPoints: 0,
+          remainingPoints: profile?.wallet ?? 0,
+        });
+        return;
+      }
+
+      const explanation = await generateQuickExplanation(question.question, question.options);
+      const result = await db.transaction(async (tx) => {
+        const inserted = await tx
+          .insert(quickExplanationsTable)
+          .values({
+            id: randomUUID(),
+            ownerId: userId,
+            sessionId,
+            questionIndex: questionIndex as number,
+            explanation,
+            chargedPoints: QUICK_EXPLANATION_COST,
+          })
+          .onConflictDoNothing()
+          .returning();
+        if (inserted.length === 0) {
+          const [existing] = await tx
+            .select()
+            .from(quickExplanationsTable)
+            .where(
+              and(
+                eq(quickExplanationsTable.ownerId, userId),
+                eq(quickExplanationsTable.sessionId, sessionId),
+                eq(quickExplanationsTable.questionIndex, questionIndex as number),
+              ),
+            );
+          const [profile] = await tx.select().from(profilesTable).where(eq(profilesTable.userId, userId));
+          return { explanation: existing!.explanation, chargedPoints: 0, remainingPoints: profile?.wallet ?? 0 };
+        }
+        const [profile] = await tx
+          .update(profilesTable)
+          .set({
+            wallet: sql`${profilesTable.wallet} - ${QUICK_EXPLANATION_COST}`,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(profilesTable.userId, userId), sql`${profilesTable.wallet} >= ${QUICK_EXPLANATION_COST}`))
+          .returning();
+        if (!profile) throw new Error("PUNTI_INSUFFICIENTI");
+        return { explanation, chargedPoints: QUICK_EXPLANATION_COST, remainingPoints: profile.wallet };
+      });
+      res.json(result);
+    } catch (err) {
+      if (err instanceof Error && err.message === "PUNTI_INSUFFICIENTI") {
+        res.status(400).json({ error: "Ti servono almeno 2 punti per una spiegazione rapida." });
+        return;
+      }
+      req.log.error({ err }, "Errore spiegazione rapida");
+      res.status(503).json({ error: "La spiegazione rapida non è disponibile. Non ti sono stati addebitati punti." });
     }
   },
 );

@@ -7,6 +7,7 @@ export type QuizQuestion = {
 
 export type QuizQuestionWithKey = QuizQuestion & {
   correctIndex: number;
+  recoveryItemId?: string;
 };
 
 export const quizSessionsTable = pgTable("quiz_sessions", {

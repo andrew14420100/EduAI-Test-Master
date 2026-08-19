@@ -10,7 +10,7 @@ import { PrimaryButton } from '@/components/Ui';
 import { useColors } from '@/hooks/useColors';
 
 type Mode = 'accesso' | 'registrazione';
-type Step = 'dati' | 'verifica';
+type Step = 'dati' | 'verifica' | 'verifica-accesso';
 
 function authErrorMessage(error: unknown) {
   const candidate = error as {
@@ -104,14 +104,53 @@ export default function AccessScreen() {
 
       if (signIn.status === 'complete') {
         await finishSession('/(tabs)');
+      } else if (signIn.status === 'needs_client_trust' || signIn.status === 'needs_second_factor') {
+        const emailCodeFactor = signIn.supportedSecondFactors.find((factor) => factor.strategy === 'email_code');
+        if (!emailCodeFactor) {
+          setModal({
+            title: 'Verifica non disponibile',
+            message: 'Questo account usa un metodo di verifica che non può essere completato su questo dispositivo. Accedi da un dispositivo già riconosciuto oppure usa un account con verifica via email.',
+          });
+          return;
+        }
+        await signIn.mfa.sendEmailCode();
+        setStep('verifica-accesso');
       } else {
         setModal({
-          title: 'Verifica aggiuntiva richiesta',
-          message: 'Questo account richiede una verifica aggiuntiva non ancora supportata nell’app.',
+          title: 'Verifica richiesta',
+          message: 'L’accesso richiede una verifica aggiuntiva. Riprova tra poco oppure controlla la tua email.',
         });
       }
     } catch (error) {
       setModal({ title: 'Accesso non riuscito', message: authErrorMessage(error) });
+    }
+  };
+
+  const verifySignIn = async () => {
+    if (code.trim().length < 4) {
+      setModal({ title: 'Codice incompleto', message: 'Inserisci il codice ricevuto via email.' });
+      return;
+    }
+
+    try {
+      const { error } = await signIn.mfa.verifyEmailCode({ code: code.trim() });
+      if (error) throw error;
+      if (signIn.status === 'complete') {
+        await finishSession('/(tabs)');
+      } else {
+        setModal({ title: 'Verifica in attesa', message: 'Il codice è stato inviato, ma l’accesso non è ancora completo. Controlla il codice e riprova.' });
+      }
+    } catch (error) {
+      setModal({ title: 'Codice non valido', message: authErrorMessage(error) });
+    }
+  };
+
+  const resendSignInCode = async () => {
+    try {
+      await signIn.mfa.sendEmailCode();
+      setModal({ title: 'Nuovo codice inviato', message: `Controlla la casella ${email.trim().toLowerCase()}.` });
+    } catch (error) {
+      setModal({ title: 'Invio non riuscito', message: authErrorMessage(error) });
     }
   };
 
@@ -161,15 +200,19 @@ export default function AccessScreen() {
         </View>
         <Text style={[styles.eyebrow, { color: c.primary }]}>EDUAI TEST MASTER</Text>
         <Text style={[styles.heading, { color: c.foreground }]}>
-          {step === 'verifica'
-            ? 'Verifica la tua email.'
+          {step !== 'dati'
+            ? step === 'verifica-accesso'
+              ? 'Conferma questo dispositivo.'
+              : 'Verifica la tua email.'
             : mode === 'registrazione'
               ? 'Crea il tuo spazio di studio.'
               : 'Bentornato su EduAI.'}
         </Text>
         <Text style={[styles.intro, { color: c.mutedForeground }]}>
-          {step === 'verifica'
-            ? `Abbiamo inviato un codice a ${email.trim().toLowerCase()}. Inseriscilo per attivare l’account.`
+          {step !== 'dati'
+            ? step === 'verifica-accesso'
+              ? `Abbiamo inviato un codice a ${email.trim().toLowerCase()}. Inseriscilo per completare l’accesso in sicurezza.`
+              : `Abbiamo inviato un codice a ${email.trim().toLowerCase()}. Inseriscilo per attivare l’account.`
             : mode === 'registrazione'
               ? 'Registrati per ritrovare materiali, progressi e premi su tutti i tuoi dispositivi.'
               : 'Accedi con l’account EduAI che hai già creato.'}
@@ -286,13 +329,13 @@ export default function AccessScreen() {
                 />
               </View>
             </View>
-            <PrimaryButton onPress={verifyEmail} disabled={loading} icon="circle-check">
-              {loading ? 'Verifica in corso…' : 'Verifica e continua'}
+            <PrimaryButton onPress={step === 'verifica-accesso' ? verifySignIn : verifyEmail} disabled={loading} icon="circle-check">
+              {loading ? 'Verifica in corso…' : step === 'verifica-accesso' ? 'Conferma accesso' : 'Verifica e continua'}
             </PrimaryButton>
-            <Pressable testID="invia-nuovo-codice" onPress={resendCode} disabled={loading}>
+            <Pressable testID="invia-nuovo-codice" onPress={step === 'verifica-accesso' ? resendSignInCode : resendCode} disabled={loading}>
               <Text style={[styles.link, { color: c.primary }]}>Invia un nuovo codice</Text>
             </Pressable>
-            <Pressable testID="torna-ai-dati" onPress={() => { signUp.reset(); setStep('dati'); setCode(''); }} disabled={loading}>
+            <Pressable testID="torna-ai-dati" onPress={() => { if (step === 'verifica-accesso') signIn.reset(); else signUp.reset(); setStep('dati'); setCode(''); }} disabled={loading}>
               <Text style={[styles.link, { color: c.mutedForeground }]}>Torna ai dati dell’account</Text>
             </Pressable>
           </View>
