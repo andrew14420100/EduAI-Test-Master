@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useUser } from '@clerk/expo';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +14,7 @@ const ticketCategories = ['Problema tecnico', 'Account', 'Materiali', 'Verifiche
 
 export default function ProfileScreen() {
   const c = useColors();
+  const { user } = useUser();
   const insets = useSafeAreaInsets();
   const { account, level, wallet, quizzes, streak, tickets, logout, createTicket } = useApp();
   const [modal, setModal] = useState<ProfileModal>(null);
@@ -22,6 +24,7 @@ export default function ProfileScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState({ title: '', message: '', success: false });
 
+  const isAdmin = user?.publicMetadata?.role === 'admin';
   const preferences: { label: string; icon: AppIconName; action: () => void }[] = [
     { label: 'Percorso di studio', icon: 'book', action: () => router.push('/onboarding') },
     { label: 'Assistenza', icon: 'support', action: () => setModal('ticket') },
@@ -29,6 +32,7 @@ export default function ProfileScreen() {
     { label: 'Privacy e dati', icon: 'shield', action: () => setModal('privacy') },
     { label: 'Esci dall’account', icon: 'logout', action: () => setModal('uscita') },
   ];
+  if (isAdmin) preferences.splice(2, 0, { label: 'Console assistenza', icon: 'shield', action: () => router.push('/admin') });
 
   const submitTicket = async () => {
     if (submitting) return;
@@ -123,6 +127,9 @@ export default function ProfileScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.ticketTitle, { color: c.foreground }]} numberOfLines={1}>{ticket.subject}</Text>
               <Text style={[styles.small, { color: c.mutedForeground }]}>{ticket.category} · {ticket.status}</Text>
+              {ticket.messages?.filter((entry) => entry.authorRole === 'admin').slice(-1).map((entry) => (
+                <Text key={entry.id} style={[styles.small, { color: c.primary, marginTop: 4 }]} numberOfLines={2}>Assistenza: {entry.message}</Text>
+              ))}
             </View>
           </View>
         )) : (

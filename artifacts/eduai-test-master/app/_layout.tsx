@@ -50,6 +50,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="quiz" options={{ presentation: 'modal' }} />
       <Stack.Screen name="onboarding" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="admin" options={{ presentation: 'modal' }} />
       <Stack.Screen name="accesso" options={{ animation: 'fade' }} />
     </Stack>
   );

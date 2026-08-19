@@ -6,11 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface QuizQuestion {
-  question: string;
+export interface AdminTicketReplyRequest {
   /**
-     * @minItems 2
-     * @maxItems 4
+     * @minLength 2
+     * @maxLength 4000
      */
-  options: string[];
+  message: string;
+  close?: boolean;
 }

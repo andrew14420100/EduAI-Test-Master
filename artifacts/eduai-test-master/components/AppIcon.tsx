@@ -21,6 +21,7 @@ import {
   faEyeSlash,
   faFileLines,
   faFilm,
+  faFire,
   faFolder,
   faGlobe,
   faGraduationCap,
@@ -34,6 +35,7 @@ import {
   faMoon,
   faMusic,
   faNoteSticky,
+  faPaintbrush,
   faPen,
   faPlus,
   faRightFromBracket,
@@ -41,6 +43,7 @@ import {
   faStar,
   faStore,
   faSun,
+  faTag,
   faTrashCan,
   faTriangleExclamation,
   faUser,
@@ -97,7 +100,11 @@ export type AppIconName =
   | 'globe'
   | 'users'
   | 'copy'
-  | 'medal';
+  | 'medal'
+  | 'sparkles'
+  | 'flame'
+  | 'paintbrush'
+  | 'tag';
 
 const iconMap: Record<AppIconName, IconDefinition> = {
   home: faHouse,
@@ -146,6 +153,10 @@ const iconMap: Record<AppIconName, IconDefinition> = {
   users: faUserGroup,
   copy: faCopy,
   medal: faMedal,
+  sparkles: faWandMagicSparkles,
+  flame: faFire,
+  paintbrush: faPaintbrush,
+  tag: faTag,
 };
 
 export function AppIcon({ name, size = 18, color }: { name: AppIconName; size?: number; color: string }) {

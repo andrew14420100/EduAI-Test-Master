@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from "node:fs";
-import { access, mkdtemp, rm, stat } from "node:fs/promises";
+import { access, mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
@@ -14,6 +14,9 @@ const execFileAsync = promisify(execFile);
 
 const MAX_AUDIO_TRANSCRIPTION_BYTES = 24 * 1024 * 1024;
 const MAX_MEDIA_DURATION_SECONDS = 75 * 60;
+const TRANSCRIPTION_CHUNK_SECONDS = 8 * 60;
+const TRANSCRIPTION_ATTEMPTS = 3;
+const MAX_MEDIA_TRANSCRIPT_CHARS = 300_000;
 
 export type MediaTranscriptionResult =
   | { status: "ready"; text: string; error: null }
@@ -72,7 +75,7 @@ async function probeMedia(inputPath: string): Promise<ProbeResult> {
   };
 }
 
-async function extractAudio(videoPath: string, audioPath: string) {
+async function extractAudioChunks(sourcePath: string, outputPattern: string) {
   await execFileAsync(
     "ffmpeg",
     [
@@ -81,7 +84,7 @@ async function extractAudio(videoPath: string, audioPath: string) {
       "-loglevel",
       "error",
       "-i",
-      videoPath,
+       sourcePath,
       "-map",
       "0:a:0",
       "-vn",
@@ -91,9 +94,15 @@ async function extractAudio(videoPath: string, audioPath: string) {
       "16000",
       "-b:a",
       "32k",
-      audioPath,
+       "-f",
+       "segment",
+       "-segment_time",
+       String(TRANSCRIPTION_CHUNK_SECONDS),
+       "-reset_timestamps",
+       "1",
+       outputPattern,
     ],
-    { maxBuffer: 64 * 1024, timeout: 10 * 60_000, killSignal: "SIGKILL" },
+    { maxBuffer: 64 * 1024, timeout: 15 * 60_000, killSignal: "SIGKILL" },
   );
 }
 
@@ -103,13 +112,29 @@ async function transcribeFile(filePath: string) {
       file: createReadStream(filePath),
       model: "gpt-4o-mini-transcribe",
       language: "it",
-      response_format: "text",
+      response_format: "json",
     },
     { timeout: 10 * 60_000 },
   );
-  // The managed Replit client is configured for response_format="text", whose
-  // runtime response is a string even though the upstream SDK narrows it here.
-  return response as unknown as string;
+  return response.text;
+}
+
+async function transcribeWithRetry(filePath: string, chunkNumber: number) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= TRANSCRIPTION_ATTEMPTS; attempt++) {
+    try {
+      return await transcribeFile(filePath);
+    } catch (error) {
+      lastError = error;
+      if (attempt < TRANSCRIPTION_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1_500));
+      }
+    }
+  }
+  throw new Error(
+    `La parte ${chunkNumber} dell'audio non è stata trascritta dopo ${TRANSCRIPTION_ATTEMPTS} tentativi.`,
+    { cause: lastError },
+  );
 }
 
 async function cleanTemporaryDirectory(directory: string) {
@@ -118,8 +143,8 @@ async function cleanTemporaryDirectory(directory: string) {
 
 /**
  * Transcribe private audio or video without buffering the media in Node memory.
- * Audio is sent directly to the transcription provider. Video is first converted
- * to a small mono audio track in a temporary directory.
+ * The source is converted to compact mono audio and split into short segments.
+ * Segment retries make long lectures recoverable instead of failing as one request.
  */
 export async function transcribeMediaObject(params: {
   objectFile: File;
@@ -150,7 +175,7 @@ export async function transcribeMediaObject(params: {
           ? ".aac"
           : ".m4a";
   const sourcePath = join(directory, `source${sourceExtension}`);
-  const extractedAudioPath = join(directory, "speech.mp3");
+  const chunkPattern = join(directory, "speech-%03d.mp3");
 
   try {
     await pipeline(objectFile.createReadStream(), createWriteStream(sourcePath));
@@ -177,34 +202,47 @@ export async function transcribeMediaObject(params: {
       };
     }
 
-    let fileToTranscribe = sourcePath;
-    if (isVideo) {
-      if (!(await commandAvailable("ffmpeg"))) {
-        return {
-          status: "failed",
-          text: null,
-          error: "Il motore di estrazione audio non è disponibile al momento. Riprova più tardi.",
-        };
-      }
-      await extractAudio(sourcePath, extractedAudioPath);
-      const audioInfo = await stat(extractedAudioPath);
-      if (audioInfo.size > MAX_AUDIO_TRANSCRIPTION_BYTES) {
-        return {
-          status: "failed",
-          text: null,
-          error: "La traccia audio del video è troppo grande per essere trascritta in sicurezza.",
-        };
-      }
-      fileToTranscribe = extractedAudioPath;
-    } else if (sourceInfo.size > MAX_AUDIO_TRANSCRIPTION_BYTES) {
+    if (!(await commandAvailable("ffmpeg"))) {
       return {
         status: "failed",
         text: null,
-        error: "Il file audio supera il limite di 24 MB del servizio di trascrizione.",
+        error: "Il motore di estrazione audio non è disponibile al momento. Riprova più tardi.",
       };
     }
 
-    const text = normalizeText(await transcribeFile(fileToTranscribe));
+    await extractAudioChunks(sourcePath, chunkPattern);
+    const chunks = (await readdir(directory))
+      .filter((name) => /^speech-\d{3}\.mp3$/.test(name))
+      .sort()
+      .map((name) => join(directory, name));
+    if (chunks.length === 0) {
+      return {
+        status: "failed",
+        text: null,
+        error: "Non è stato possibile preparare l'audio per la trascrizione.",
+      };
+    }
+    for (const chunk of chunks) {
+      const info = await stat(chunk);
+      if (info.size > MAX_AUDIO_TRANSCRIPTION_BYTES) {
+        return {
+          status: "failed",
+          text: null,
+          error: "Una parte dell'audio è troppo grande per essere trascritta in sicurezza.",
+        };
+      }
+    }
+
+    const transcribedChunks: string[] = [];
+    for (let index = 0; index < chunks.length; index += 1) {
+      transcribedChunks.push(
+        await transcribeWithRetry(chunks[index]!, index + 1),
+      );
+    }
+    const text = normalizeText(
+      transcribedChunks.join("\n\n"),
+      MAX_MEDIA_TRANSCRIPT_CHARS,
+    );
     if (!isMeaningfulText(text)) {
       return {
         status: "unsupported",

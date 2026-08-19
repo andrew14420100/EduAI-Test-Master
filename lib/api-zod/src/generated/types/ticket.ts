@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TicketMessage } from './ticketMessage';
 
 export interface Ticket {
   id: string;
@@ -15,4 +16,7 @@ export interface Ticket {
   message: string;
   status: string;
   createdAt: Date;
+  updatedAt: Date;
+  closedAt?: Date | null;
+  messages: TicketMessage[];
 }

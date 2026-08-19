@@ -6,11 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface QuizQuestion {
-  question: string;
-  /**
-     * @minItems 2
-     * @maxItems 4
-     */
-  options: string[];
+export interface AdminUser {
+  userId: string;
+  username: string;
+  email: string;
+  level?: string | null;
+  createdAt: Date;
 }

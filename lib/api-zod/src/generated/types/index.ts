@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminTicket';
+export * from './adminTicketReplyRequest';
+export * from './adminUser';
 export * from './buyShopItemRequest';
 export * from './completeQuizSessionRequest';
 export * from './createGroupRequest';
@@ -35,6 +38,8 @@ export * from './startQuizSessionRequest';
 export * from './startQuizSessionRequestTotalQuestions';
 export * from './studyGroup';
 export * from './ticket';
+export * from './ticketMessage';
+export * from './ticketMessageAuthorRole';
 export * from './updateLevelRequest';
 export * from './uploadUrlRequest';
 export * from './uploadUrlResponse';

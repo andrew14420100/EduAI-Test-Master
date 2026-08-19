@@ -1,3 +1,4 @@
 - [Clerk profile bootstrap](clerk-profile-bootstrap.md) — verify auth bootstrap by counting network calls after a hard reload; typechecks cannot catch request loops.
 - [Drizzle migration validation](drizzle-migration-validation.md) — keep migration output relative so metadata checks resolve correctly; validate with the official migrator in isolation.
 - [PostgreSQL list filters](postgres-list-filters.md) — with Drizzle, prefer inArray for scalar lists; interpolated arrays may expand into an invalid ANY expression.
+- [Development database migration history](development-db-migration-history.md) — dev may have tables without Drizzle’s ledger; inspect schema before applying generated migrations.

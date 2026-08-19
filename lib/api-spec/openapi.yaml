@@ -896,6 +896,93 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
 
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [tickets]
+      summary: List users for the private support console
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  /admin/tickets:
+    get:
+      operationId: listAdminTickets
+      tags: [tickets]
+      summary: List support tickets for the private console
+      responses:
+        "200":
+          description: Tickets with conversation history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminTicket"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  /admin/tickets/{ticketId}/reply:
+    post:
+      operationId: replyToAdminTicket
+      tags: [tickets]
+      summary: Reply to or close a support ticket
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminTicketReplyRequest" }
+      responses:
+        "200":
+          description: Updated ticket
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        "400":
+          description: Invalid reply
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "404":
+          description: Ticket not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
   /leaderboard:
     get:
       operationId: getLeaderboard
@@ -1174,7 +1261,7 @@ components:
           type: array
           items:
             type: string
-          minItems: 4
+          minItems: 2
           maxItems: 4
 
     StartQuizSessionRequest:
@@ -1354,7 +1441,7 @@ components:
 
     Ticket:
       type: object
-      required: [id, userId, subject, category, message, status, createdAt]
+      required: [id, userId, subject, category, message, status, createdAt, updatedAt, messages]
       properties:
         id:
           type: string
@@ -1372,6 +1459,56 @@ components:
         createdAt:
           type: string
           format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketMessage"
+
+    TicketMessage:
+      type: object
+      required: [id, ticketId, authorId, authorRole, message, createdAt]
+      properties:
+        id: { type: string }
+        ticketId: { type: string }
+        authorId: { type: string }
+        authorRole: { type: string, enum: [user, admin] }
+        message: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    AdminUser:
+      type: object
+      required: [userId, username, email, createdAt]
+      properties:
+        userId: { type: string }
+        username: { type: string }
+        email: { type: string }
+        level: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    AdminTicket:
+      allOf:
+        - $ref: "#/components/schemas/Ticket"
+        - type: object
+          required: [user]
+          properties:
+            user:
+              allOf:
+                - $ref: "#/components/schemas/AdminUser"
+              nullable: true
+
+    AdminTicketReplyRequest:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, minLength: 2, maxLength: 4000 }
+        close: { type: boolean, default: false }
 
     CreateTicketRequest:
       type: object

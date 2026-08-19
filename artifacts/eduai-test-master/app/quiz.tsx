@@ -133,7 +133,6 @@ export default function QuizScreen() {
   const [questions, setQuestions] = useState<MCQuestion[]>([]);
   const [currentQ, setCurrentQ] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<(number | null)[]>([]);
-  const [answerLocked, setAnswerLocked] = useState(false);
 
   // Stable idempotency key for this quiz attempt — generated once at start
   const idempotencyKeyRef = useRef<string>('');
@@ -258,7 +257,6 @@ export default function QuizScreen() {
     setQuestions(session.questions);
     setSelectedAnswers(new Array(session.questions.length).fill(null));
     setCurrentQ(0);
-    setAnswerLocked(false);
     setSubmitError(null);
     setTimeLeft(null);
     setPhase('quiz');
@@ -337,26 +335,23 @@ export default function QuizScreen() {
     setQuestions(session.questions);
     setSelectedAnswers(new Array(selectedCount).fill(null));
     setCurrentQ(0);
-    setAnswerLocked(false);
     setSubmitError(null);
     setTimeLeft(selectedDuration.seconds);
     setPhase('quiz');
   };
 
-  const selectAnswer = (optionIndex: number) => {
-    if (answerLocked || phase !== 'quiz') return;
+  const selectAnswer = (qIndex: number, optionIndex: number) => {
+    if (phase !== 'quiz') return;
     setSelectedAnswers((prev) => {
       const next = [...prev];
-      next[currentQ] = optionIndex;
+      next[qIndex] = optionIndex;
       return next;
     });
-    setAnswerLocked(true);
   };
 
   const goNext = () => {
     if (currentQ < questions.length - 1) {
       setCurrentQ((prev) => prev + 1);
-      setAnswerLocked(selectedAnswers[currentQ + 1] !== null);
     } else {
       // last question — finish
       if (!activeSession) return;
@@ -922,14 +917,14 @@ export default function QuizScreen() {
               <Pressable
                 key={idx}
                 testID={`answer-option-${idx}`}
-                onPress={() => selectAnswer(idx)}
-                disabled={answerLocked || isSubmitting}
+                onPress={() => selectAnswer(currentQ, idx)}
+                disabled={isSubmitting}
                 style={({ pressed }) => [
                   styles.answerChip,
                   {
                     backgroundColor: bg,
                     borderColor,
-                    opacity: (answerLocked && !isSelected) || isSubmitting ? 0.5 : pressed ? 0.8 : 1,
+                    opacity: isSubmitting ? 0.5 : pressed ? 0.8 : 1,
                   },
                 ]}
               >
@@ -951,13 +946,16 @@ export default function QuizScreen() {
           })}
         </View>
 
-        {answerLocked && phase === 'quiz' && (
+        {phase === 'quiz' && (
           <View testID="next-question">
             <PrimaryButton
               onPress={goNext}
               icon={isLast ? 'circle-check' : 'chevron-right'}
+              disabled={isLast && chosen === null}
             >
-              {isLast ? 'Vedi i risultati' : 'Prossima domanda'}
+              {isLast
+                ? chosen === null ? 'Consegna senza risposta' : 'Vedi i risultati'
+                : chosen === null ? 'Salta domanda' : 'Prossima domanda'}
             </PrimaryButton>
           </View>
         )}

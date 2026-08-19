@@ -1,10 +1,41 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
-import { eq } from "drizzle-orm";
-import { db, ticketsTable } from "@workspace/db";
-import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
+import { desc, eq, inArray } from "drizzle-orm";
+import { db, profilesTable, ticketMessagesTable, ticketsTable } from "@workspace/db";
+import { requireAdmin, requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
+
+async function ticketDetails(tickets: (typeof ticketsTable.$inferSelect)[]) {
+  const ticketIds = tickets.map((ticket) => ticket.id);
+  const messages = ticketIds.length
+    ? await db
+      .select()
+      .from(ticketMessagesTable)
+      .where(inArray(ticketMessagesTable.ticketId, ticketIds))
+      .orderBy(ticketMessagesTable.createdAt)
+    : [];
+  const messagesByTicketId = new Map<string, typeof messages>();
+  for (const message of messages) {
+    const thread = messagesByTicketId.get(message.ticketId) ?? [];
+    thread.push(message);
+    messagesByTicketId.set(message.ticketId, thread);
+  }
+  return tickets.map((ticket) => ({
+    ...ticket,
+    messages: [
+      {
+        id: `initial-${ticket.id}`,
+        ticketId: ticket.id,
+        authorId: ticket.userId,
+        authorRole: "user",
+        message: ticket.message,
+        createdAt: ticket.createdAt,
+      },
+      ...(messagesByTicketId.get(ticket.id) ?? []),
+    ],
+  }));
+}
 
 /**
  * GET /tickets — list tickets for current user
@@ -15,8 +46,9 @@ router.get("/tickets", requireAuth, async (req: Request, res: Response) => {
     const tickets = await db
       .select()
       .from(ticketsTable)
-      .where(eq(ticketsTable.userId, userId));
-    res.json(tickets);
+      .where(eq(ticketsTable.userId, userId))
+      .orderBy(desc(ticketsTable.updatedAt));
+    res.json(await ticketDetails(tickets));
   } catch (err) {
     req.log.error({ err }, "Errore lista ticket");
     res.status(500).json({ error: "Errore interno del server" });
@@ -58,20 +90,111 @@ router.post("/tickets", requireAuth, async (req: Request, res: Response) => {
   }
 
   try {
-    const [ticket] = await db
-      .insert(ticketsTable)
-      .values({
-        id: randomUUID(),
-        userId,
-        subject: subject.trim(),
-        category: category.trim(),
-        message: message.trim(),
-        status: "open",
-      })
-      .returning();
-    res.status(201).json(ticket);
+    const ticket = await db.transaction(async (tx) => {
+      const id = randomUUID();
+      const [created] = await tx
+        .insert(ticketsTable)
+        .values({
+          id,
+          userId,
+          subject: subject.trim(),
+          category: category.trim(),
+          message: message.trim(),
+          status: "open",
+        })
+        .returning();
+      return created!;
+    });
+    res.status(201).json((await ticketDetails([ticket]))[0]);
   } catch (err) {
     req.log.error({ err }, "Errore creazione ticket");
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
+router.get("/admin/users", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const users = await db
+      .select({
+        userId: profilesTable.userId,
+        username: profilesTable.username,
+        email: profilesTable.email,
+        level: profilesTable.level,
+        createdAt: profilesTable.createdAt,
+      })
+      .from(profilesTable)
+      .orderBy(desc(profilesTable.createdAt))
+      .limit(200);
+    res.json(users);
+  } catch (err) {
+    req.log.error({ err }, "Errore elenco utenti amministratore");
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
+router.get("/admin/tickets", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const tickets = await db.select().from(ticketsTable).orderBy(desc(ticketsTable.updatedAt)).limit(300);
+    const profiles = await db
+      .select({ userId: profilesTable.userId, username: profilesTable.username, email: profilesTable.email })
+      .from(profilesTable);
+    const profileById = new Map(profiles.map((profile) => [profile.userId, profile]));
+    const detailed = await ticketDetails(tickets);
+    res.json(detailed.map((ticket) => ({ ...ticket, user: profileById.get(ticket.userId) ?? null })));
+  } catch (err) {
+    req.log.error({ err }, "Errore elenco ticket amministratore");
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
+router.post("/admin/tickets/:ticketId/reply", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+  const adminId = (req as AuthedRequest).clerkUserId;
+  const ticketId = req.params.ticketId as string;
+  const { message, close } = req.body as { message?: unknown; close?: unknown };
+  if (typeof message !== "string" || message.trim().length < 2 || message.trim().length > 4_000) {
+    res.status(400).json({ error: "La risposta deve contenere da 2 a 4000 caratteri" });
+    return;
+  }
+  try {
+    const ticket = await db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(ticketsTable)
+        .where(eq(ticketsTable.id, ticketId))
+        .limit(1);
+      if (!current) return null;
+      const closing = close === true;
+      const [updated] = await tx
+        .update(ticketsTable)
+        .set({
+          // A normal reply preserves a resolved state; reopening requires a
+          // deliberate user follow-up rather than an accidental admin click.
+          status: closing ? "closed" : current.status === "closed" ? "closed" : "in_progress",
+          updatedAt: new Date(),
+          ...(closing
+            ? { closedAt: new Date(), closedBy: adminId }
+            : current.status === "closed"
+              ? { closedAt: current.closedAt, closedBy: current.closedBy }
+              : { closedAt: null, closedBy: null }),
+        })
+        .where(eq(ticketsTable.id, ticketId))
+        .returning();
+      await tx.insert(ticketMessagesTable).values({
+        id: randomUUID(),
+        ticketId,
+        authorId: adminId,
+        authorRole: "admin",
+        message: message.trim(),
+      });
+      return updated;
+    });
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket non trovato" });
+      return;
+    }
+    res.json((await ticketDetails([ticket]))[0]);
+  } catch (err) {
+    req.log.error({ err }, "Errore risposta ticket amministratore");
     res.status(500).json({ error: "Errore interno del server" });
   }
 });

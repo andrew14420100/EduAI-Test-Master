@@ -295,7 +295,7 @@ export const StartQuizSessionBody = zod.object({
   "totalQuestions": zod.union([zod.literal(10),zod.literal(20),zod.literal(30)])
 })
 
-export const startQuizSessionResponseQuestionsItemOptionsMin = 4;
+export const startQuizSessionResponseQuestionsItemOptionsMin = 2;
 export const startQuizSessionResponseQuestionsItemOptionsMax = 4;
 
 
@@ -351,7 +351,7 @@ export const GetRecoverySummaryResponse = zod.object({
 /**
  * @summary Start a targeted quiz with unresolved incorrect answers only
  */
-export const startRecoverySessionResponseQuestionsItemOptionsMin = 4;
+export const startRecoverySessionResponseQuestionsItemOptionsMin = 2;
 export const startRecoverySessionResponseQuestionsItemOptionsMax = 4;
 
 
@@ -497,7 +497,17 @@ export const ListTicketsResponseItem = zod.object({
   "category": zod.string().describe('Ticket category (e.g. \"bug\", \"domanda\", \"altro\").'),
   "message": zod.string(),
   "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "closedAt": zod.coerce.date().nullish(),
+  "messages": zod.array(zod.object({
+  "id": zod.string(),
+  "ticketId": zod.string(),
+  "authorId": zod.string(),
+  "authorRole": zod.enum(['user', 'admin']),
+  "message": zod.string(),
   "createdAt": zod.coerce.date()
+}))
 })
 export const ListTicketsResponse = zod.array(ListTicketsResponseItem)
 
@@ -524,7 +534,101 @@ export const CreateTicketResponse = zod.object({
   "category": zod.string().describe('Ticket category (e.g. \"bug\", \"domanda\", \"altro\").'),
   "message": zod.string(),
   "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "closedAt": zod.coerce.date().nullish(),
+  "messages": zod.array(zod.object({
+  "id": zod.string(),
+  "ticketId": zod.string(),
+  "authorId": zod.string(),
+  "authorRole": zod.enum(['user', 'admin']),
+  "message": zod.string(),
   "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary List users for the private support console
+ */
+export const ListAdminUsersResponseItem = zod.object({
+  "userId": zod.string(),
+  "username": zod.string(),
+  "email": zod.string(),
+  "level": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminUsersResponse = zod.array(ListAdminUsersResponseItem)
+
+
+/**
+ * @summary List support tickets for the private console
+ */
+export const ListAdminTicketsResponseItem = zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "subject": zod.string(),
+  "category": zod.string().describe('Ticket category (e.g. \"bug\", \"domanda\", \"altro\").'),
+  "message": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "closedAt": zod.coerce.date().nullish(),
+  "messages": zod.array(zod.object({
+  "id": zod.string(),
+  "ticketId": zod.string(),
+  "authorId": zod.string(),
+  "authorRole": zod.enum(['user', 'admin']),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+}).and(zod.object({
+  "user": zod.object({
+  "userId": zod.string(),
+  "username": zod.string(),
+  "email": zod.string(),
+  "level": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).nullable()
+}))
+export const ListAdminTicketsResponse = zod.array(ListAdminTicketsResponseItem)
+
+
+/**
+ * @summary Reply to or close a support ticket
+ */
+export const ReplyToAdminTicketParams = zod.object({
+  "ticketId": zod.coerce.string()
+})
+
+export const replyToAdminTicketBodyMessageMin = 2;
+export const replyToAdminTicketBodyMessageMax = 4000;
+
+export const replyToAdminTicketBodyCloseDefault = false;
+
+export const ReplyToAdminTicketBody = zod.object({
+  "message": zod.string().min(replyToAdminTicketBodyMessageMin).max(replyToAdminTicketBodyMessageMax),
+  "close": zod.boolean().default(replyToAdminTicketBodyCloseDefault)
+})
+
+export const ReplyToAdminTicketResponse = zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "subject": zod.string(),
+  "category": zod.string().describe('Ticket category (e.g. \"bug\", \"domanda\", \"altro\").'),
+  "message": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "closedAt": zod.coerce.date().nullish(),
+  "messages": zod.array(zod.object({
+  "id": zod.string(),
+  "ticketId": zod.string(),
+  "authorId": zod.string(),
+  "authorRole": zod.enum(['user', 'admin']),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 

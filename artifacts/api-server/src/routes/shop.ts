@@ -8,14 +8,54 @@ const router: IRouter = Router();
 
 // ─── Server-side catalog (single source of truth) ──────────────────────────
 // Format: itemId → { itemType, price }
-// dark/tema/15, neon/tema/30, brilliant/distintivo/10, professor/distintivo/25
 type CatalogEntry = { itemType: string; price: number };
 
 const SHOP_CATALOG: Record<string, CatalogEntry> = {
-  dark: { itemType: "tema", price: 15 },
-  neon: { itemType: "tema", price: 30 },
-  brilliant: { itemType: "distintivo", price: 10 },
-  professor: { itemType: "distintivo", price: 25 },
+  // Temi
+  dark:           { itemType: "tema",        price: 15  },
+  neon:           { itemType: "tema",        price: 40  },
+  ocean:          { itemType: "tema",        price: 55  },
+  forest:         { itemType: "tema",        price: 65  },
+  sunset:         { itemType: "tema",        price: 75  },
+  midnight:       { itemType: "tema",        price: 90  },
+  ember:          { itemType: "tema",        price: 110 },
+  arctic:         { itemType: "tema",        price: 130 },
+  // Animazioni di completamento
+  anim_confetti:  { itemType: "animazione",  price: 25  },
+  anim_stars:     { itemType: "animazione",  price: 35  },
+  anim_fire:      { itemType: "animazione",  price: 50  },
+  anim_aurora:    { itemType: "animazione",  price: 70  },
+  anim_lightning: { itemType: "animazione",  price: 90  },
+  anim_crown:     { itemType: "animazione",  price: 120 },
+  // Stili carta
+  card_glass:     { itemType: "stile_carta", price: 30  },
+  card_gradient:  { itemType: "stile_carta", price: 45  },
+  card_minimal:   { itemType: "stile_carta", price: 55  },
+  card_neon:      { itemType: "stile_carta", price: 80  },
+  card_paper:     { itemType: "stile_carta", price: 60  },
+  // Titoli profilo
+  title_studioso:   { itemType: "titolo",    price: 20  },
+  title_stratega:   { itemType: "titolo",    price: 35  },
+  title_pioniere:   { itemType: "titolo",    price: 50  },
+  title_genio:      { itemType: "titolo",    price: 75  },
+  title_maratoneta: { itemType: "titolo",    price: 95  },
+  title_maestro:    { itemType: "titolo",    price: 130 },
+  title_leggenda:   { itemType: "titolo",    price: 200 },
+  title_professore: { itemType: "titolo",    price: 160 },
+  // Distintivi
+  badge_first_pass:   { itemType: "distintivo", price: 10  },
+  badge_streak7:      { itemType: "distintivo", price: 40  },
+  badge_100:          { itemType: "distintivo", price: 60  },
+  badge_error_hunter: { itemType: "distintivo", price: 80  },
+  badge_speed:        { itemType: "distintivo", price: 100 },
+  badge_library:      { itemType: "distintivo", price: 120 },
+  badge_grandmaster:  { itemType: "distintivo", price: 250 },
+  // Icone future (launcher)
+  app_icon_midnight: { itemType: "icona_futura", price: 110 },
+  app_icon_neon:     { itemType: "icona_futura", price: 140 },
+  app_icon_scholar:  { itemType: "icona_futura", price: 170 },
+  app_icon_aurora:   { itemType: "icona_futura", price: 210 },
+  app_icon_legend:   { itemType: "icona_futura", price: 260 },
 };
 
 /**

@@ -131,7 +131,7 @@ const MSG = {
  * Normalize decoded text: unify newlines, strip control chars, collapse
  * excessive whitespace, and cap to MAX_TEXT_CHARS.
  */
-export function normalizeText(raw: string): string {
+export function normalizeText(raw: string, maxCharacters = MAX_TEXT_CHARS): string {
   let text = raw
     .replace(/\r\n?/g, "\n")
     // strip most control characters except newline/tab
@@ -142,8 +142,8 @@ export function normalizeText(raw: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  if (text.length > MAX_TEXT_CHARS) {
-    text = text.slice(0, MAX_TEXT_CHARS).trim();
+  if (text.length > maxCharacters) {
+    text = text.slice(0, maxCharacters).trim();
   }
   return text;
 }

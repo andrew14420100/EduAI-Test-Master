@@ -13,13 +13,12 @@ import {
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 import type { QuizQuestionWithKey, QuizQuestion } from "@workspace/db";
 import {
-  generateQuestionsWithKey,
   generateFlashcards,
   toPublicQuestions,
   isMeaningfulText,
   type SourceMaterial,
 } from "../lib/contentStudy";
-import { generateQuickExplanation } from "../lib/studyAi";
+import { generateExamQuestions, generateQuickExplanation } from "../lib/studyAi";
 
 const router: IRouter = Router();
 
@@ -153,17 +152,25 @@ router.post(
         return;
       }
 
-      // Generate content-grounded questions with answer key, rotating across
-      // every selected material. Distinct contents yield distinct questions.
-      const seed =
-        uniqueIds.join(",") + "|" + userId + "|" + String(totalQuestions);
-      const generated = generateQuestionsWithKey(
-        ready.sources,
-        totalQuestions,
-        seed,
-      );
+       // The generated key remains server-only. Questions are written from
+       // scratch by the model after reading the extracted material, rather than
+       // turning source sentences into fill-in-the-blank prompts.
+       let generated: QuizQuestionWithKey[];
+       try {
+         generated = await generateExamQuestions(
+           ready.sources,
+           totalQuestions,
+         );
+       } catch (error) {
+         req.log.error({ err: error }, "Generazione IA delle domande non riuscita");
+         res.status(503).json({
+           error:
+             "Non è stato possibile preparare un fac-simile affidabile dal contenuto selezionato. Riprova tra poco.",
+         });
+         return;
+       }
 
-      if (generated.length < totalQuestions) {
+       if (generated.length !== totalQuestions) {
         res.status(422).json({
           error:
             `Il testo estratto dai materiali selezionati non basta a generare ${totalQuestions} domande diverse ` +

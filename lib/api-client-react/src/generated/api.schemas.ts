@@ -131,7 +131,7 @@ export interface CreateGroupRequest {
 export interface QuizQuestion {
   question: string;
   /**
-     * @minItems 4
+     * @minItems 2
      * @maxItems 4
      */
   options: string[];
@@ -240,6 +240,23 @@ export interface EquipShopItemRequest {
   ownedItemId: string;
 }
 
+export type TicketMessageAuthorRole = typeof TicketMessageAuthorRole[keyof typeof TicketMessageAuthorRole];
+
+
+export const TicketMessageAuthorRole = {
+  user: 'user',
+  admin: 'admin',
+} as const;
+
+export interface TicketMessage {
+  id: string;
+  ticketId: string;
+  authorId: string;
+  authorRole: TicketMessageAuthorRole;
+  message: string;
+  createdAt: string;
+}
+
 export interface Ticket {
   id: string;
   userId: string;
@@ -249,6 +266,30 @@ export interface Ticket {
   message: string;
   status: string;
   createdAt: string;
+  updatedAt: string;
+  closedAt?: string | null;
+  messages: TicketMessage[];
+}
+
+export interface AdminUser {
+  userId: string;
+  username: string;
+  email: string;
+  level?: string | null;
+  createdAt: string;
+}
+
+export type AdminTicket = Ticket & ({
+  user: AdminUser | null;
+});
+
+export interface AdminTicketReplyRequest {
+  /**
+     * @minLength 2
+     * @maxLength 4000
+     */
+  message: string;
+  close?: boolean;
 }
 
 export interface CreateTicketRequest {

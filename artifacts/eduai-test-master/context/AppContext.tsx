@@ -57,8 +57,8 @@ export type ShopItem = {
   title: string;
   subtitle: string;
   cost: number;
-  icon: 'moon' | 'zap' | 'award' | 'star';
-  itemType: 'tema' | 'distintivo';
+  icon: 'moon' | 'zap' | 'award' | 'star' | 'sparkles' | 'layers' | 'flame' | 'shield' | 'paintbrush' | 'tag';
+  itemType: 'tema' | 'distintivo' | 'collezionabile' | 'icona_futura' | 'animazione' | 'stile_carta' | 'titolo';
   owned: boolean;
   equipped: boolean;
   ownedItemId?: string;
@@ -162,10 +162,56 @@ type AppState = {
 // Server catalog mirrors SHOP_CATALOG in the backend (single source of truth on the server;
 // this client copy is display-only — price/type are never trusted by the server).
 const shopCatalog: Omit<ShopItem, 'owned' | 'equipped' | 'ownedItemId'>[] = [
-  { id: 'dark', title: 'Tema modalità scura', subtitle: 'Un ambiente concentrato e profondo', cost: 15, icon: 'moon', itemType: 'tema' },
-  { id: 'neon', title: 'Palette Neon Cyberpunk', subtitle: 'Energia elettrica per studiare', cost: 30, icon: 'zap', itemType: 'tema' },
-  { id: 'brilliant', title: 'Studente brillante', subtitle: 'Distintivo del profilo', cost: 10, icon: 'award', itemType: 'distintivo' },
-  { id: 'professor', title: 'Professore supremo', subtitle: 'Distintivo del profilo', cost: 25, icon: 'star', itemType: 'distintivo' },
+  // ── TEMI (palette colori, equipaggiabili — uno attivo alla volta) ──────────
+  { id: 'dark',     title: 'Modalità scura',       subtitle: 'Sfondo scuro, riposo visivo garantito',   cost: 15,  icon: 'moon',       itemType: 'tema' },
+  { id: 'neon',     title: 'Neon Cyberpunk',        subtitle: 'Viola e verde elettrico ad alta energia',  cost: 40,  icon: 'zap',        itemType: 'tema' },
+  { id: 'ocean',    title: 'Oceano',                subtitle: 'Blu profondi e accenti acqua',             cost: 55,  icon: 'moon',       itemType: 'tema' },
+  { id: 'forest',   title: 'Foresta',               subtitle: 'Verde morbido, studio nella natura',       cost: 65,  icon: 'moon',       itemType: 'tema' },
+  { id: 'sunset',   title: 'Tramonto',              subtitle: 'Arancio caldo e rosa al crepuscolo',       cost: 75,  icon: 'moon',       itemType: 'tema' },
+  { id: 'midnight', title: 'Mezzanotte',            subtitle: 'Blu cobalto per sessioni notturne',        cost: 90,  icon: 'moon',       itemType: 'tema' },
+  { id: 'ember',    title: 'Brace',                 subtitle: 'Rosso e ambra per studiare con fuoco',     cost: 110, icon: 'flame',      itemType: 'tema' },
+  { id: 'arctic',   title: 'Artico',                subtitle: 'Bianco ghiaccio e accenti ciano',          cost: 130, icon: 'moon',       itemType: 'tema' },
+
+  // ── ANIMAZIONI DI COMPLETAMENTO (effetto visivo fine verifica, equipaggiabili) ──
+  { id: 'anim_confetti',  title: 'Coriandoli',       subtitle: 'Animazione completamento · equipaggiabile', cost: 25,  icon: 'sparkles',   itemType: 'animazione' },
+  { id: 'anim_stars',     title: 'Pioggia di stelle', subtitle: 'Animazione completamento · equipaggiabile', cost: 35,  icon: 'star',       itemType: 'animazione' },
+  { id: 'anim_fire',      title: 'Fiamme del successo', subtitle: 'Animazione completamento · equipaggiabile', cost: 50,  icon: 'flame',      itemType: 'animazione' },
+  { id: 'anim_aurora',    title: 'Aurora boreale',   subtitle: 'Animazione completamento · equipaggiabile', cost: 70,  icon: 'sparkles',   itemType: 'animazione' },
+  { id: 'anim_lightning', title: 'Lampi di genio',   subtitle: 'Animazione completamento · equipaggiabile', cost: 90,  icon: 'zap',        itemType: 'animazione' },
+  { id: 'anim_crown',     title: 'Incoronazione',    subtitle: 'Animazione completamento · equipaggiabile', cost: 120, icon: 'award',      itemType: 'animazione' },
+
+  // ── STILI CARTA (aspetto delle card materiali e quiz, equipaggiabili) ────────
+  { id: 'card_glass',     title: 'Vetro smerigliato', subtitle: 'Stile carta · equipaggiabile',          cost: 30,  icon: 'layers',     itemType: 'stile_carta' },
+  { id: 'card_gradient',  title: 'Sfumatura viva',    subtitle: 'Stile carta · equipaggiabile',          cost: 45,  icon: 'paintbrush', itemType: 'stile_carta' },
+  { id: 'card_minimal',   title: 'Minimalismo puro',  subtitle: 'Stile carta · equipaggiabile',          cost: 55,  icon: 'layers',     itemType: 'stile_carta' },
+  { id: 'card_neon',      title: 'Bordo neon',        subtitle: 'Stile carta · equipaggiabile',          cost: 80,  icon: 'zap',        itemType: 'stile_carta' },
+  { id: 'card_paper',     title: 'Carta da quaderno',  subtitle: 'Stile carta · equipaggiabile',         cost: 60,  icon: 'paintbrush', itemType: 'stile_carta' },
+
+  // ── TITOLI / RANGHI PROFILO (testo sotto al nome, equipaggiabili) ────────────
+  { id: 'title_studioso',   title: '"Lo Studioso"',        subtitle: 'Titolo profilo · equipaggiabile',  cost: 20,  icon: 'tag',        itemType: 'titolo' },
+  { id: 'title_stratega',   title: '"Il Stratega"',        subtitle: 'Titolo profilo · equipaggiabile',  cost: 35,  icon: 'tag',        itemType: 'titolo' },
+  { id: 'title_pioniere',   title: '"Il Pioniere"',        subtitle: 'Titolo profilo · equipaggiabile',  cost: 50,  icon: 'tag',        itemType: 'titolo' },
+  { id: 'title_genio',      title: '"Il Genio"',           subtitle: 'Titolo profilo · equipaggiabile',  cost: 75,  icon: 'tag',        itemType: 'titolo' },
+  { id: 'title_maratoneta', title: '"Il Maratoneta"',      subtitle: 'Titolo profilo · equipaggiabile',  cost: 95,  icon: 'tag',        itemType: 'titolo' },
+  { id: 'title_maestro',    title: '"Maestro del Sapere"', subtitle: 'Titolo profilo · equipaggiabile',  cost: 130, icon: 'tag',        itemType: 'titolo' },
+  { id: 'title_leggenda',   title: '"La Leggenda"',        subtitle: 'Titolo profilo · equipaggiabile',  cost: 200, icon: 'tag',        itemType: 'titolo' },
+  { id: 'title_professore', title: '"Il Professore"',      subtitle: 'Titolo profilo · equipaggiabile',  cost: 160, icon: 'tag',        itemType: 'titolo' },
+
+  // ── DISTINTIVI SIGNIFICATIVI (pochi, guadagnati con impegno) ────────────────
+  { id: 'badge_first_pass',  title: 'Prima verifica superata', subtitle: 'Distintivo · guadagnato una volta', cost: 10,  icon: 'award',  itemType: 'distintivo' },
+  { id: 'badge_streak7',     title: 'Settimana perfetta',      subtitle: 'Distintivo · 7 giorni di studio',   cost: 40,  icon: 'flame',  itemType: 'distintivo' },
+  { id: 'badge_100',         title: 'Cento percento',          subtitle: 'Distintivo · verifica al 100%',     cost: 60,  icon: 'star',   itemType: 'distintivo' },
+  { id: 'badge_error_hunter',title: 'Cacciatore di errori',    subtitle: 'Distintivo · 50 recuperi completati', cost: 80, icon: 'shield', itemType: 'distintivo' },
+  { id: 'badge_speed',       title: 'Lampo del sapere',        subtitle: 'Distintivo · verifica in meno di 3 min', cost: 100, icon: 'zap', itemType: 'distintivo' },
+  { id: 'badge_library',     title: 'Biblioteca viva',         subtitle: 'Distintivo · 20 materiali caricati', cost: 120, icon: 'layers', itemType: 'distintivo' },
+  { id: 'badge_grandmaster', title: 'Gran Maestro',            subtitle: 'Distintivo · 500 domande corrette', cost: 250, icon: 'star',   itemType: 'distintivo' },
+
+  // ── ICONE FUTURA (launcher, prossimo aggiornamento) ──────────────────────────
+  { id: 'app_icon_midnight', title: 'Icona Mezzanotte', subtitle: 'Icona telefono: disponibile con il prossimo aggiornamento', cost: 110, icon: 'moon',       itemType: 'icona_futura' },
+  { id: 'app_icon_neon',     title: 'Icona Neon',       subtitle: 'Icona telefono: disponibile con il prossimo aggiornamento', cost: 140, icon: 'zap',        itemType: 'icona_futura' },
+  { id: 'app_icon_scholar',  title: 'Icona Studioso',   subtitle: 'Icona telefono: disponibile con il prossimo aggiornamento', cost: 170, icon: 'award',      itemType: 'icona_futura' },
+  { id: 'app_icon_aurora',   title: 'Icona Aurora',     subtitle: 'Icona telefono: disponibile con il prossimo aggiornamento', cost: 210, icon: 'sparkles',   itemType: 'icona_futura' },
+  { id: 'app_icon_legend',   title: 'Icona Leggenda',   subtitle: 'Icona telefono: disponibile con il prossimo aggiornamento', cost: 260, icon: 'star',       itemType: 'icona_futura' },
 ];
 
 function messageFromError(error: unknown) {
