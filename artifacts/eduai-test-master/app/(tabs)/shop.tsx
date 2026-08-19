@@ -61,12 +61,23 @@ const CATEGORIES: {
 
 const EQUIPPABLE_TYPES: ShopItem['itemType'][] = ['tema', 'animazione', 'stile_carta', 'titolo'];
 
+function rewardDescription(item: ShopItem): string {
+  if (item.itemType === 'tema') return 'Cambia immediatamente i colori e l’atmosfera dell’intera app.';
+  if (item.itemType === 'animazione') return 'Viene mostrata al completamento di una verifica superata.';
+  if (item.itemType === 'stile_carta') return 'Modifica il modo in cui vengono visualizzate le card di materiali, quiz e laboratori.';
+  if (item.itemType === 'titolo') return 'Compare sotto il tuo nome nel profilo quando lo equipaggi.';
+  if (item.itemType === 'icona_futura') return 'È una ricompensa preparata per cambiare l’icona di avvio in un futuro aggiornamento.';
+  return 'Resta nella tua collezione come ricordo del traguardo raggiunto.';
+}
+
 export default function ShopScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { wallet, theme, shop, buyItem, equipItem, useLightTheme } = useApp();
   const [message, setMessage] = useState<{ title: string; message: string; success: boolean } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<ShopItem['itemType']>('tema');
+  const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
 
   const nextReward = shop.find((item) => !item.owned);
   const rewardProgress = nextReward ? Math.min(100, Math.round((wallet / nextReward.cost) * 100)) : 100;
@@ -210,10 +221,25 @@ export default function ShopScreen() {
           ) : null}
         </View>
 
-        {/* Category sections */}
-        {CATEGORIES.map((cat) => {
+        {/* Category picker: one horizontal row, one category visible at a time */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryPicker}>
+          {CATEGORIES.map((cat) => {
+            const active = selectedCategory === cat.itemType;
+            return (
+              <Pressable
+                key={cat.itemType}
+                onPress={() => setSelectedCategory(cat.itemType)}
+                style={[styles.categoryChip, { backgroundColor: active ? c.primary : c.card, borderColor: active ? c.primary : c.border }]}
+              >
+                <AppIcon name={cat.icon} size={14} color={active ? c.primaryForeground : c.mutedForeground} />
+                <Text style={[styles.categoryChipText, { color: active ? c.primaryForeground : c.foreground }]}>{cat.title}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {CATEGORIES.filter((cat) => cat.itemType === selectedCategory).map((cat) => {
           const items = shop.filter((i) => i.itemType === cat.itemType);
-          if (items.length === 0) return null;
           return (
             <View key={cat.itemType}>
               <SectionTitle eyebrow={cat.eyebrow} title={cat.title} />
@@ -224,7 +250,7 @@ export default function ShopScreen() {
                   item={item}
                   busyId={busyId}
                   equippable={EQUIPPABLE_TYPES.includes(item.itemType)}
-                  onPress={() => { void purchase(item.id, item.title, item.cost, item.owned); }}
+                  onPress={() => setSelectedItem(item)}
                   c={c}
                 />
               ))}
@@ -233,6 +259,29 @@ export default function ShopScreen() {
         })}
       </ScrollView>
 
+      <AppModal
+        visible={Boolean(selectedItem)}
+        title={selectedItem?.title ?? ''}
+        message={selectedItem ? `${selectedItem.subtitle}\n\n${rewardDescription(selectedItem)}` : undefined}
+        icon={(selectedItem?.icon as AppIconName | undefined) ?? 'award'}
+        onDismiss={() => setSelectedItem(null)}
+        actions={selectedItem ? [
+          { label: 'Chiudi', onPress: () => setSelectedItem(null) },
+          {
+            label: selectedItem.owned
+              ? (EQUIPPABLE_TYPES.includes(selectedItem.itemType) ? 'Equipaggia' : 'Già sbloccato')
+              : `Sblocca · ${selectedItem.cost} pt`,
+            variant: 'primaria' as const,
+            onPress: () => {
+              if (!selectedItem.owned || EQUIPPABLE_TYPES.includes(selectedItem.itemType)) {
+                const item = selectedItem;
+                setSelectedItem(null);
+                void purchase(item.id, item.title, item.cost, item.owned);
+              }
+            },
+          },
+        ] : []}
+      />
       <AppModal
         visible={Boolean(message)}
         title={message?.title ?? ''}
@@ -297,6 +346,9 @@ function ShopItemRow({
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, gap: 18 },
+  categoryPicker: { gap: 8, paddingVertical: 2 },
+  categoryChip: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  categoryChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   eyebrow: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1.6, marginBottom: 5 },
   heading: { fontFamily: 'Inter_700Bold', fontSize: 27, letterSpacing: -0.8 },

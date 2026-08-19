@@ -267,33 +267,22 @@ router.post("/labs/attempts", requireAuth, async (req: Request, res: Response) =
     let score: number;
     let feedback: string;
 
-    if (exercise.exerciseType === "multiple_choice") {
-      const answerIndex = parseInt(userAnswer.trim(), 10);
-      if (isNaN(answerIndex) || exercise.correctIndex === null) {
-        res.status(400).json({ error: "Risposta non valida per un esercizio a scelta multipla" });
-        return;
-      }
-      const correct = answerIndex === exercise.correctIndex;
-      score = correct ? 1.0 : 0.0;
-      const options = (exercise.options ?? []) as string[];
-      const correctText = options[exercise.correctIndex] ?? "";
-      feedback = correct
-        ? `Corretto! "${correctText}" è effettivamente la risposta giusta.`
-        : `Non corretto. La risposta esatta era: "${correctText}". Rileggi il concetto e riprova.`;
-    } else {
-      // free_text — grade with AI
-      if (!exercise.correctAnswer) {
-        res.status(500).json({ error: "Chiave di risposta non disponibile per questo esercizio" });
-        return;
-      }
-      const result = await gradeFreeText(
-        exercise.prompt,
-        exercise.correctAnswer,
-        userAnswer.trim(),
-      );
-      score = result.score;
-      feedback = result.feedback;
+    // Labs are practical: every answer is written by the student and evaluated
+    // against the private solution. Legacy multiple-choice rows are converted
+    // to a solution string here so old seeded exercises keep working.
+    const expectedSolution = exercise.correctAnswer
+      ?? ((exercise.options ?? []) as string[])[exercise.correctIndex ?? -1];
+    if (!expectedSolution) {
+      res.status(500).json({ error: "Soluzione non disponibile per questo esercizio" });
+      return;
     }
+    const result = await gradeFreeText(
+      exercise.prompt,
+      expectedSolution,
+      userAnswer.trim(),
+    );
+    score = result.score;
+    feedback = result.feedback;
 
     const earnedPoints = Math.round(exercise.points * score);
     const attemptId = randomUUID();

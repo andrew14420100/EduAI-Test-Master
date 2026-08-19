@@ -101,15 +101,12 @@ export default function LabsScreen() {
 
   // ── exercise view ─────────────────────────────────────────────────────────
   if (view === 'exercise' && selected) {
-    const isMC = selected.exerciseType === 'multiple_choice';
-    const options = (selected.options ?? []) as string[];
-    const canSubmit = isMC ? mcAnswer !== null : ftAnswer.trim().length >= 3;
+    const canSubmit = ftAnswer.trim().length >= 1;
 
     const handleSubmit = async () => {
       if (!canSubmit || submitting) return;
       setSubmitting(true);
-      const answer = isMC ? String(mcAnswer!) : ftAnswer.trim();
-      const res = await submitLabAttempt(selected.id, answer);
+      const res = await submitLabAttempt(selected.id, ftAnswer.trim());
       setSubmitting(false);
       if (res.ok) {
         setResult(res.result);
@@ -146,44 +143,22 @@ export default function LabsScreen() {
             <Text style={[styles.prompt, { color: c.foreground }]}>{selected.prompt}</Text>
           </View>
 
-          {isMC ? (
-            <View style={{ gap: 10 }}>
-              {options.map((opt, idx) => {
-                const isSelected = mcAnswer === idx;
-                return (
-                  <Pressable
-                    key={idx}
-                    testID={`lab-option-${idx}`}
-                    onPress={() => setMcAnswer(idx)}
-                    style={({ pressed }) => [
-                      styles.mcOption,
-                      {
-                        backgroundColor: isSelected ? c.accent : c.card,
-                        borderColor: isSelected ? c.primary : c.border,
-                        opacity: pressed ? 0.78 : 1,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.mcBullet, { backgroundColor: isSelected ? c.primary : c.muted }]}>
-                      <Text style={[styles.mcBulletText, { color: c.primaryForeground }]}>{String.fromCharCode(65 + idx)}</Text>
-                    </View>
-                    <Text style={[styles.mcText, { color: c.foreground }]}>{opt}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <TextInput
-              testID="lab-free-text"
-              value={ftAnswer}
-              onChangeText={setFtAnswer}
-              placeholder="Scrivi la tua risposta qui…"
-              placeholderTextColor={c.mutedForeground}
-              multiline
-              textAlignVertical="top"
-              style={[styles.ftInput, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]}
-            />
-          )}
+          <View style={[styles.workCard, { backgroundColor: c.accent, borderColor: c.border }]}>
+            <Text style={[styles.workLabel, { color: c.accentForeground }]}>SVOLGIMENTO PRATICO</Text>
+            <Text style={[styles.workHint, { color: c.accentForeground }]}>
+              Scrivi formule, passaggi, calcoli, pseudocodice o il risultato finale. Non serve una risposta teorica.
+            </Text>
+          </View>
+          <TextInput
+            testID="lab-free-text"
+            value={ftAnswer}
+            onChangeText={setFtAnswer}
+            placeholder="Inserisci qui il procedimento e la soluzione…"
+            placeholderTextColor={c.mutedForeground}
+            multiline
+            textAlignVertical="top"
+            style={[styles.ftInput, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]}
+          />
 
           <PrimaryButton
             onPress={() => { void handleSubmit(); }}
@@ -325,7 +300,7 @@ export default function LabsScreen() {
                   <Text style={[styles.exerciseItemTitle, { color: c.foreground }]}>{ex.title}</Text>
                   <View style={styles.exerciseItemMeta}>
                     <Text style={[styles.small, { color: c.mutedForeground }]}>
-                      {ex.exerciseType === 'multiple_choice' ? 'Scelta multipla' : 'Risposta libera'} · {ex.difficultyLevel}
+                      Soluzione scritta · {ex.difficultyLevel}
                     </Text>
                     <View style={styles.exerciseItemPoints}>
                       <AppIcon name="zap" size={10} color={c.primary} />
@@ -367,10 +342,9 @@ const styles = StyleSheet.create({
   exercisePoints: { fontFamily: 'Inter_700Bold', fontSize: 13, opacity: 0.85 },
   promptCard: { borderWidth: 1, borderRadius: 18, padding: 16 },
   prompt: { fontFamily: 'Inter_500Medium', fontSize: 15, lineHeight: 22 },
-  mcOption: { borderWidth: 1, borderRadius: 16, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 11 },
-  mcBullet: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  mcBulletText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
-  mcText: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 20 },
+  workCard: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 5 },
+  workLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.2 },
+  workHint: { fontFamily: 'Inter_500Medium', fontSize: 13, lineHeight: 19 },
   ftInput: { borderWidth: 1, borderRadius: 16, minHeight: 130, padding: 14, fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 21 },
   // Result view
   resultCard: { borderRadius: 22, borderWidth: 2, padding: 22, alignItems: 'center', gap: 10 },

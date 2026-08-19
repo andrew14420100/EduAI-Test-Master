@@ -272,6 +272,16 @@ function accountName(user: ReturnType<typeof useUser>['user']) {
   return `Studente-${user?.id.slice(-4) ?? 'EduAI'}`;
 }
 
+function initialStoredTheme(): AppTheme | null {
+  if (Platform.OS !== 'web') return null;
+  try {
+    const value = globalThis.localStorage?.getItem('eduai:last-theme');
+    return value === 'dark' || value === 'light' ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 const AppContext = createContext<AppState | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -288,6 +298,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [profileSyncError, setProfileSyncError] = useState<string | null>(null);
   // Bumping this manually re-arms a single retry attempt for the current user.
   const [profileSyncNonce, setProfileSyncNonce] = useState(0);
+  const [storedTheme, setStoredTheme] = useState<AppTheme | null>(initialStoredTheme);
 
   const upsertProfile = useUpsertProfile();
   const profileQuery = useGetProfile({
@@ -442,9 +453,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ownedItemId: owned?.id,
     };
   }), [inventoryQuery.data]);
-  const theme: AppTheme = shop.some((item) => item.id === 'dark' && item.equipped)
+  const serverTheme: AppTheme = shop.some((item) => item.id === 'dark' && item.equipped)
     ? 'dark'
     : 'light';
+  const theme: AppTheme = storedTheme ?? serverTheme;
+
+  useEffect(() => {
+    if (!user?.id) {
+      setStoredTheme(null);
+      return;
+    }
+    let cancelled = false;
+    void AsyncStorage.getItem(`eduai:theme:${user.id}`).then((value) => {
+      if (cancelled) return;
+      if (value === 'dark' || value === 'light') setStoredTheme(value);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !inventoryQuery.data) return;
+    setStoredTheme(serverTheme);
+    void AsyncStorage.setItem(`eduai:theme:${user.id}`, serverTheme);
+  }, [inventoryQuery.data, serverTheme, user?.id]);
 
   useEffect(() => {
     const analysisInProgress = (materialsQuery.data ?? []).some(
@@ -691,6 +724,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!item?.ownedItemId) return { ok: false, message: 'Prima devi sbloccare questo oggetto.' };
       try {
         await equipItemMutation.mutateAsync({ data: { ownedItemId: item.ownedItemId } });
+        if (item.itemType === 'tema' && user?.id) {
+          const nextTheme: AppTheme = item.id === 'dark' ? 'dark' : 'light';
+          setStoredTheme(nextTheme);
+          await AsyncStorage.setItem(`eduai:theme:${user.id}`, nextTheme);
+          if (Platform.OS === 'web') globalThis.localStorage?.setItem('eduai:last-theme', nextTheme);
+        }
         await inventoryQuery.refetch();
         return { ok: true };
       } catch (error) {
@@ -700,6 +739,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     useLightTheme: async () => {
       try {
         await useLightThemeMutation.mutateAsync();
+        setStoredTheme('light');
+        if (user?.id) await AsyncStorage.setItem(`eduai:theme:${user.id}`, 'light');
+        if (Platform.OS === 'web') globalThis.localStorage?.setItem('eduai:last-theme', 'light');
         await inventoryQuery.refetch();
         return { ok: true };
       } catch (error) {
