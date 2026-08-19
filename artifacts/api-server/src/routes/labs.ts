@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
-import { eq, and, inArray, sql, exists } from "drizzle-orm";
+import { eq, and, inArray, sql, exists, or, isNull } from "drizzle-orm";
 import {
   db,
   labExercisesTable,
@@ -186,8 +186,10 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
         .from(labExercisesTable)
         .where(and(
           inArray(labExercisesTable.subject, subjects),
-          sql`${labExercisesTable.sourceMaterialId} IS NOT NULL`,
-          exists(db.select({ id: materialsTable.id }).from(materialsTable).where(eq(materialsTable.id, labExercisesTable.sourceMaterialId))),
+          or(
+            isNull(labExercisesTable.sourceMaterialId),
+            exists(db.select({ id: materialsTable.id }).from(materialsTable).where(eq(materialsTable.id, labExercisesTable.sourceMaterialId))),
+          ),
         ))
         .orderBy(labExercisesTable.subject, labExercisesTable.topic);
     } else {
@@ -206,8 +208,10 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
         })
         .from(labExercisesTable)
         .where(and(
-          sql`${labExercisesTable.sourceMaterialId} IS NOT NULL`,
-          exists(db.select({ id: materialsTable.id }).from(materialsTable).where(eq(materialsTable.id, labExercisesTable.sourceMaterialId))),
+          or(
+            isNull(labExercisesTable.sourceMaterialId),
+            exists(db.select({ id: materialsTable.id }).from(materialsTable).where(eq(materialsTable.id, labExercisesTable.sourceMaterialId))),
+          ),
         ))
         .orderBy(labExercisesTable.subject, labExercisesTable.topic)
         .limit(30);

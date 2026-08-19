@@ -56,8 +56,6 @@ export default function LabsScreen() {
 
   const [view, setView] = useState<ViewMode>('list');
   const [selected, setSelected] = useState<LabExercise | null>(null);
-  // For multiple_choice: index; for free_text: string
-  const [mcAnswer, setMcAnswer] = useState<number | null>(null);
   const [ftAnswer, setFtAnswer] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ score: number; feedback: string; earnedPoints: number; totalPoints: number } | null>(null);
@@ -123,7 +121,7 @@ export default function LabsScreen() {
           contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Pressable onPress={() => { setView('list'); setMcAnswer(null); setFtAnswer(''); }} style={styles.backRow}>
+            <Pressable onPress={() => { setView('list'); setFtAnswer(''); }} style={styles.backRow}>
             <AppIcon name="chevron-right" size={13} color={c.mutedForeground} />
             <Text style={[styles.backText, { color: c.mutedForeground }]}>
               {selected.topic}
@@ -202,7 +200,7 @@ export default function LabsScreen() {
           <Text style={[styles.feedbackText, { color: c.foreground }]}>{result.feedback}</Text>
         </View>
 
-        <PrimaryButton onPress={() => { setView('list'); setSelected(null); setResult(null); setMcAnswer(null); setFtAnswer(''); }} icon="flask">
+         <PrimaryButton onPress={() => { setView('list'); setSelected(null); setResult(null); setFtAnswer(''); }} icon="flask">
           Torna agli esercizi
         </PrimaryButton>
       </ScrollView>
@@ -283,7 +281,6 @@ export default function LabsScreen() {
                 testID={`lab-exercise-${ex.id}`}
                 onPress={() => {
                   setSelected(ex);
-                  setMcAnswer(null);
                   setFtAnswer('');
                   setResult(null);
                   setView('exercise');

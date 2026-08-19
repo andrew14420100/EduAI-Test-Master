@@ -15,6 +15,12 @@ type SeedExercise = {
   points: number;
 };
 
+type PracticalSeedExercise = Omit<SeedExercise, "exerciseType" | "options" | "correctIndex"> & {
+  exerciseType: "free_text";
+  options?: undefined;
+  correctIndex?: undefined;
+};
+
 const EXERCISES: SeedExercise[] = [
   // ── Ingegneria Informatica ─────────────────────────────────────────────────
   {
@@ -830,6 +836,120 @@ const EXERCISES: SeedExercise[] = [
   },
 ];
 
+// These paths are part of the profile selector and must have a real lab
+// catalogue too. Each task gives a concrete case, constraints and an output
+// to produce; the answer is intentionally written so it can be AI-graded.
+const ADDITIONAL_PRACTICAL_EXERCISES: PracticalSeedExercise[] = [
+  {
+    subject: "Ingegneria Civile", topic: "Scienza delle costruzioni",
+    title: "Reazioni vincolari di una trave",
+    prompt: "Dati: trave semplicemente appoggiata lunga 6 m, con carico concentrato di 12 kN a 2 m dall'appoggio A. Vincoli: piano, peso della trave trascurato. Consegna: calcola le reazioni verticali in A e B usando l'equilibrio dei momenti e delle forze, mostrando i passaggi.",
+    exerciseType: "free_text", correctAnswer: "ΣM_A=0: R_B·6−12·2=0, quindi R_B=4 kN. ΣF_y=0: R_A+R_B−12=0, quindi R_A=8 kN.",
+    difficultyLevel: "medio", points: 12,
+  },
+  {
+    subject: "Ingegneria Gestionale", topic: "Gestione della produzione",
+    title: "Punto di riordino",
+    prompt: "Dati: un componente ha domanda media di 40 pezzi al giorno, lead time di 5 giorni e scorta di sicurezza di 30 pezzi. Vincoli: domanda costante. Consegna: calcola il punto di riordino e spiega quale quantità deve far scattare l'ordine.",
+    exerciseType: "free_text", correctAnswer: "Punto di riordino = domanda giornaliera × lead time + scorta di sicurezza = 40×5+30 = 230 pezzi. L'ordine scatta quando la giacenza raggiunge 230 pezzi.",
+    difficultyLevel: "base", points: 10,
+  },
+  {
+    subject: "Economia e Commercio", topic: "Contabilità",
+    title: "Margine e utile operativo",
+    prompt: "Dati: ricavi di vendita 18.000 €, costi variabili 7.200 € e costi fissi 6.000 €. Vincoli: nessuna imposta o interesse. Consegna: calcola margine di contribuzione, percentuale sul ricavo e utile operativo.",
+    exerciseType: "free_text", correctAnswer: "Margine di contribuzione = 18.000−7.200 = 10.800 €. Percentuale = 10.800/18.000 = 60%. Utile operativo = 10.800−6.000 = 4.800 €.",
+    difficultyLevel: "base", points: 10,
+  },
+  {
+    subject: "Scienze Politiche", topic: "Analisi dei dati",
+    title: "Affluenza e rappresentatività",
+    prompt: "Dati: in un comune 3.600 persone su 6.000 aventi diritto votano; una lista riceve 1.440 voti validi su 3.000. Vincoli: considera separatamente affluenza e consenso sui voti validi. Consegna: calcola entrambe le percentuali e interpreta il risultato in due frasi.",
+    exerciseType: "free_text", correctAnswer: "Affluenza = 3.600/6.000×100 = 60%. Consenso della lista = 1.440/3.000×100 = 48% dei voti validi. La lista raccoglie quasi metà dei voti espressi, ma rappresenta il 24% degli aventi diritto.",
+    difficultyLevel: "base", points: 10,
+  },
+  {
+    subject: "Liceo Classico", topic: "Analisi del testo",
+    title: "Traduzione argomentata",
+    prompt: "Dati: traduci la frase latina «Fortuna fortes adiuvat». Vincoli: mantieni soggetto, complemento oggetto e tempo verbale; indica caso e funzione di ogni parola. Consegna: scrivi traduzione e analisi morfosintattica.",
+    exerciseType: "free_text", correctAnswer: "Traduzione: «La fortuna aiuta gli audaci». Fortuna è nominativo singolare, soggetto; fortes è accusativo plurale, complemento oggetto sostantivato; adiuvat è indicativo presente, terza persona singolare.",
+    difficultyLevel: "base", points: 10,
+  },
+  {
+    subject: "Liceo Linguistico", topic: "Produzione linguistica",
+    title: "Itinerario bilingue",
+    prompt: "Dati: devi presentare in inglese un itinerario di 2 giorni a Roma per un visitatore con budget di 120 €. Vincoli: almeno 3 tappe, un prezzo per ciascun biglietto e una frase con il futuro. Consegna: scrivi 80-100 parole e calcola il totale delle spese.",
+    exerciseType: "free_text", correctAnswer: "La risposta deve contenere un itinerario di 2 giorni in inglese, almeno 3 tappe, prezzi la cui somma non superi 120 € e una frase corretta al futuro (will o going to).",
+    difficultyLevel: "medio", points: 12,
+  },
+  {
+    subject: "Liceo delle Scienze Umane", topic: "Osservazione educativa",
+    title: "Scheda di osservazione",
+    prompt: "Dati: osserva per 20 minuti un'attività di gruppo di 4 bambini. Vincoli: registra solo comportamenti osservabili, con orario e frequenza, senza diagnosi. Consegna: prepara una tabella con almeno 5 osservazioni e calcola la frequenza media per bambino.",
+    exerciseType: "free_text", correctAnswer: "La risposta deve riportare almeno 5 comportamenti descritti senza interpretazioni, il minuto dell'osservazione e una frequenza. La frequenza media si calcola dividendo il numero totale degli eventi per 4 bambini.",
+    difficultyLevel: "medio", points: 12,
+  },
+  {
+    subject: "Giurisprudenza", topic: "Caso pratico",
+    title: "Termine per l'adempimento",
+    prompt: "Dati: un contratto prevede consegna il 10 maggio; il venditore consegna il 18 maggio causando 500 € di danno documentato. Vincoli: distingui fatto, obbligo violato, danno e prova. Consegna: redigi una breve qualificazione giuridica e indica quali elementi devono essere provati.",
+    exerciseType: "free_text", correctAnswer: "Occorre ricostruire l'inadempimento del termine contrattuale, il nesso causale tra ritardo e danno di 500 €, l'entità del danno e l'assenza di cause esonerative. Vanno provati contratto, scadenza, consegna tardiva e documentazione del danno.",
+    difficultyLevel: "avanzato", points: 14,
+  },
+  {
+    subject: "Psicologia", topic: "Metodologia",
+    title: "Disegno sperimentale",
+    prompt: "Dati: vuoi verificare se 20 minuti di ripasso migliorano il punteggio di memoria. Vincoli: 30 partecipanti, gruppo sperimentale e controllo, stesso test finale. Consegna: definisci variabile indipendente, dipendente, gruppi e confronto dei risultati.",
+    exerciseType: "free_text", correctAnswer: "Variabile indipendente: ripasso di 20 minuti sì/no. Variabile dipendente: punteggio al test di memoria. Si dividono i 30 partecipanti in due gruppi comparabili e si confrontano media e dispersione dei punteggi finali.",
+    difficultyLevel: "medio", points: 12,
+  },
+  {
+    subject: "Lettere e Filosofia", topic: "Analisi argomentativa",
+    title: "Mappa di un argomento",
+    prompt: "Dati: una tesi deve essere sostenuta da due argomenti e un esempio concreto. Vincoli: separa tesi, premesse e conclusione; segnala una possibile obiezione. Consegna: costruisci una mappa argomentativa di 120-150 parole.",
+    exerciseType: "free_text", correctAnswer: "La risposta deve distinguere chiaramente una tesi, due premesse pertinenti, una conclusione coerente, un esempio e un'obiezione con relativa replica.",
+    difficultyLevel: "medio", points: 12,
+  },
+  {
+    subject: "Lingue e Letterature Straniere", topic: "Mediazione linguistica",
+    title: "Istruzioni per un servizio",
+    prompt: "Dati: un servizio ha tre passaggi, durata di 45 minuti e costo di 30 €. Vincoli: destinatario non madrelingua, lessico semplice, nessuna informazione inventata. Consegna: riscrivi le istruzioni nella lingua studiata e indica durata e prezzo.",
+    exerciseType: "free_text", correctAnswer: "La risposta deve contenere tre passaggi ordinati nella lingua studiata, durata di 45 minuti e prezzo di 30 €, con lessico semplice e senza aggiungere dati non forniti.",
+    difficultyLevel: "base", points: 10,
+  },
+];
+
+function toPracticalExercise(exercise: SeedExercise): PracticalSeedExercise {
+  if (exercise.exerciseType === "free_text") {
+    return {
+      subject: exercise.subject,
+      topic: exercise.topic,
+      title: exercise.title,
+      correctAnswer: exercise.correctAnswer,
+      difficultyLevel: exercise.difficultyLevel,
+      points: exercise.points,
+      exerciseType: "free_text",
+      prompt: `Caso pratico: ${exercise.prompt} Dati e vincoli: interpreta il caso usando esclusivamente le informazioni fornite. Consegna: mostra il procedimento, le formule o i passaggi applicati e concludi con il risultato.`,
+    };
+  }
+  const expected = exercise.options?.[exercise.correctIndex ?? -1] ?? "";
+  return {
+    subject: exercise.subject,
+    topic: exercise.topic,
+    title: exercise.title,
+    prompt: `Caso pratico: ${exercise.prompt} Dati e vincoli: usa solo le informazioni del caso e giustifica ogni passaggio. Consegna: risolvi il problema, mostrando formula, calcolo o procedimento; non limitarti a indicare una scelta.`,
+    exerciseType: "free_text",
+    correctAnswer: expected,
+    difficultyLevel: exercise.difficultyLevel,
+    points: exercise.points,
+  };
+}
+
+const PRACTICAL_EXERCISES: PracticalSeedExercise[] = [
+  ...EXERCISES.map(toPracticalExercise),
+  ...ADDITIONAL_PRACTICAL_EXERCISES,
+];
+
 let seeded = false;
 
 export async function seedLabExercisesIfEmpty(): Promise<void> {
@@ -840,11 +960,58 @@ export async function seedLabExercisesIfEmpty(): Promise<void> {
     .from(labExercisesTable);
 
   if (count > 0) {
+    // Older deployments may already contain the original mixed catalogue.
+    // Normalize only built-in rows; material-generated labs are untouched.
+    const seededRows = await db.select().from(labExercisesTable).where(sql`${labExercisesTable.sourceMaterialId} IS NULL`);
+    const existingTitles = new Set(seededRows.map((exercise) => exercise.title));
+    for (const exercise of seededRows) {
+      if (exercise.exerciseType === "free_text" && (
+        exercise.prompt.includes("Caso pratico:") ||
+        exercise.prompt.includes("Consegna: mostra il procedimento")
+      )) continue;
+      const practical = toPracticalExercise({
+        subject: exercise.subject,
+        topic: exercise.topic,
+        title: exercise.title,
+        prompt: exercise.prompt,
+        exerciseType: exercise.exerciseType,
+        options: exercise.options ?? undefined,
+        correctIndex: exercise.correctIndex ?? undefined,
+        correctAnswer: exercise.correctAnswer ?? undefined,
+        difficultyLevel: exercise.difficultyLevel,
+        points: exercise.points,
+      });
+      await db.update(labExercisesTable).set({
+        prompt: practical.prompt,
+        exerciseType: "free_text",
+        options: null,
+        correctIndex: null,
+        correctAnswer: practical.correctAnswer ?? null,
+      }).where(sql`${labExercisesTable.id} = ${exercise.id}`);
+    }
+    const missingAdditional = ADDITIONAL_PRACTICAL_EXERCISES
+      .filter((exercise) => !existingTitles.has(exercise.title))
+      .map((ex) => ({
+        id: randomUUID(),
+        subject: ex.subject,
+        topic: ex.topic,
+        title: ex.title,
+        prompt: ex.prompt,
+        exerciseType: ex.exerciseType,
+        options: null,
+        correctIndex: null,
+        correctAnswer: ex.correctAnswer,
+        difficultyLevel: ex.difficultyLevel,
+        points: ex.points,
+      }));
+    if (missingAdditional.length > 0) {
+      await db.insert(labExercisesTable).values(missingAdditional);
+    }
     seeded = true;
     return;
   }
 
-  const rows = EXERCISES.map((ex) => ({
+  const rows = PRACTICAL_EXERCISES.map((ex) => ({
     id: randomUUID(),
     subject: ex.subject,
     topic: ex.topic,
