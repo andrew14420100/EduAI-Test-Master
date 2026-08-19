@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -74,10 +74,12 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+  const [themeReady, setThemeReady] = useState(false);
+  const handleThemeReady = useCallback(() => setThemeReady(true), []);
 
   useEffect(() => {
-    if (fontsLoaded || fontError) SplashScreen.hideAsync();
-  }, [fontsLoaded, fontError]);
+    if ((fontsLoaded || fontError) && themeReady) SplashScreen.hideAsync();
+  }, [fontsLoaded, fontError, themeReady]);
 
   if (!fontsLoaded && !fontError) return null;
   if (!publishableKey) {
@@ -93,7 +95,7 @@ export default function RootLayout() {
               <GestureHandlerRootView style={{ flex: 1 }}>
                 <KeyboardProvider>
                   <AuthTokenBridge>
-                    <AppProvider>
+                    <AppProvider onThemeReady={handleThemeReady}>
                       <RootLayoutNav />
                     </AppProvider>
                   </AuthTokenBridge>

@@ -285,7 +285,13 @@ function initialStoredTheme(): AppTheme | null {
 
 const AppContext = createContext<AppState | null>(null);
 
-export function AppProvider({ children }: { children: ReactNode }) {
+export function AppProvider({
+  children,
+  onThemeReady,
+}: {
+  children: ReactNode;
+  onThemeReady?: () => void;
+}) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { signOut } = useClerk();
   const { user } = useUser();
@@ -460,19 +466,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const theme: AppTheme = storedTheme ?? serverTheme;
 
   useEffect(() => {
+    if (!isLoaded) return;
     if (!user?.id) {
       setStoredTheme(null);
+      onThemeReady?.();
       return;
     }
     let cancelled = false;
     void AsyncStorage.getItem(`eduai:theme:${user.id}`).then((value) => {
       if (cancelled) return;
       if (value === 'dark' || value === 'light') setStoredTheme(value);
+      else setStoredTheme(null);
+      onThemeReady?.();
     });
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [isLoaded, onThemeReady, user?.id]);
 
   useEffect(() => {
     if (!user?.id || !inventoryQuery.data) return;
