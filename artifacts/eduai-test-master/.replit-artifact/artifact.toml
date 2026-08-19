@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/"
+title = "EduAI Test Master"
+description = "A mobile AI-powered study companion for high school and university students. Users can choose their study level, turn learning materials into five-question practice exams, build a reward wallet by passing quizzes, and personalize their experience in a point shop."
+version = "1.0.0"
+id = "artifacts/eduai-test-master"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 25427
+
+[services.development]
+run = "pnpm --filter @workspace/eduai-test-master run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/eduai-test-master", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/eduai-test-master", "run", "serve" ]
+
+[services.env]
+PORT = "25427"
+BASE_PATH = "/"

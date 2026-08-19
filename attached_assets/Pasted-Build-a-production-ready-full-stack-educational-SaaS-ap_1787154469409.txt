@@ -1,0 +1,40 @@
+Build a production-ready, full-stack educational SaaS application called "EduAI Test Master". The app must include user authentication, an advanced AI exam simulator that generates questions from uploaded multi-media materials, a gamified point system, and a customization shop.
+
+Configure the app following these precise specifications:
+
+1. TARGET AUDIENCE & USER INITIALIZATION (SCHOOLS & UNIVERSITIES):
+- Implement an onboarding flow where users must select their level of study from a wide range of options (e.g., High Schools like Liceo Scientifico, Classico, Istituto Tecnico; Universities grouped by macro-areas like Medicine, Engineering, Law, Economics).
+- Store this selection in the user profile database. It will serve as the difficulty modifier for the AI.
+
+2. MULTI-MEDIA FILE UPLOAD & PARSING (PDF, IMAGES, VIDEO):
+- Create a dedicated "Generate from Materials" dashboard with a secure file uploader.
+- The system must accept and process:
+  * Documents: PDF, TXT, DOCX (textbooks, lecture slides).
+  * Images: JPG, PNG (photos of handwritten notes).
+  * Video: MP4 file uploads or links to recorded lectures.
+- The app must parse the uploaded content (using OCR for notes and transcriptions/vision for video summaries) to extract core context for the quiz generation.
+
+3. AUTONOMOUS AI QUIZ GENERATION ENGINE:
+- Use Emergent’s universal LLM key (preferring Claude 4.5 Sonnet) to create a custom agent workflow.
+- When an exam is triggered, the AI agent must read the extracted source material text, consider the user's selected School/University level, and autonomously generate exactly 5 multiple-choice questions.
+- The generation must be structured as a strict JSON object containing: Question text, 4 Options, Correct Option Index, and a Detailed Educational Explanation for the answer.
+- Display a sleek loading state while the AI agent compiles the quiz.
+
+4. GAMIFIED SCORING & PROGRESSION LOGIC:
+- Every quiz must include an active countdown timer (e.g., 10 minutes).
+- Score Calculation: +3 points for a correct answer, -1 point for an incorrect answer, 0 points for skipped questions.
+- PASSING CONDITION: A test is marked as "Passed" only if the user achieves at least 60% of the maximum possible score.
+- POINT ACCUMULATION CRITERIA: Points are added to the user's permanent wallet/profile ONLY if the quiz is "Passed". If the user fails, they get 0 reward points, but they can still view the AI explanations to study.
+
+5. THE CUSTOMIZATION COIN SHOP:
+- Build an in-app marketplace where users spend their accumulated reward points.
+- Include the following redeemable items:
+  * "Dark Mode Theme Toggle" - Cost: 15 points
+  * "Neon Cyberpunk Theme Palette" - Cost: 30 points
+  * "Profile Badge: Brilliant Student" - Cost: 10 points
+  * "Profile Badge: Supreme Professor" - Cost: 25 points
+- Implement logic where purchasing deducts points from the user database, unlocks the asset, and allows the user to instantly equip it to change the app's visual CSS style or profile avatar.
+
+6. SYSTEM & DATABASE INFRASTRUCTURE:
+- Build a persistent PostgreSQL database via Emergent to handle: User profiles (auth, current tier, wallet balance), uploaded file metadata, quiz score history, and unlocked shop items.
+- Ensure the UI has a high-end, responsive tech-SaaS aesthetic with clean layout cards and modern progress bars.
