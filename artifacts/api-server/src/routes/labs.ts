@@ -27,17 +27,26 @@ router.post("/materials/:materialId/labs", requireAuth, async (req: Request, res
     if (material.extractionStatus !== "ready" || !material.extractedText?.trim()) {
       res.status(409).json({ error: "Il materiale non è ancora pronto per creare i laboratori." }); return;
     }
-    const response = await openai.chat.completions.create({
-      model: "gpt-5-mini",
-      max_completion_tokens: 9000,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: "Sei un docente italiano. Crea esattamente 15 laboratori pratici originali basati solo sul materiale fornito. Non creare domande teoriche o a scelta multipla. Ogni esercizio deve richiedere calcoli, dati, procedimenti, pseudocodice o applicazione concreta. Rispondi solo JSON con {\"exercises\":[{\"topic\":\"...\",\"title\":\"...\",\"prompt\":\"...\",\"solution\":\"...\",\"difficulty\":\"base|medio|avanzato\",\"points\":number}]}." },
-        { role: "user", content: `Materiale: ${material.title}\n\nCONTENUTO:\n${material.extractedText.slice(0, 180000)}` },
-      ],
-    });
-    const parsed = JSON.parse(response.choices[0]?.message?.content ?? "{}") as { exercises?: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> };
-    const exercises = (parsed.exercises ?? []).filter((item) => item.topic && item.title && item.prompt && item.solution).slice(0, 15);
+    let exercises: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> = [];
+    for (let attempt = 0; attempt < 2 && exercises.length < 15; attempt++) {
+      const response = await openai.chat.completions.create({
+        model: "gpt-5-mini",
+        max_completion_tokens: 12000,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: "Sei un docente italiano. Crea esattamente 15 laboratori pratici originali basati solo sul materiale fornito. Non creare domande teoriche o a scelta multipla. Ogni esercizio deve richiedere calcoli, dati, procedimenti, pseudocodice o applicazione concreta. Rispondi solo JSON con {\"exercises\":[{\"topic\":\"...\",\"title\":\"...\",\"prompt\":\"...\",\"solution\":\"...\",\"difficulty\":\"base|medio|avanzato\",\"points\":number}]}." },
+          { role: "user", content: `Materiale: ${material.title}\n\nCONTENUTO:\n${material.extractedText.slice(0, 120000)}` },
+        ],
+      });
+      const raw = (response.choices[0]?.message?.content ?? "{}")
+        .replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      try {
+        const parsed = JSON.parse(raw) as { exercises?: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> };
+        exercises = (parsed.exercises ?? []).filter((item) => item.topic && item.title && item.prompt && item.solution).slice(0, 15);
+      } catch (parseError) {
+        req.log.warn({ materialId, attempt, parseError }, "Risposta IA laboratori non valida, nuovo tentativo");
+      }
+    }
     if (exercises.length < 15) { res.status(502).json({ error: "L'IA non ha prodotto 15 esercizi validi. Riprova." }); return; }
     const rows = exercises.map((item) => ({
       id: randomUUID(), sourceMaterialId: materialId, subject: material.title,

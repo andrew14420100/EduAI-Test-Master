@@ -2,7 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
@@ -15,6 +15,7 @@ type UploadItem = { id: string; name: string; kind: MaterialKind; progress: numb
 type LibraryModal =
   | { kind: 'sorgente' }
   | { kind: 'messaggio'; title: string; message: string; icon: 'warning' | 'circle-check' | 'info' }
+  | { kind: 'laboratori'; material: Material }
   | { kind: 'elimina'; material: Material }
   | { kind: 'generazione' };
 
@@ -284,6 +285,32 @@ export default function LibraryScreen() {
         ],
       };
     }
+    if (modal.kind === 'laboratori') {
+      return {
+        title: 'Crea laboratori pratici',
+        message: `Genera 15 esercizi basati su ${modal.material.name}? Saranno disponibili nella sezione Laboratori.`,
+        icon: 'generate' as const,
+        actions: [
+          {
+            label: 'Crea 15 esercizi',
+            variant: 'primaria' as const,
+            onPress: () => {
+              const material = modal.material;
+              setModal({ kind: 'messaggio', title: 'Generazione in corso', message: 'Sto leggendo il materiale e preparando gli esercizi pratici…', icon: 'info' });
+              void generateLabsForMaterial(material.id).then((result) => {
+                setModal({
+                  kind: 'messaggio',
+                  title: result.ok ? 'Laboratori creati' : 'Generazione non riuscita',
+                  message: result.ok ? 'I 15 esercizi pratici sono disponibili nella sezione Laboratori.' : result.message,
+                  icon: result.ok ? 'circle-check' : 'warning',
+                });
+              });
+            },
+          },
+          { label: 'Annulla', onPress: () => setModal(null) },
+        ],
+      };
+    }
     if (modal.kind === 'generazione') {
       return {
         title: groupTitle,
@@ -421,20 +448,7 @@ export default function LibraryScreen() {
                       {ready ? (
                         <Pressable
                           accessibilityLabel={`Crea laboratori da ${item.name}`}
-                          onPress={() => {
-                            Alert.alert('Crea laboratori pratici', `Genera 15 esercizi basati su ${item.name}?`, [
-                              { text: 'Annulla', style: 'cancel' },
-                              {
-                                text: 'Crea',
-                                onPress: () => {
-                                  void generateLabsForMaterial(item.id).then((result) => {
-                                    if (!result.ok) Alert.alert('Generazione non riuscita', result.message);
-                                    else Alert.alert('Laboratori creati', 'I 15 esercizi pratici sono ora disponibili nella sezione Laboratori.');
-                                  });
-                                },
-                              },
-                            ]);
-                          }}
+                          onPress={() => setModal({ kind: 'laboratori', material: item })}
                           hitSlop={8}
                         >
                           <Text style={[styles.retryText, { color: c.primary }]}>Crea laboratori (15)</Text>
