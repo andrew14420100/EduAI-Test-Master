@@ -15,6 +15,10 @@ export interface Profile {
   streak: number;
   inviteCode: string;
   avatarObjectPath?: string | null;
+  /** Whether labs are enabled for this user (true by default for STEM paths). */
+  labsEnabled: boolean;
+  /** Whether this study path has labs enabled by default. */
+  hasLabsByDefault?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

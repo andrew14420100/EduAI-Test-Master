@@ -34,6 +34,11 @@ import type {
   FlashcardsResponse,
   HealthStatus,
   InviteSummary,
+  LabAttemptHistory,
+  LabAttemptRequest,
+  LabAttemptResult,
+  LabExercise,
+  LabExercisesResponse,
   LeaderboardEntry,
   Material,
   OwnedShopItem,
@@ -43,6 +48,7 @@ import type {
   QuizAttempt,
   QuizSessionResponse,
   RecoverySummary,
+  SetLabsEnabledRequest,
   StartQuizSessionRequest,
   StudyGroup,
   Ticket,
@@ -533,6 +539,77 @@ export const useUpsertProfile = <TError = ErrorType<ErrorEnvelope>,
         TContext
       > => {
       return useMutation(getUpsertProfileMutationOptions(options));
+    }
+
+export const getSetLabsEnabledUrl = () => {
+
+
+
+
+  return `/api/profile/labs-enabled`
+}
+
+/**
+ * @summary Enable or disable labs for this user
+ */
+export const setLabsEnabled = async (setLabsEnabledRequest: SetLabsEnabledRequest, options?: Parameters<typeof customFetch>[1]): Promise<Profile> => {
+
+  return customFetch<Profile>(getSetLabsEnabledUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(setLabsEnabledRequest)
+  }
+);}
+
+
+
+
+
+export const getSetLabsEnabledMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setLabsEnabled>>, TError,{data: BodyType<SetLabsEnabledRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setLabsEnabled>>, TError,{data: BodyType<SetLabsEnabledRequest>}, TContext> => {
+
+const mutationKey = ['setLabsEnabled'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setLabsEnabled>>, {data: BodyType<SetLabsEnabledRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setLabsEnabled(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetLabsEnabledMutationResult = NonNullable<Awaited<ReturnType<typeof setLabsEnabled>>>
+    export type SetLabsEnabledMutationBody = BodyType<SetLabsEnabledRequest>
+    export type SetLabsEnabledMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Enable or disable labs for this user
+ */
+export const useSetLabsEnabled = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setLabsEnabled>>, TError,{data: BodyType<SetLabsEnabledRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setLabsEnabled>>,
+        TError,
+        {data: BodyType<SetLabsEnabledRequest>},
+        TContext
+      > => {
+      return useMutation(getSetLabsEnabledMutationOptions(options));
     }
 
 export const getUpdateLevelUrl = () => {
@@ -1852,6 +1929,308 @@ export const useUseLightTheme = <TError = ErrorType<ErrorEnvelope>,
       > => {
       return useMutation(getUseLightThemeMutationOptions(options));
     }
+
+export const getListLabExercisesUrl = () => {
+
+
+
+
+  return `/api/labs/exercises`
+}
+
+/**
+ * @summary List lab exercises for the current user's study path
+ */
+export const listLabExercises = async ( options?: Parameters<typeof customFetch>[1]): Promise<LabExercisesResponse> => {
+
+  return customFetch<LabExercisesResponse>(getListLabExercisesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLabExercisesQueryKey = () => {
+    return [
+    `/api/labs/exercises`
+    ] as const;
+    }
+
+
+export const getListLabExercisesQueryOptions = <TData = Awaited<ReturnType<typeof listLabExercises>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLabExercises>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLabExercisesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLabExercises>>> = ({ signal }) => listLabExercises({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLabExercises>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLabExercisesQueryResult = NonNullable<Awaited<ReturnType<typeof listLabExercises>>>
+export type ListLabExercisesQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary List lab exercises for the current user's study path
+ */
+
+export function useListLabExercises<TData = Awaited<ReturnType<typeof listLabExercises>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLabExercises>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLabExercisesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetLabExerciseUrl = (id: string,) => {
+
+
+
+
+  return `/api/labs/exercises/${id}`
+}
+
+/**
+ * @summary Get a single lab exercise by id
+ */
+export const getLabExercise = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<LabExercise> => {
+
+  return customFetch<LabExercise>(getGetLabExerciseUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLabExerciseQueryKey = (id: string,) => {
+    return [
+    `/api/labs/exercises/${id}`
+    ] as const;
+    }
+
+
+export const getGetLabExerciseQueryOptions = <TData = Awaited<ReturnType<typeof getLabExercise>>, TError = ErrorType<ErrorEnvelope>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLabExercise>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLabExerciseQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLabExercise>>> = ({ signal }) => getLabExercise(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLabExercise>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLabExerciseQueryResult = NonNullable<Awaited<ReturnType<typeof getLabExercise>>>
+export type GetLabExerciseQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary Get a single lab exercise by id
+ */
+
+export function useGetLabExercise<TData = Awaited<ReturnType<typeof getLabExercise>>, TError = ErrorType<ErrorEnvelope>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLabExercise>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLabExerciseQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSubmitLabAttemptUrl = () => {
+
+
+
+
+  return `/api/labs/attempts`
+}
+
+/**
+ * @summary Submit an answer to a lab exercise
+ */
+export const submitLabAttempt = async (labAttemptRequest: LabAttemptRequest, options?: Parameters<typeof customFetch>[1]): Promise<LabAttemptResult> => {
+
+  return customFetch<LabAttemptResult>(getSubmitLabAttemptUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(labAttemptRequest)
+  }
+);}
+
+
+
+
+
+export const getSubmitLabAttemptMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitLabAttempt>>, TError,{data: BodyType<LabAttemptRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitLabAttempt>>, TError,{data: BodyType<LabAttemptRequest>}, TContext> => {
+
+const mutationKey = ['submitLabAttempt'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitLabAttempt>>, {data: BodyType<LabAttemptRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitLabAttempt(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitLabAttemptMutationResult = NonNullable<Awaited<ReturnType<typeof submitLabAttempt>>>
+    export type SubmitLabAttemptMutationBody = BodyType<LabAttemptRequest>
+    export type SubmitLabAttemptMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Submit an answer to a lab exercise
+ */
+export const useSubmitLabAttempt = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitLabAttempt>>, TError,{data: BodyType<LabAttemptRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitLabAttempt>>,
+        TError,
+        {data: BodyType<LabAttemptRequest>},
+        TContext
+      > => {
+      return useMutation(getSubmitLabAttemptMutationOptions(options));
+    }
+
+export const getListLabAttemptsUrl = () => {
+
+
+
+
+  return `/api/labs/attempts`
+}
+
+/**
+ * @summary List the current user's lab attempt history
+ */
+export const listLabAttempts = async ( options?: Parameters<typeof customFetch>[1]): Promise<LabAttemptHistory[]> => {
+
+  return customFetch<LabAttemptHistory[]>(getListLabAttemptsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLabAttemptsQueryKey = () => {
+    return [
+    `/api/labs/attempts`
+    ] as const;
+    }
+
+
+export const getListLabAttemptsQueryOptions = <TData = Awaited<ReturnType<typeof listLabAttempts>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLabAttempts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLabAttemptsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLabAttempts>>> = ({ signal }) => listLabAttempts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLabAttempts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLabAttemptsQueryResult = NonNullable<Awaited<ReturnType<typeof listLabAttempts>>>
+export type ListLabAttemptsQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary List the current user's lab attempt history
+ */
+
+export function useListLabAttempts<TData = Awaited<ReturnType<typeof listLabAttempts>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLabAttempts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLabAttemptsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetInventoryUrl = () => {
 

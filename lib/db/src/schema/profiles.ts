@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 
 export const profilesTable = pgTable("profiles", {
   userId: text("user_id").primaryKey(), // Clerk user id
@@ -10,6 +10,9 @@ export const profilesTable = pgTable("profiles", {
   streak: integer("streak").notNull().default(0),
   inviteCode: text("invite_code").notNull().unique(), // stable 6-char code
   avatarObjectPath: text("avatar_object_path"),
+  // Labs: true for STEM/technical paths by default, false for humanities.
+  // Can be toggled manually via PATCH /profile/labs-enabled.
+  labsEnabled: boolean("labs_enabled").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

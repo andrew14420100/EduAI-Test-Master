@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
@@ -16,8 +16,9 @@ export default function ProfileScreen() {
   const c = useColors();
   const { user } = useUser();
   const insets = useSafeAreaInsets();
-  const { account, level, wallet, quizzes, streak, tickets, logout, createTicket } = useApp();
+  const { account, level, wallet, quizzes, streak, tickets, logout, createTicket, labsEnabled, hasLabsByDefault, enableLabs } = useApp();
   const [modal, setModal] = useState<ProfileModal>(null);
+  const [togglingLabs, setTogglingLabs] = useState(false);
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState(ticketCategories[0]);
   const [description, setDescription] = useState('');
@@ -144,6 +145,26 @@ export default function ProfileScreen() {
         )}
 
         <SectionTitle eyebrow="Impostazioni" title="Preferenze" />
+        {!hasLabsByDefault ? (
+          <View style={[styles.preference, { borderBottomColor: c.border }]}>
+            <View style={[styles.prefIcon, { backgroundColor: c.secondary }]}><AppIcon name="flask" size={15} color={c.foreground} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.prefText, { color: c.foreground }]}>Laboratori interattivi</Text>
+              <Text style={[styles.small, { color: c.mutedForeground }]}>Esercizi pratici facoltativi per il tuo percorso</Text>
+            </View>
+            <Switch
+              testID="toggle-laboratori"
+              value={labsEnabled}
+              disabled={togglingLabs}
+              onValueChange={(next) => {
+                setTogglingLabs(true);
+                void enableLabs(next).finally(() => setTogglingLabs(false));
+              }}
+              trackColor={{ false: c.border, true: c.primary }}
+              thumbColor={c.background}
+            />
+          </View>
+        ) : null}
         {preferences.map((item) => (
           <Pressable key={item.label} testID={item.label} onPress={item.action} style={[styles.preference, { borderBottomColor: c.border }]}>
             <View style={[styles.prefIcon, { backgroundColor: c.secondary }]}><AppIcon name={item.icon} size={15} color={c.foreground} /></View>

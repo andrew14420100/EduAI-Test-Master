@@ -22,6 +22,7 @@ import {
   faFileLines,
   faFilm,
   faFire,
+  faFlask,
   faFolder,
   faGlobe,
   faGraduationCap,
@@ -104,7 +105,8 @@ export type AppIconName =
   | 'sparkles'
   | 'flame'
   | 'paintbrush'
-  | 'tag';
+  | 'tag'
+  | 'flask';
 
 const iconMap: Record<AppIconName, IconDefinition> = {
   home: faHouse,
@@ -157,6 +159,7 @@ const iconMap: Record<AppIconName, IconDefinition> = {
   flame: faFire,
   paintbrush: faPaintbrush,
   tag: faTag,
+  flask: faFlask,
 };
 
 export function AppIcon({ name, size = 18, color }: { name: AppIconName; size?: number; color: string }) {

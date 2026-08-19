@@ -82,6 +82,8 @@ export const GetProfileResponse = zod.object({
   "streak": zod.number().int(),
   "inviteCode": zod.string(),
   "avatarObjectPath": zod.string().nullish(),
+  "labsEnabled": zod.boolean().describe('Whether labs are enabled for this user (true by default for STEM paths).'),
+  "hasLabsByDefault": zod.boolean().optional().describe('Whether this study path has labs enabled by default.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -108,6 +110,30 @@ export const UpsertProfileResponse = zod.object({
   "streak": zod.number().int(),
   "inviteCode": zod.string(),
   "avatarObjectPath": zod.string().nullish(),
+  "labsEnabled": zod.boolean().describe('Whether labs are enabled for this user (true by default for STEM paths).'),
+  "hasLabsByDefault": zod.boolean().optional().describe('Whether this study path has labs enabled by default.'),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Enable or disable labs for this user
+ */
+export const SetLabsEnabledBody = zod.object({
+  "enabled": zod.boolean()
+})
+
+export const SetLabsEnabledResponse = zod.object({
+  "userId": zod.string(),
+  "username": zod.string(),
+  "level": zod.string().nullish().describe('Full Italian study-path string (e.g. \"Liceo Scientifico\"). Null before onboarding.'),
+  "wallet": zod.number().int(),
+  "streak": zod.number().int(),
+  "inviteCode": zod.string(),
+  "avatarObjectPath": zod.string().nullish(),
+  "labsEnabled": zod.boolean().describe('Whether labs are enabled for this user (true by default for STEM paths).'),
+  "hasLabsByDefault": zod.boolean().optional().describe('Whether this study path has labs enabled by default.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -131,6 +157,8 @@ export const UpdateLevelResponse = zod.object({
   "streak": zod.number().int(),
   "inviteCode": zod.string(),
   "avatarObjectPath": zod.string().nullish(),
+  "labsEnabled": zod.boolean().describe('Whether labs are enabled for this user (true by default for STEM paths).'),
+  "hasLabsByDefault": zod.boolean().optional().describe('Whether this study path has labs enabled by default.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -471,6 +499,83 @@ export const EquipShopItemResponse = zod.object({
  * @summary Return to the free light theme
  */
 export const UseLightThemeResponse = zod.void()
+
+
+/**
+ * @summary List lab exercises for the current user's study path
+ */
+export const ListLabExercisesResponse = zod.object({
+  "hasLabsByDefault": zod.boolean(),
+  "labsEnabled": zod.boolean(),
+  "exercises": zod.array(zod.object({
+  "id": zod.string(),
+  "subject": zod.string(),
+  "topic": zod.string(),
+  "title": zod.string(),
+  "prompt": zod.string(),
+  "exerciseType": zod.enum(['multiple_choice', 'free_text']),
+  "options": zod.array(zod.string()).nullish(),
+  "difficultyLevel": zod.enum(['base', 'medio', 'avanzato']),
+  "points": zod.number().int()
+}))
+})
+
+
+/**
+ * @summary Get a single lab exercise by id
+ */
+export const GetLabExerciseParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetLabExerciseResponse = zod.object({
+  "id": zod.string(),
+  "subject": zod.string(),
+  "topic": zod.string(),
+  "title": zod.string(),
+  "prompt": zod.string(),
+  "exerciseType": zod.enum(['multiple_choice', 'free_text']),
+  "options": zod.array(zod.string()).nullish(),
+  "difficultyLevel": zod.enum(['base', 'medio', 'avanzato']),
+  "points": zod.number().int()
+})
+
+
+/**
+ * @summary Submit an answer to a lab exercise
+ */
+export const SubmitLabAttemptBody = zod.object({
+  "exerciseId": zod.string(),
+  "userAnswer": zod.string().describe('For multiple_choice, the string representation of the chosen option index (e.g. \"2\"). For free_text, the student\'s written answer.')
+})
+
+export const SubmitLabAttemptResponse = zod.object({
+  "id": zod.string(),
+  "exerciseId": zod.string(),
+  "score": zod.number().describe('0.0 = wrong, 0.5 = partial, 1.0 = correct'),
+  "feedback": zod.string(),
+  "earnedPoints": zod.number().int(),
+  "totalPoints": zod.number().int(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List the current user's lab attempt history
+ */
+export const ListLabAttemptsResponseItem = zod.object({
+  "id": zod.string(),
+  "exerciseId": zod.string(),
+  "userAnswer": zod.string(),
+  "score": zod.number(),
+  "feedback": zod.string(),
+  "earnedPoints": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "exerciseTitle": zod.string(),
+  "exerciseSubject": zod.string(),
+  "exerciseTopic": zod.string()
+})
+export const ListLabAttemptsResponse = zod.array(ListLabAttemptsResponseItem)
 
 
 /**

@@ -3,13 +3,19 @@ import { eq } from "drizzle-orm";
 import { db, profilesTable } from "@workspace/db";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 import { generateInviteCode } from "../lib/inviteCode";
+import { hasLabsByDefault } from "../lib/labPath";
 
 const router: IRouter = Router();
 
 function toPublicProfile(profile: typeof profilesTable.$inferSelect) {
   // Never expose email in the public profile response
   const { email: _email, ...pub } = profile;
-  return pub;
+  return {
+    ...pub,
+    // STEM/technical paths see labs regardless of the manual toggle
+    labsEnabled: profile.labsEnabled || hasLabsByDefault(profile.level),
+    hasLabsByDefault: hasLabsByDefault(profile.level),
+  };
 }
 
 /**

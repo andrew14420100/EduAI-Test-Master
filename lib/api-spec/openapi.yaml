@@ -28,6 +28,8 @@ tags:
     description: Social and invite operations
   - name: leaderboard
     description: Global leaderboard
+  - name: labs
+    description: Interactive lab exercises and attempts
 paths:
   /healthz:
     get:
@@ -204,6 +206,43 @@ paths:
                 $ref: "#/components/schemas/ErrorEnvelope"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /profile/labs-enabled:
+    patch:
+      operationId: setLabsEnabled
+      tags: [profile]
+      summary: Enable or disable labs for this user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetLabsEnabledRequest"
+      responses:
+        "200":
+          description: Labs preference updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Profile not found
           content:
             application/json:
               schema:
@@ -825,6 +864,136 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
 
+  /labs/exercises:
+    get:
+      operationId: listLabExercises
+      tags: [labs]
+      summary: List lab exercises for the current user's study path
+      responses:
+        "200":
+          description: Lab exercises
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabExercisesResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Labs not enabled for this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /labs/exercises/{id}:
+    get:
+      operationId: getLabExercise
+      tags: [labs]
+      summary: Get a single lab exercise by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lab exercise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabExercise"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Labs not enabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Exercise not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /labs/attempts:
+    post:
+      operationId: submitLabAttempt
+      tags: [labs]
+      summary: Submit an answer to a lab exercise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabAttemptRequest"
+      responses:
+        "201":
+          description: Attempt result with score, feedback and earned points
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabAttemptResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Labs not enabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Exercise not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    get:
+      operationId: listLabAttempts
+      tags: [labs]
+      summary: List the current user's lab attempt history
+      responses:
+        "200":
+          description: List of attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LabAttemptHistory"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   /shop/inventory:
     get:
       operationId: getInventory
@@ -1099,7 +1268,7 @@ components:
 
     Profile:
       type: object
-      required: [userId, username, wallet, streak, inviteCode, createdAt, updatedAt]
+      required: [userId, username, wallet, streak, inviteCode, labsEnabled, createdAt, updatedAt]
       properties:
         userId:
           type: string
@@ -1118,12 +1287,25 @@ components:
         avatarObjectPath:
           type: string
           nullable: true
+        labsEnabled:
+          type: boolean
+          description: Whether labs are enabled for this user (true by default for STEM paths).
+        hasLabsByDefault:
+          type: boolean
+          description: Whether this study path has labs enabled by default.
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
+
+    SetLabsEnabledRequest:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
 
     UpsertProfileRequest:
       type: object
@@ -1565,3 +1747,101 @@ components:
           type: string
           minLength: 6
           maxLength: 6
+
+    LabExercise:
+      type: object
+      required: [id, subject, topic, title, prompt, exerciseType, difficultyLevel, points]
+      properties:
+        id:
+          type: string
+        subject:
+          type: string
+        topic:
+          type: string
+        title:
+          type: string
+        prompt:
+          type: string
+        exerciseType:
+          type: string
+          enum: [multiple_choice, free_text]
+        options:
+          type: array
+          nullable: true
+          items:
+            type: string
+        difficultyLevel:
+          type: string
+          enum: [base, medio, avanzato]
+        points:
+          type: integer
+
+    LabExercisesResponse:
+      type: object
+      required: [hasLabsByDefault, labsEnabled, exercises]
+      properties:
+        hasLabsByDefault:
+          type: boolean
+        labsEnabled:
+          type: boolean
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabExercise"
+
+    LabAttemptRequest:
+      type: object
+      required: [exerciseId, userAnswer]
+      properties:
+        exerciseId:
+          type: string
+        userAnswer:
+          type: string
+          description: For multiple_choice, the string representation of the chosen option index (e.g. "2"). For free_text, the student's written answer.
+
+    LabAttemptResult:
+      type: object
+      required: [id, exerciseId, score, feedback, earnedPoints, totalPoints, createdAt]
+      properties:
+        id:
+          type: string
+        exerciseId:
+          type: string
+        score:
+          type: number
+          description: 0.0 = wrong, 0.5 = partial, 1.0 = correct
+        feedback:
+          type: string
+        earnedPoints:
+          type: integer
+        totalPoints:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    LabAttemptHistory:
+      type: object
+      required: [id, exerciseId, userAnswer, score, feedback, earnedPoints, createdAt, exerciseTitle, exerciseSubject, exerciseTopic]
+      properties:
+        id:
+          type: string
+        exerciseId:
+          type: string
+        userAnswer:
+          type: string
+        score:
+          type: number
+        feedback:
+          type: string
+        earnedPoints:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        exerciseTitle:
+          type: string
+        exerciseSubject:
+          type: string
+        exerciseTopic:
+          type: string

@@ -37,8 +37,16 @@ export interface Profile {
   streak: number;
   inviteCode: string;
   avatarObjectPath?: string | null;
+  /** Whether labs are enabled for this user (true by default for STEM paths). */
+  labsEnabled: boolean;
+  /** Whether this study path has labs enabled by default. */
+  hasLabsByDefault?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SetLabsEnabledRequest {
+  enabled: boolean;
 }
 
 export interface UpsertProfileRequest {
@@ -329,5 +337,70 @@ export interface UseInviteCodeRequest {
      * @maxLength 6
      */
   code: string;
+}
+
+export type LabExerciseExerciseType = typeof LabExerciseExerciseType[keyof typeof LabExerciseExerciseType];
+
+
+export const LabExerciseExerciseType = {
+  multiple_choice: 'multiple_choice',
+  free_text: 'free_text',
+} as const;
+
+export type LabExerciseDifficultyLevel = typeof LabExerciseDifficultyLevel[keyof typeof LabExerciseDifficultyLevel];
+
+
+export const LabExerciseDifficultyLevel = {
+  base: 'base',
+  medio: 'medio',
+  avanzato: 'avanzato',
+} as const;
+
+export interface LabExercise {
+  id: string;
+  subject: string;
+  topic: string;
+  title: string;
+  prompt: string;
+  exerciseType: LabExerciseExerciseType;
+  options?: string[] | null;
+  difficultyLevel: LabExerciseDifficultyLevel;
+  points: number;
+}
+
+export interface LabExercisesResponse {
+  hasLabsByDefault: boolean;
+  labsEnabled: boolean;
+  exercises: LabExercise[];
+}
+
+export interface LabAttemptRequest {
+  exerciseId: string;
+  /** For multiple_choice, the string representation of the chosen option index (e.g. "2"). For free_text, the student's written answer. */
+  userAnswer: string;
+}
+
+export interface LabAttemptResult {
+  id: string;
+  exerciseId: string;
+  /** 0.0 = wrong, 0.5 = partial, 1.0 = correct */
+  score: number;
+  feedback: string;
+  earnedPoints: number;
+  totalPoints: number;
+  createdAt: string;
+}
+
+export interface LabAttemptHistory {
+  id: string;
+  exerciseId: string;
+  userAnswer: string;
+  score: number;
+  feedback: string;
+  earnedPoints: number;
+  createdAt: string;
+  exerciseTitle: string;
+  exerciseSubject: string;
+  exerciseTopic: string;
 }
 

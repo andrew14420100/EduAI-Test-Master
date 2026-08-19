@@ -9,6 +9,7 @@ import shopRouter from "./shop";
 import ticketsRouter from "./tickets";
 import leaderboardRouter from "./leaderboard";
 import socialRouter from "./social";
+import labsRouter from "./labs";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(shopRouter);
 router.use(ticketsRouter);
 router.use(leaderboardRouter);
 router.use(socialRouter);
+router.use(labsRouter);
 
 export default router;

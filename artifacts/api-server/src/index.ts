@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { seedLabExercisesIfEmpty } from "./lib/labSeed";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,11 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Seed lab exercises in development if the table is empty (non-blocking)
+  if (process.env["NODE_ENV"] !== "production") {
+    seedLabExercisesIfEmpty().catch((err) => {
+      logger.error({ err }, "Lab seed failed");
+    });
+  }
 });

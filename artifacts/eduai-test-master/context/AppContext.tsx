@@ -10,6 +10,8 @@ import {
   getListMaterialsQueryKey,
   getListQuizAttemptsQueryKey,
   getListTicketsQueryKey,
+  getListLabExercisesQueryKey,
+  getListLabAttemptsQueryKey,
   useBuyShopItem,
   useCreateGroup,
   useCreateTicket as useCreateTicketMutation,
@@ -24,6 +26,10 @@ import {
   useListMaterials,
   useListQuizAttempts,
   useListTickets,
+  useListLabExercises,
+  useListLabAttempts,
+  useSubmitLabAttempt,
+  useSetLabsEnabled,
   useStartQuizSession,
   useCompleteQuizSession,
   useGenerateFlashcards,
@@ -44,8 +50,12 @@ import {
   type QuizAttempt,
   type Flashcard,
   type MaterialExtractionStatus,
+  type LabExercise,
+  type LabAttemptResult,
+  type LabAttemptHistory,
 } from '@workspace/api-client-react';
 import * as FileSystem from 'expo-file-system/legacy';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { ThemeProvider, type AppTheme } from '@/context/ThemeContext';
@@ -157,6 +167,14 @@ type AppState = {
   createTicket: (subject: string, category: string, message: string) => Promise<ActionResult>;
   useInvite: (code: string) => Promise<ActionResult>;
   refresh: () => Promise<void>;
+  // Labs
+  labExercises: LabExercise[];
+  labAttempts: LabAttemptHistory[];
+  labsEnabled: boolean;
+  hasLabsByDefault: boolean;
+  labsLoading: boolean;
+  submitLabAttempt: (exerciseId: string, userAnswer: string) => Promise<{ ok: true; result: { score: number; feedback: string; earnedPoints: number; totalPoints: number } } | { ok: false; message: string }>;
+  enableLabs: (enabled: boolean) => Promise<ActionResult>;
 };
 
 // Server catalog mirrors SHOP_CATALOG in the backend (single source of truth on the server;
@@ -302,6 +320,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const inviteQuery = useGetInviteSummary({
     query: { queryKey: getGetInviteSummaryQueryKey(), enabled: dataEnabled },
   });
+  // Labs — the list endpoint also returns labsEnabled/hasLabsByDefault flags.
+  // Enabled whenever data is enabled: the server responds 403 when labs are off,
+  // so we rely on the profile flags below for visibility and keep retry low.
+  const labsEnabledFlag = Boolean(profile?.labsEnabled);
+  const labExercisesQuery = useListLabExercises({
+    query: { queryKey: getListLabExercisesQueryKey(), enabled: dataEnabled && labsEnabledFlag, retry: 1 },
+  });
+  const labAttemptsQuery = useListLabAttempts({
+    query: { queryKey: getListLabAttemptsQueryKey(), enabled: dataEnabled && labsEnabledFlag, retry: 1 },
+  });
 
   const updateLevelMutation = useUpdateLevel();
   const requestUploadMutation = useRequestUploadUrl();
@@ -319,6 +347,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const useLightThemeMutation = useUseLightTheme();
   const createTicketMutation = useCreateTicketMutation();
   const useInviteMutation = useUseInviteCode();
+  const submitLabAttemptMutation = useSubmitLabAttempt();
+  const setLabsEnabledMutation = useSetLabsEnabled();
 
   useEffect(() => {
     if (!isSignedIn || !user) {
@@ -695,6 +725,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     },
     refresh,
+    // ── Labs ──────────────────────────────────────────────────────────────
+    labExercises: labExercisesQuery.data?.exercises ?? [],
+    labAttempts: labAttemptsQuery.data ?? [],
+    labsEnabled: Boolean(profile?.labsEnabled),
+    hasLabsByDefault: Boolean(profile?.hasLabsByDefault),
+    labsLoading: labExercisesQuery.isLoading,
+    submitLabAttempt: async (exerciseId, userAnswer) => {
+      try {
+        const attempt = await submitLabAttemptMutation.mutateAsync({ data: { exerciseId, userAnswer } });
+        // Wallet and history change server-side in the same transaction.
+        await Promise.all([profileQuery.refetch(), labAttemptsQuery.refetch(), leaderboardQuery.refetch()]);
+        return {
+          ok: true,
+          result: {
+            score: attempt.score,
+            feedback: attempt.feedback,
+            earnedPoints: attempt.earnedPoints,
+            totalPoints: attempt.totalPoints,
+          },
+        };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
+      }
+    },
+    enableLabs: async (enabled) => {
+      try {
+        const updated = await setLabsEnabledMutation.mutateAsync({ data: { enabled } });
+        queryClient.setQueryData(getGetProfileQueryKey(), updated);
+        await profileQuery.refetch();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
+      }
+    },
   }), [
     buyItemMutation,
     completeQuizSessionMutation,
@@ -710,6 +774,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     inviteQuery,
     isLoaded,
     isSignedIn,
+    labAttemptsQuery,
+    labExercisesQuery,
     leaderboardQuery,
     materials,
     materialsQuery,
@@ -723,10 +789,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     quizzesQuery,
     recoveryQuery.data,
     requestUploadMutation,
+    setLabsEnabledMutation,
     shop,
     signOut,
     startRecoverySessionMutation,
     startQuizSessionMutation,
+    submitLabAttemptMutation,
     studyGroups,
     ticketsQuery,
     updateLevelMutation,

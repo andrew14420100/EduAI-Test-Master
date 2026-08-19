@@ -8,3 +8,4 @@ export * from "./tickets";
 export * from "./friends";
 export * from "./pendingUploads";
 export * from "./studyRecovery";
+export * from "./labs";
