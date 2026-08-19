@@ -1,8 +1,8 @@
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
+import { AppIcon } from '@/components/AppIcon';
 import { useColors } from '@/hooks/useColors';
 
 export default function TabLayout() {
@@ -31,10 +31,10 @@ export default function TabLayout() {
             : null,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Oggi', tabBarIcon: ({ color }) => <Feather name="home" size={21} color={color} /> }} />
-      <Tabs.Screen name="library" options={{ title: 'Materiali', tabBarIcon: ({ color }) => <Feather name="folder" size={21} color={color} /> }} />
-      <Tabs.Screen name="shop" options={{ title: 'Negozio', tabBarIcon: ({ color }) => <Feather name="shopping-bag" size={21} color={color} /> }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profilo', tabBarIcon: ({ color }) => <Feather name="user" size={21} color={color} /> }} />
+      <Tabs.Screen name="index" options={{ title: 'Oggi', tabBarIcon: ({ color }) => <AppIcon name="home" size={20} color={color} /> }} />
+      <Tabs.Screen name="library" options={{ title: 'Genera', tabBarIcon: ({ color }) => <AppIcon name="generate" size={20} color={color} /> }} />
+      <Tabs.Screen name="shop" options={{ title: 'Negozio', tabBarIcon: ({ color }) => <AppIcon name="shop" size={20} color={color} /> }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profilo', tabBarIcon: ({ color }) => <AppIcon name="profile" size={20} color={color} /> }} />
     </Tabs>
   );
 }
