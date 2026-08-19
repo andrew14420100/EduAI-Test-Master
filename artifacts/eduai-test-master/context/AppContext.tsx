@@ -48,7 +48,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     level: level ?? 'Liceo Scientifico',
     wallet, streak, quizzes, shop,
     completeOnboarding: (next) => setLevel(next),
-    addQuiz: (record) => setQuizzes((items) => [record, ...items]),
+    addQuiz: (record) => {
+      setQuizzes((items) => [record, ...items]);
+      if (record.passed) setWallet((value) => value + record.score);
+    },
     buyItem: (id) => { const item = shop.find((entry) => entry.id === id); if (!item || item.owned || wallet < item.cost) return; setWallet((value) => value - item.cost); setShop((items) => items.map((entry) => entry.id === id ? { ...entry, owned: true } : entry)); },
     equipItem: (id) => setShop((items) => items.map((item) => ({ ...item, equipped: item.id === id ? true : item.equipped }))),
   }), [level, wallet, streak, quizzes, shop]);
