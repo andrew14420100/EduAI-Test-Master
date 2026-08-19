@@ -77,7 +77,7 @@ function automaticTitle(materials: Array<{ name: string }>) {
 export default function LibraryScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { materials, studyGroups, uploadMaterials, removeMaterial } = useApp();
+  const { materials, studyGroups, uploadMaterials, removeMaterial, retryMaterialAnalysis } = useApp();
   const mounted = useRef(true);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -142,7 +142,11 @@ export default function LibraryScreen() {
       (clientId, progress) => {
         if (!mounted.current) return;
         setUploads((current) => current.map((item) => item.id === clientId
-          ? { ...item, progress, status: progress === 100 ? 'completato' : 'caricamento' }
+          ? {
+            ...item,
+            progress: progress < 0 ? item.progress : progress,
+            status: progress < 0 ? 'errore' : progress === 100 ? 'completato' : 'caricamento',
+          }
           : item));
       },
     );
@@ -158,8 +162,8 @@ export default function LibraryScreen() {
       kind: 'messaggio',
       title: pendingMaterials.length === 1 ? 'Materiale importato' : `${pendingMaterials.length} materiali importati`,
       message: rejectedCount
-        ? `${rejectedCount} file non supportati sono stati ignorati. Gli altri sono pronti per l’analisi unificata.`
-        : 'Tutti i file sono stati salvati online e sono pronti per essere analizzati insieme.',
+        ? `${rejectedCount} file non supportati sono stati ignorati. Gli altri sono stati salvati e la loro analisi è iniziata.`
+        : 'Tutti i file sono stati salvati online. L’analisi o la trascrizione continua in background.',
       icon: 'circle-check',
     });
   };
@@ -212,6 +216,13 @@ export default function LibraryScreen() {
 
   const toggleMaterial = (id: string) => {
     setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  };
+
+  const retryAnalysis = async (material: Material) => {
+    const result = await retryMaterialAnalysis(material.id);
+    if (!result.ok) {
+      setModal({ kind: 'messaggio', title: 'Analisi non riavviata', message: result.message, icon: 'warning' });
+    }
   };
 
   const askToGenerate = () => {
@@ -374,24 +385,39 @@ export default function LibraryScreen() {
                 {(() => {
                   const ready = item.extractionStatus === 'ready';
                   const failed = item.extractionStatus === 'failed';
+                  const analyzing = item.extractionStatus === 'pending' || item.extractionStatus === 'processing';
                   const badgeColor = ready ? '#4ADE80' : failed ? c.destructive : c.mutedForeground;
                   const badgeLabel = ready
                     ? 'Pronto per lo studio'
                     : item.extractionStatus === 'unsupported'
-                    ? 'Solo archivio · OCR/trascrizione non disponibili'
+                    ? 'Solo archivio · contenuto non analizzabile'
                     : failed
-                    ? 'Estrazione non riuscita'
-                    : 'Estrazione in corso';
+                    ? 'Analisi non riuscita'
+                    : item.kind === 'audio' || item.kind === 'video'
+                    ? 'Trascrizione in corso'
+                    : 'Analisi in corso';
                   return (
-                    <View style={styles.readinessRow}>
-                      <AppIcon
-                        name={ready ? 'circle-check' : failed ? 'warning' : 'info'}
-                        size={12}
-                        color={badgeColor}
-                      />
-                      <Text style={[styles.readinessText, { color: badgeColor }]} numberOfLines={1}>
-                        {badgeLabel}
-                      </Text>
+                    <View style={styles.analysisInfo}>
+                      <View style={styles.readinessRow}>
+                        <AppIcon
+                          name={ready ? 'circle-check' : failed ? 'warning' : 'info'}
+                          size={12}
+                          color={badgeColor}
+                        />
+                        <Text style={[styles.readinessText, { color: badgeColor }]} numberOfLines={1}>
+                          {badgeLabel}
+                        </Text>
+                      </View>
+                      {!ready && !analyzing ? (
+                        <Text style={[styles.analysisMessage, { color: c.mutedForeground }]} numberOfLines={2}>
+                          {item.extractionMessage}
+                        </Text>
+                      ) : null}
+                      {failed ? (
+                        <Pressable accessibilityLabel={`Riprova analisi ${item.name}`} onPress={() => void retryAnalysis(item)} hitSlop={8}>
+                          <Text style={[styles.retryText, { color: c.primary }]}>Riprova analisi</Text>
+                        </Pressable>
+                      ) : null}
                     </View>
                   );
                 })()}
@@ -499,7 +525,10 @@ const styles = StyleSheet.create({
   fileIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   materialTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, marginBottom: 4 },
   readinessRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  analysisInfo: { gap: 3 },
   readinessText: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 11, lineHeight: 15 },
+  analysisMessage: { fontFamily: 'Inter_500Medium', fontSize: 10, lineHeight: 14, marginTop: 1 },
+  retryText: { fontFamily: 'Inter_700Bold', fontSize: 11, marginTop: 2 },
   deleteButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   empty: { borderRadius: 18, padding: 20, gap: 7, alignItems: 'flex-start' },
   emptyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },

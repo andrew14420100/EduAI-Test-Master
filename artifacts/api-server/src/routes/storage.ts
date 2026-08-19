@@ -11,6 +11,7 @@ import {
 } from "../lib/objectStorage";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 import { db, pendingUploadsTable } from "@workspace/db";
+import { MAX_MEDIA_UPLOAD_BYTES } from "../lib/mediaLimits";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -40,6 +41,16 @@ router.post(
 
     try {
       const { name, size, contentType } = parsed.data;
+      if (
+        (contentType.toLowerCase().startsWith("audio/") ||
+          contentType.toLowerCase().startsWith("video/")) &&
+        size > MAX_MEDIA_UPLOAD_BYTES
+      ) {
+        res.status(400).json({
+          error: "Audio e video possono essere analizzati fino a 250 MB.",
+        });
+        return;
+      }
 
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       const objectPath =

@@ -148,7 +148,7 @@ export const ListMaterialsResponseItem = zod.object({
   "objectPath": zod.string(),
   "size": zod.number().int().nullish().describe('File size in bytes.'),
   "groupId": zod.string().nullish(),
-  "extractionStatus": zod.enum(['ready', 'unsupported', 'failed', 'pending']).describe('Readiness of the extracted study text. Raw extracted text is never exposed. \'ready\' means usable for quizzes\/flashcards.\n'),
+  "extractionStatus": zod.enum(['ready', 'unsupported', 'failed', 'pending', 'processing']).describe('Readiness of the extracted study text. Raw extracted text is never exposed. \'ready\' means usable for quizzes\/flashcards.\n'),
   "extractionMessage": zod.string().describe('Safe Italian readiness message (never the extracted text).'),
   "isStudyReady": zod.boolean().describe('True when extractionStatus is \'ready\'.'),
   "createdAt": zod.coerce.date()
@@ -184,7 +184,30 @@ export const FinalizeMaterialResponse = zod.object({
   "objectPath": zod.string(),
   "size": zod.number().int().nullish().describe('File size in bytes.'),
   "groupId": zod.string().nullish(),
-  "extractionStatus": zod.enum(['ready', 'unsupported', 'failed', 'pending']).describe('Readiness of the extracted study text. Raw extracted text is never exposed. \'ready\' means usable for quizzes\/flashcards.\n'),
+  "extractionStatus": zod.enum(['ready', 'unsupported', 'failed', 'pending', 'processing']).describe('Readiness of the extracted study text. Raw extracted text is never exposed. \'ready\' means usable for quizzes\/flashcards.\n'),
+  "extractionMessage": zod.string().describe('Safe Italian readiness message (never the extracted text).'),
+  "isStudyReady": zod.boolean().describe('True when extractionStatus is \'ready\'.'),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Retry extraction or transcription for a material
+ */
+export const RetryMaterialAnalysisParams = zod.object({
+  "materialId": zod.coerce.string()
+})
+
+export const RetryMaterialAnalysisResponse = zod.object({
+  "id": zod.string(),
+  "ownerId": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "contentType": zod.string(),
+  "objectPath": zod.string(),
+  "size": zod.number().int().nullish().describe('File size in bytes.'),
+  "groupId": zod.string().nullish(),
+  "extractionStatus": zod.enum(['ready', 'unsupported', 'failed', 'pending', 'processing']).describe('Readiness of the extracted study text. Raw extracted text is never exposed. \'ready\' means usable for quizzes\/flashcards.\n'),
   "extractionMessage": zod.string().describe('Safe Italian readiness message (never the extracted text).'),
   "isStudyReady": zod.boolean().describe('True when extractionStatus is \'ready\'.'),
   "createdAt": zod.coerce.date()

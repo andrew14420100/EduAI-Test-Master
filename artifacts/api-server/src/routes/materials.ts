@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
-import { eq, and, gt, lte, sql } from "drizzle-orm";
+import { eq, and, gt, inArray, lte, sql } from "drizzle-orm";
 import {
   db,
   materialsTable,
@@ -21,6 +21,8 @@ import {
   type ExtractionResult,
 } from "../lib/contentStudy";
 import { generateMaterialTitle } from "../lib/studyAi";
+import { transcribeMediaObject } from "../lib/mediaTranscription";
+import { MAX_MEDIA_UPLOAD_BYTES } from "../lib/mediaLimits";
 import type { File } from "@google-cloud/storage";
 
 const router: IRouter = Router();
@@ -72,6 +74,159 @@ async function extractFromObject(
   }
 }
 
+function importedFileTitle(fileName: string) {
+  const withoutExtension = fileName.replace(/\.[^.]+$/, "").trim();
+  return (withoutExtension || "File importato").slice(0, 100);
+}
+
+async function analyzeStoredMaterial(params: {
+  materialId: string;
+  ownerId: string;
+  objectPath: string;
+  contentType: string;
+  fileName: string;
+  size: number | null;
+  log: Pick<Request["log"], "warn" | "error">;
+}) {
+  const { materialId, objectPath, contentType, fileName, size, log } = params;
+  try {
+    await db
+      .update(materialsTable)
+      .set({ extractionStatus: "processing", extractionError: null })
+      .where(eq(materialsTable.id, materialId));
+
+    const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+    const extraction = contentType.startsWith("audio/") || contentType.startsWith("video/")
+      ? await transcribeMediaObject({ objectFile, contentType, size })
+      : await extractFromObject(objectFile, contentType, fileName);
+
+    let title: string | undefined;
+    if (extraction.status === "ready" && extraction.text) {
+      try {
+        title = await generateMaterialTitle({ extractedText: extraction.text }) ?? undefined;
+      } catch (error) {
+        log.warn({ err: error, materialId }, "Titolo IA non disponibile: mantengo il nome del file");
+      }
+    }
+
+    await db
+      .update(materialsTable)
+      .set({
+        ...(title ? { title } : {}),
+        extractedText: extraction.text,
+        extractionStatus: extraction.status,
+        extractionError: extraction.error,
+      })
+      .where(eq(materialsTable.id, materialId));
+  } catch (error) {
+    log.error({ err: error, materialId }, "Analisi del materiale non riuscita");
+    await db
+      .update(materialsTable)
+      .set({
+        extractedText: null,
+        extractionStatus: "failed",
+        extractionError: "L'analisi del contenuto si è interrotta. Puoi riprovare.",
+      })
+      .where(eq(materialsTable.id, materialId))
+      .catch((updateError) =>
+        log.error({ err: updateError, materialId }, "Impossibile salvare l'errore di analisi"),
+      );
+  }
+}
+
+type AnalysisQueueItem = Parameters<typeof analyzeStoredMaterial>[0];
+type QueueResult = "queued" | "duplicate" | "full";
+
+const MAX_ANALYSIS_CONCURRENCY = 2;
+const MAX_ANALYSIS_QUEUE = 20;
+const MAX_ANALYSIS_WORK_PER_USER = 5;
+const analysisQueue: AnalysisQueueItem[] = [];
+const queuedAnalysisIds = new Set<string>();
+const activeAnalysisIds = new Set<string>();
+const recoveryLog = {
+  warn: (...args: unknown[]) => console.warn(...args),
+  error: (...args: unknown[]) => console.error(...args),
+} as unknown as Pick<Request["log"], "warn" | "error">;
+
+function analysisWorkForOwner(ownerId: string) {
+  return analysisQueue.filter((item) => item.ownerId === ownerId).length
+    + [...activeAnalysisIds].filter((id) => id.startsWith(`${ownerId}:`)).length;
+}
+
+async function pumpAnalysisQueue() {
+  while (activeAnalysisIds.size < MAX_ANALYSIS_CONCURRENCY && analysisQueue.length > 0) {
+    const item = analysisQueue.shift()!;
+    queuedAnalysisIds.delete(item.materialId);
+    const activeKey = `${item.ownerId}:${item.materialId}`;
+    activeAnalysisIds.add(activeKey);
+    void analyzeStoredMaterial(item).finally(() => {
+      activeAnalysisIds.delete(activeKey);
+      void pumpAnalysisQueue();
+    });
+  }
+}
+
+function queueMaterialAnalysis(params: AnalysisQueueItem): QueueResult {
+  if (queuedAnalysisIds.has(params.materialId) || [...activeAnalysisIds].some((id) => id.endsWith(`:${params.materialId}`))) {
+    return "duplicate";
+  }
+  if (
+    analysisQueue.length >= MAX_ANALYSIS_QUEUE
+    || analysisWorkForOwner(params.ownerId) >= MAX_ANALYSIS_WORK_PER_USER
+  ) {
+    return "full";
+  }
+  queuedAnalysisIds.add(params.materialId);
+  analysisQueue.push(params);
+  void pumpAnalysisQueue();
+  return "queued";
+}
+
+async function markAnalysisQueueFull(
+  materialId: string,
+  log: Pick<Request["log"], "warn" | "error">,
+) {
+  await db
+    .update(materialsTable)
+    .set({
+      extractionStatus: "failed",
+      extractionError: "La coda di analisi è momentaneamente piena. Puoi riprovare tra poco.",
+    })
+    .where(eq(materialsTable.id, materialId))
+    .catch((error) => log.error({ err: error, materialId }, "Impossibile salvare coda piena"));
+}
+
+async function recoverPendingAnalyses() {
+  try {
+    const pending = await db
+      .select()
+      .from(materialsTable)
+      .where(inArray(materialsTable.extractionStatus, ["pending", "processing"]));
+    for (const material of pending) {
+      const result = queueMaterialAnalysis({
+        materialId: material.id,
+        ownerId: material.ownerId,
+        objectPath: material.objectPath,
+        contentType: material.contentType,
+        fileName: material.title,
+        size: material.size,
+        log: recoveryLog,
+      });
+      if (result === "full") {
+        await db
+          .update(materialsTable)
+          .set({
+            extractionStatus: "failed",
+            extractionError: "L'analisi è stata interrotta dal riavvio. Puoi riprovare.",
+          })
+          .where(eq(materialsTable.id, material.id));
+      }
+    }
+  } catch (error) {
+    console.error("Impossibile recuperare le analisi in sospeso", error);
+  }
+}
+
 /**
  * Shape a material row for list/detail responses WITHOUT leaking extractedText.
  * Exposes extractionStatus and a safe Italian readiness message.
@@ -93,7 +248,8 @@ function toPublicMaterial(m: {
     | "ready"
     | "unsupported"
     | "failed"
-    | "pending";
+    | "pending"
+    | "processing";
   return {
     id: m.id,
     ownerId: m.ownerId,
@@ -277,36 +433,6 @@ router.post("/materials", requireAuth, async (req: Request, res: Response) => {
       visibility: "private",
     });
 
-    // 6b. Download + extract study text (best effort). Any failure is captured
-    //     as a failed/unsupported status — the imported material is NEVER lost.
-    const extraction = await extractFromObject(
-      objectFile,
-      contentType,
-      pending.name,
-    );
-    if (extraction.status === "failed") {
-      req.log.warn(
-        { objectPath, reason: extraction.error },
-        "Estrazione testo materiale non riuscita",
-      );
-    }
-    let generatedTitle = "Materiale di studio importato";
-    try {
-      generatedTitle = await generateMaterialTitle({
-        extractedText: extraction.text,
-        contentType,
-      });
-    } catch (error) {
-      req.log.warn({ err: error }, "Titolo IA non disponibile: uso titolo sicuro di importazione");
-      generatedTitle = contentType.startsWith("image/")
-        ? "Immagine di studio importata"
-        : contentType.startsWith("audio/")
-          ? "Registrazione di studio importata"
-          : contentType.startsWith("video/")
-            ? "Video di studio importato"
-            : "Materiale di studio importato";
-    }
-
     // 7. Atomically consume the pending row and insert the material.
     //    Deleting the pending row inside the transaction with a RETURNING guard
     //    ensures a concurrent finalize cannot also proceed; the unique constraint
@@ -335,15 +461,15 @@ router.post("/materials", requireAuth, async (req: Request, res: Response) => {
           .values({
             id: randomUUID(),
             ownerId: userId,
-            title: generatedTitle,
+            title: importedFileTitle(pending.name),
             description: description ?? null,
             contentType,
             objectPath,
             size,
             groupId: groupId ?? null,
-            extractedText: extraction.text,
-            extractionStatus: extraction.status,
-            extractionError: extraction.error,
+            extractedText: null,
+            extractionStatus: "pending",
+            extractionError: null,
           })
           .returning();
 
@@ -387,12 +513,87 @@ router.post("/materials", requireAuth, async (req: Request, res: Response) => {
       throw txErr;
     }
 
+    const initialQueueResult = queueMaterialAnalysis({
+      materialId: material!.id,
+      ownerId: userId,
+      objectPath,
+      contentType,
+      fileName: pending.name,
+      size: material!.size,
+      log: req.log,
+    });
+    if (initialQueueResult === "full") {
+      await markAnalysisQueueFull(material!.id, req.log);
+    }
     res.status(201).json(toPublicMaterial(material!));
   } catch (err) {
     req.log.error({ err }, "Errore creazione materiale");
     res.status(500).json({ error: "Errore interno del server" });
   }
 });
+
+router.post(
+  "/materials/:materialId/retry-analysis",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthedRequest).clerkUserId;
+    const materialId = req.params.materialId as string;
+    try {
+      const [material] = await db
+        .select()
+        .from(materialsTable)
+        .where(and(eq(materialsTable.id, materialId), eq(materialsTable.ownerId, userId)));
+      if (!material) {
+        res.status(404).json({ error: "Materiale non trovato." });
+        return;
+      }
+      const active = [...activeAnalysisIds].some((id) => id.endsWith(`:${materialId}`));
+      const queued = queuedAnalysisIds.has(materialId);
+      if (active || queued) {
+        res.status(409).json({ error: "L'analisi del materiale è già in corso." });
+        return;
+      }
+      if (material.contentType.startsWith("image/")) {
+        res.status(400).json({
+          error: "Le immagini richiedono OCR, che non è disponibile: il materiale resta archiviato in sicurezza.",
+        });
+        return;
+      }
+      if (
+        (material.contentType.startsWith("audio/") || material.contentType.startsWith("video/")) &&
+        material.size !== null &&
+        material.size > MAX_MEDIA_UPLOAD_BYTES
+      ) {
+        res.status(400).json({ error: "Il file supera il limite previsto per riprovare l'analisi." });
+        return;
+      }
+
+      const [updated] = await db
+        .update(materialsTable)
+        .set({ extractionStatus: "pending", extractionError: null })
+        .where(and(eq(materialsTable.id, materialId), eq(materialsTable.ownerId, userId)))
+        .returning();
+      const queueResult = queueMaterialAnalysis({
+        materialId: updated!.id,
+        ownerId: userId,
+        objectPath: updated!.objectPath,
+        contentType: updated!.contentType,
+        fileName: updated!.title,
+        size: updated!.size,
+        log: req.log,
+      });
+      if (queueResult === "full") {
+        await markAnalysisQueueFull(updated!.id, req.log);
+        res.status(429).json({ error: "La coda di analisi è piena. Riprova tra poco." });
+        return;
+      }
+      res.json(toPublicMaterial(updated!));
+    } catch (err) {
+      req.log.error({ err, materialId }, "Impossibile riavviare l'analisi del materiale");
+      res.status(500).json({ error: "Impossibile riavviare l'analisi. Riprova più tardi." });
+    }
+  },
+);
 
 /**
  * DELETE /materials/:materialId — delete a material (owner only)
@@ -448,3 +649,5 @@ router.delete(
 );
 
 export default router;
+
+void recoverPendingAnalyses();

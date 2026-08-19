@@ -17,4 +17,5 @@ export const MaterialExtractionStatus = {
   unsupported: 'unsupported',
   failed: 'failed',
   pending: 'pending',
+  processing: 'processing',
 } as const;

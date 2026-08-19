@@ -11,10 +11,10 @@ export const materialsTable = pgTable(
     objectPath: text("object_path").notNull(), // stored path, not file bytes
     size: integer("size"), // file size in bytes, optional
     groupId: text("group_id"), // nullable, references studyGroupsTable.id
-    // Content-grounded study pipeline (no AI, no OCR/transcription):
+    // Content-grounded study pipeline; raw text is never exposed to clients.
     // Normalized text extracted from the uploaded object, when supported.
     extractedText: text("extracted_text"), // nullable — never exposed in list responses
-    // 'pending' | 'ready' | 'unsupported' | 'failed'
+    // 'pending' | 'processing' | 'ready' | 'unsupported' | 'failed'
     extractionStatus: text("extraction_status").notNull().default("pending"),
     // Italian human-readable reason when status is unsupported/failed
     extractionError: text("extraction_error"), // nullable

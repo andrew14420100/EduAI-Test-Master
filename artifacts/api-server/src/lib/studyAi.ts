@@ -9,18 +9,10 @@ function cleanShortText(value: string, maxLength: number): string {
     .trim();
 }
 
-function fallbackTitle(contentType: string): string {
-  if (contentType.startsWith("image/")) return "Immagine di studio importata";
-  if (contentType.startsWith("audio/")) return "Registrazione di studio importata";
-  if (contentType.startsWith("video/")) return "Video di studio importato";
-  return "Materiale di studio importato";
-}
-
 export async function generateMaterialTitle(params: {
-  extractedText: string | null;
-  contentType: string;
-}): Promise<string> {
-  if (!params.extractedText?.trim()) return fallbackTitle(params.contentType);
+  extractedText: string;
+}): Promise<string | null> {
+  if (!params.extractedText.trim()) return null;
 
   const response = await openai.chat.completions.create({
     model: "gpt-5-mini",
@@ -38,7 +30,7 @@ export async function generateMaterialTitle(params: {
     ],
   });
   const title = cleanShortText(response.choices[0]?.message?.content ?? "", 70);
-  return title.length >= 4 ? title : fallbackTitle(params.contentType);
+  return title.length >= 4 ? title : null;
 }
 
 export async function generateQuickExplanation(question: string, options: string[]): Promise<string> {

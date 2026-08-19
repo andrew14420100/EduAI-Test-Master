@@ -754,6 +754,77 @@ export const useFinalizeMaterial = <TError = ErrorType<ErrorEnvelope>,
       return useMutation(getFinalizeMaterialMutationOptions(options));
     }
 
+export const getRetryMaterialAnalysisUrl = (materialId: string,) => {
+
+
+
+
+  return `/api/materials/${materialId}/retry-analysis`
+}
+
+/**
+ * @summary Retry extraction or transcription for a material
+ */
+export const retryMaterialAnalysis = async (materialId: string, options?: Parameters<typeof customFetch>[1]): Promise<Material> => {
+
+  return customFetch<Material>(getRetryMaterialAnalysisUrl(materialId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRetryMaterialAnalysisMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryMaterialAnalysis>>, TError,{materialId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof retryMaterialAnalysis>>, TError,{materialId: string}, TContext> => {
+
+const mutationKey = ['retryMaterialAnalysis'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof retryMaterialAnalysis>>, {materialId: string}> = (props) => {
+          const {materialId} = props ?? {};
+
+          return  retryMaterialAnalysis(materialId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RetryMaterialAnalysisMutationResult = NonNullable<Awaited<ReturnType<typeof retryMaterialAnalysis>>>
+
+    export type RetryMaterialAnalysisMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Retry extraction or transcription for a material
+ */
+export const useRetryMaterialAnalysis = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryMaterialAnalysis>>, TError,{materialId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof retryMaterialAnalysis>>,
+        TError,
+        {materialId: string},
+        TContext
+      > => {
+      return useMutation(getRetryMaterialAnalysisMutationOptions(options));
+    }
+
 export const getDeleteMaterialUrl = (materialId: string,) => {
 
 

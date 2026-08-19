@@ -2,13 +2,10 @@
  * contentStudy.ts — Pure, dependency-free content extraction + deterministic
  * study generation for EduAI Test Master.
  *
- * Scope constraints (hard requirements):
- *  - NO external packages / services.
- *  - NO OCR, NO audio/video transcription, NO paid AI.
- *  - Text is extracted only from genuinely textual/document formats we can decode
- *    with the Node standard library (Buffer + zlib). Images/audio/video and any
- *    other binary type are reported `unsupported` with a clear Italian message —
- *    never fabricated from the filename.
+ * Scope constraints:
+ *  - Textual documents are extracted locally with Node standard library helpers.
+ *  - OCR is not available; image-only materials remain archive-only.
+ *  - Audio/video are handled by the separate streaming transcription pipeline.
  *
  * The whole module is pure and synchronous where possible so it can be unit
  * tested with Node's built-in test runner without a database or network.
@@ -27,7 +24,12 @@ export const MAX_TEXT_CHARS = 60_000;
 
 // ─── Status types ────────────────────────────────────────────────────────────
 
-export type ExtractionStatus = "ready" | "unsupported" | "failed" | "pending";
+export type ExtractionStatus =
+  | "ready"
+  | "unsupported"
+  | "failed"
+  | "pending"
+  | "processing";
 
 export type ExtractionResult = {
   status: ExtractionStatus;
@@ -518,8 +520,9 @@ export function readinessMessage(
     case "failed":
       return error ?? "Estrazione del testo non riuscita.";
     case "pending":
+    case "processing":
     default:
-      return "Estrazione del contenuto in corso…";
+      return "Analisi del contenuto in corso…";
   }
 }
 

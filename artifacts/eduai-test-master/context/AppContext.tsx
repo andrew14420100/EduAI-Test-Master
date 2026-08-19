@@ -30,6 +30,7 @@ import {
   useGetQuickExplanation,
   useGetRecoverySummary,
   useRequestUploadUrl,
+  useRetryMaterialAnalysis,
   useStartRecoverySession,
   useUpdateLevel,
   useUpsertProfile,
@@ -44,9 +45,9 @@ import {
   type Flashcard,
   type MaterialExtractionStatus,
 } from '@workspace/api-client-react';
-import { File } from 'expo-file-system';
-import { fetch as expoFetch } from 'expo/fetch';
+import * as FileSystem from 'expo-file-system/legacy';
 import React, { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { ThemeProvider, type AppTheme } from '@/context/ThemeContext';
 
 export type Level = string;
@@ -115,6 +116,9 @@ export type StudyFlashcard = Flashcard;
 type ActionResult = { ok: true } | { ok: false; message: string };
 type UploadProgress = (clientId: string, progress: number) => void;
 
+const MAX_MEDIA_UPLOAD_BYTES = 250 * 1024 * 1024;
+const MAX_PARALLEL_UPLOADS = 2;
+
 type AppState = {
   level: Level | null;
   ready: boolean;
@@ -145,6 +149,7 @@ type AppState = {
   getQuickExplanation: (sessionId: string, questionIndex: number) => Promise<{ ok: true; explanation: string; chargedPoints: number } | { ok: false; message: string }>;
   generateFlashcards: (materialIds: string[]) => Promise<{ ok: true; flashcards: StudyFlashcard[] } | { ok: false; message: string }>;
   uploadMaterials: (files: UploadMaterialInput[], groupTitle: string, onProgress: UploadProgress) => Promise<ActionResult>;
+  retryMaterialAnalysis: (id: string) => Promise<ActionResult>;
   removeMaterial: (id: string) => Promise<ActionResult>;
   buyItem: (id: string) => Promise<ActionResult>;
   equipItem: (id: string) => Promise<ActionResult>;
@@ -173,6 +178,21 @@ function kindFromContentType(contentType: string): MaterialKind {
   if (contentType.startsWith('video/')) return 'video';
   if (contentType.startsWith('audio/')) return 'audio';
   return 'documento';
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+) {
+  let nextIndex = 0;
+  const workerCount = Math.min(limit, items.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const item = items[nextIndex++];
+      if (item) await worker(item);
+    }
+  }));
 }
 
 function accountName(user: ReturnType<typeof useUser>['user']) {
@@ -239,6 +259,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateLevelMutation = useUpdateLevel();
   const requestUploadMutation = useRequestUploadUrl();
+  const retryMaterialAnalysisMutation = useRetryMaterialAnalysis();
   const finalizeMaterialMutation = useFinalizeMaterial();
   const createGroupMutation = useCreateGroup();
   const deleteMaterialMutation = useDeleteMaterial();
@@ -348,6 +369,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const theme: AppTheme = shop.some((item) => item.id === 'dark' && item.equipped)
     ? 'dark'
     : 'light';
+
+  useEffect(() => {
+    const analysisInProgress = (materialsQuery.data ?? []).some(
+      (material) => material.extractionStatus === 'pending' || material.extractionStatus === 'processing',
+    );
+    if (!analysisInProgress) return;
+    const interval = setInterval(() => {
+      void materialsQuery.refetch();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [materialsQuery, materialsQuery.data]);
 
   const refresh = async () => {
     if (!dataEnabled) return;
@@ -468,21 +500,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
     uploadMaterials: async (files, groupTitle, onProgress) => {
       try {
         const group = await createGroupMutation.mutateAsync({ data: { name: groupTitle } });
-        await Promise.all(files.map(async (file) => {
-          onProgress(file.clientId, 8);
-          const nativeFile = new File(file.uri);
-          onProgress(file.clientId, 24);
-          const size = Math.max(file.size ?? nativeFile.size, 1);
+        await runWithConcurrency(files, MAX_PARALLEL_UPLOADS, async (file) => {
+          try {
+            onProgress(file.clientId, 8);
+            let webBlob: Blob | null = null;
+            let detectedSize = file.size ?? 0;
+            if (Platform.OS === 'web') {
+              const localResponse = await fetch(file.uri);
+              if (!localResponse.ok) throw new Error(`Impossibile leggere ${file.name}.`);
+              webBlob = await localResponse.blob();
+              detectedSize = webBlob.size;
+            } else {
+              const info = await FileSystem.getInfoAsync(file.uri);
+              detectedSize = info.exists ? info.size : 0;
+            }
+            const size = Math.max(file.size ?? detectedSize, 1);
+            if (
+              (file.contentType.startsWith('audio/') || file.contentType.startsWith('video/'))
+              && size > MAX_MEDIA_UPLOAD_BYTES
+            ) {
+              throw new Error(`${file.name} supera il limite di 250 MB previsto per audio e video.`);
+            }
+            onProgress(file.clientId, 24);
           const upload = await requestUploadMutation.mutateAsync({
             data: { name: file.name, size, contentType: file.contentType },
           });
           onProgress(file.clientId, 42);
-          const response = await expoFetch(upload.uploadURL, {
-            method: 'PUT',
-            headers: { 'Content-Type': file.contentType },
-            body: nativeFile,
-          });
-          if (!response.ok) throw new Error(`Caricamento di ${file.name} non riuscito.`);
+            if (Platform.OS === 'web') {
+              const response = await fetch(upload.uploadURL, {
+                method: 'PUT',
+                headers: { 'Content-Type': file.contentType },
+                body: webBlob,
+              });
+              if (!response.ok) throw new Error(`Caricamento di ${file.name} non riuscito.`);
+              onProgress(file.clientId, 87);
+            } else {
+              const task = FileSystem.createUploadTask(
+                upload.uploadURL,
+                file.uri,
+                {
+                  httpMethod: 'PUT',
+                  uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+                  headers: { 'Content-Type': file.contentType },
+                },
+                ({ totalBytesSent, totalBytesExpectedToSend }) => {
+                  if (totalBytesExpectedToSend > 0) {
+                    onProgress(
+                      file.clientId,
+                      Math.min(87, 42 + Math.round((totalBytesSent / totalBytesExpectedToSend) * 45)),
+                    );
+                  }
+                },
+              );
+              const response = await task.uploadAsync();
+              if (!response || response.status < 200 || response.status >= 300) {
+                throw new Error(`Caricamento di ${file.name} non riuscito.`);
+              }
+            }
           onProgress(file.clientId, 88);
           await finalizeMaterialMutation.mutateAsync({
             data: {
@@ -493,8 +567,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
             },
           });
           onProgress(file.clientId, 100);
-        }));
+          } catch (error) {
+            onProgress(file.clientId, -1);
+            throw error;
+          }
+        });
         await Promise.all([materialsQuery.refetch(), groupsQuery.refetch()]);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
+      }
+    },
+    retryMaterialAnalysis: async (id) => {
+      try {
+        await retryMaterialAnalysisMutation.mutateAsync({ materialId: id });
+        await materialsQuery.refetch();
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
