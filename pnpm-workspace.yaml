@@ -68,6 +68,14 @@ catalog:
 
 autoInstallPeers: false
 
+peerDependencyRules:
+  # Expo SDK 54 pins React 19.1.0 exactly. Clerk Expo supports React ^19,
+  # while two internal Clerk packages currently declare 19.1.4 as their
+  # first accepted patch release. Keep Expo's required version authoritative.
+  allowedVersions:
+    react: 19.1.0
+    react-dom: 19.1.0
+
 onlyBuiltDependencies:
   - '@swc/core'
   - esbuild

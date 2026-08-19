@@ -10,6 +10,24 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+  - name: profile
+    description: User profile operations
+  - name: materials
+    description: Study material operations
+  - name: groups
+    description: Study group operations
+  - name: quiz
+    description: Quiz operations
+  - name: shop
+    description: Shop and inventory operations
+  - name: tickets
+    description: Support ticket operations
+  - name: social
+    description: Social and invite operations
+  - name: leaderboard
+    description: Global leaderboard
 paths:
   /healthz:
     get:
@@ -24,6 +42,786 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      description: |
+        Returns a presigned GCS URL for direct upload. The client sends JSON
+        metadata here, then uploads the file directly to the returned URL.
+        A pending_uploads row is inserted for later verification; ACL is set
+        only after the object is confirmed to exist in POST /materials.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /storage/public-objects/{filePath}:
+    get:
+      tags: [Storage]
+      operationId: getPublicObject
+      summary: Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Object content.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Failed to serve public object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an object entity from PRIVATE_OBJECT_DIR (requires auth + owner check)
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Object content.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Failed to serve object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Current profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    put:
+      operationId: upsertProfile
+      tags: [profile]
+      summary: Upsert current user profile (create on first call)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertProfileRequest"
+      responses:
+        "200":
+          description: Profile upserted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /profile/level:
+    patch:
+      operationId: updateLevel
+      tags: [profile]
+      summary: Update user level
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLevelRequest"
+      responses:
+        "200":
+          description: Level updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /materials:
+    get:
+      operationId: listMaterials
+      tags: [materials]
+      summary: List materials owned by current user
+      responses:
+        "200":
+          description: List of materials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Material"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    post:
+      operationId: finalizeMaterial
+      tags: [materials]
+      summary: Finalize material metadata after successful upload
+      description: |
+        Verifies a pending upload row owned by current user exists and is unexpired,
+        confirms the object exists in storage with matching metadata/size,
+        sets private ACL, inserts material record, and consumes the pending row.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinalizeMaterialRequest"
+      responses:
+        "201":
+          description: Material created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Material"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Forbidden (pending row not owned by current user or groupId not owned)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Pending upload not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Upload already finalized or object already added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /materials/{materialId}:
+    delete:
+      operationId: deleteMaterial
+      tags: [materials]
+      summary: Delete a material (owner only) and remove underlying object
+      parameters:
+        - name: materialId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /groups:
+    get:
+      operationId: listGroups
+      tags: [groups]
+      summary: List study groups the current user is a member of
+      responses:
+        "200":
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StudyGroup"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    post:
+      operationId: createGroup
+      tags: [groups]
+      summary: Create a study group (also finalizes group metadata after upload)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupRequest"
+      responses:
+        "201":
+          description: Group created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudyGroup"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /groups/{groupId}/join:
+    post:
+      operationId: joinGroup
+      tags: [groups]
+      summary: Join a study group
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Joined group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudyGroup"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /quiz/sessions:
+    post:
+      operationId: startQuizSession
+      tags: [quiz]
+      summary: Start a server-scored quiz session
+      description: |
+        Creates a quiz session for an owned material. Returns questions without
+        correctIndex. The server stores the answer key internally.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartQuizSessionRequest"
+      responses:
+        "201":
+          description: Quiz session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizSessionResponse"
+        "400":
+          description: Validation error (invalid materialId or totalQuestions)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Material not owned by current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Material not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: >
+            One or more selected materials are not ready for study (unsupported
+            format, extraction failed, or not enough extractable text).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /study/flashcards:
+    post:
+      operationId: generateFlashcards
+      tags: [quiz]
+      summary: Generate content-grounded flashcards from owned, ready materials
+      description: |
+        Verifies all selected materials are owned and extractionStatus=ready with
+        meaningful extracted text, then returns flashcards grounded in the actual
+        content. Generated separately from quiz answer keys. No filename fallback.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FlashcardsRequest"
+      responses:
+        "200":
+          description: Flashcards generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashcardsResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: One or more materials not found or not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: One or more materials not ready for study
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /quiz/sessions/{sessionId}/complete:
+    post:
+      operationId: completeQuizSession
+      tags: [quiz]
+      summary: Complete a quiz session and award coins (idempotent)
+      description: |
+        Accepts the user's answers array, scores against the server answer key,
+        inserts one attempt record, awards wallet coins, and marks session complete.
+        Idempotent: same idempotencyKey on a completed session returns the existing
+        attempt without re-awarding coins. Different key on completed session
+        returns existing attempt without re-awarding.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteQuizSessionRequest"
+      responses:
+        "200":
+          description: Session completed (or already completed — returns existing attempt)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizAttempt"
+        "400":
+          description: Validation error (wrong answer array length, expired session)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Session not owned by current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Session already completed but attempt record unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /quiz/attempts:
+    get:
+      operationId: listQuizAttempts
+      tags: [quiz]
+      summary: List quiz attempts for the current user
+      responses:
+        "200":
+          description: List of attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuizAttempt"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /shop/buy:
+    post:
+      operationId: buyShopItem
+      tags: [shop]
+      summary: Purchase a shop item (server validates price from catalog)
+      description: |
+        Only itemId is accepted. Server looks up price and type from the server-side
+        catalog. Duplicate purchases return 409. Insufficient funds return 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuyShopItemRequest"
+      responses:
+        "200":
+          description: Item purchased
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnedShopItem"
+        "400":
+          description: Validation error, unknown item, or insufficient funds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Item already owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /shop/equip:
+    post:
+      operationId: equipShopItem
+      tags: [shop]
+      summary: Equip an owned shop item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EquipShopItemRequest"
+      responses:
+        "200":
+          description: Item equipped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnedShopItem"
+        "400":
+          description: Item not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /shop/inventory:
+    get:
+      operationId: getInventory
+      tags: [shop]
+      summary: Get owned/equipped shop items for current user
+      responses:
+        "200":
+          description: Inventory
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OwnedShopItem"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /tickets:
+    get:
+      operationId: listTickets
+      tags: [tickets]
+      summary: List tickets for current user
+      responses:
+        "200":
+          description: List of tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    post:
+      operationId: createTicket
+      tags: [tickets]
+      summary: Create a support ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicketRequest"
+      responses:
+        "201":
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      summary: Global leaderboard (username and wallet only)
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /social/invite:
+    get:
+      operationId: getInviteSummary
+      tags: [social]
+      summary: Get invite code and friends summary for current user
+      responses:
+        "200":
+          description: Invite summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InviteSummary"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /social/use-invite:
+    post:
+      operationId: useInviteCode
+      tags: [social]
+      summary: Use an invite code to connect with a friend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UseInviteCodeRequest"
+      responses:
+        "200":
+          description: Invite used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InviteSummary"
+        "400":
+          description: Invalid code or self-invite
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +832,405 @@ components:
       required:
         - status
 
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/UploadUrlRequest'
+
+    Profile:
+      type: object
+      required: [userId, username, wallet, streak, inviteCode, createdAt, updatedAt]
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        level:
+          type: string
+          nullable: true
+          description: Full Italian study-path string (e.g. "Liceo Scientifico"). Null before onboarding.
+        wallet:
+          type: integer
+        streak:
+          type: integer
+        inviteCode:
+          type: string
+        avatarObjectPath:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UpsertProfileRequest:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+          minLength: 2
+          maxLength: 32
+        email:
+          type: string
+          format: email
+
+    UpdateLevelRequest:
+      type: object
+      required: [level]
+      properties:
+        level:
+          type: string
+          minLength: 1
+          description: Full Italian study-path string (e.g. "Liceo Scientifico").
+
+    Material:
+      type: object
+      required:
+        - id
+        - ownerId
+        - title
+        - contentType
+        - objectPath
+        - extractionStatus
+        - extractionMessage
+        - isStudyReady
+        - createdAt
+      properties:
+        id:
+          type: string
+        ownerId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        contentType:
+          type: string
+        objectPath:
+          type: string
+        size:
+          type: integer
+          nullable: true
+          description: File size in bytes.
+        groupId:
+          type: string
+          nullable: true
+        extractionStatus:
+          type: string
+          enum: [ready, unsupported, failed, pending]
+          description: >
+            Readiness of the extracted study text. Raw extracted text is never
+            exposed. 'ready' means usable for quizzes/flashcards.
+        extractionMessage:
+          type: string
+          description: Safe Italian readiness message (never the extracted text).
+        isStudyReady:
+          type: boolean
+          description: True when extractionStatus is 'ready'.
+        createdAt:
+          type: string
+          format: date-time
+
+    FinalizeMaterialRequest:
+      type: object
+      required: [title, contentType, objectPath, size]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        contentType:
+          type: string
+        objectPath:
+          type: string
+        size:
+          type: integer
+          minimum: 1
+          description: File size in bytes.
+        groupId:
+          type: string
+
+    StudyGroup:
+      type: object
+      required: [id, name, ownerId, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        ownerId:
+          type: string
+        coverObjectPath:
+          type: string
+          nullable: true
+        memberCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateGroupRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        description:
+          type: string
+        coverObjectPath:
+          type: string
+
+    QuizQuestion:
+      type: object
+      required: [question, options]
+      properties:
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+          minItems: 4
+          maxItems: 4
+
+    StartQuizSessionRequest:
+      type: object
+      required: [materialIds, totalQuestions]
+      properties:
+        materialIds:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 20
+          description: Owned material ids to combine into one unified quiz.
+        totalQuestions:
+          type: integer
+          enum: [10, 20, 30]
+
+    QuizSessionResponse:
+      type: object
+      required: [sessionId, questions, expiresAt]
+      properties:
+        sessionId:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+        expiresAt:
+          type: string
+          format: date-time
+
+    CompleteQuizSessionRequest:
+      type: object
+      required: [answers, idempotencyKey]
+      properties:
+        answers:
+          type: array
+          items:
+            type: integer
+            nullable: true
+          description: Array of selected option indices (null = unanswered). Length must equal totalQuestions.
+        idempotencyKey:
+          type: string
+          minLength: 1
+
+    QuizAttempt:
+      type: object
+      required: [id, userId, materialId, score, totalQuestions, createdAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        materialId:
+          type: string
+        score:
+          type: integer
+        totalQuestions:
+          type: integer
+        earnedCoins:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    FlashcardsRequest:
+      type: object
+      required: [materialIds]
+      properties:
+        materialIds:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 20
+          description: Owned, study-ready material ids.
+
+    Flashcard:
+      type: object
+      required: [front, back, materialTitle]
+      properties:
+        front:
+          type: string
+        back:
+          type: string
+        materialTitle:
+          type: string
+
+    FlashcardsResponse:
+      type: object
+      required: [flashcards]
+      properties:
+        flashcards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Flashcard"
+
+    OwnedShopItem:
+      type: object
+      required: [id, userId, itemId, itemType, equipped, purchasedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        itemId:
+          type: string
+        itemType:
+          type: string
+        equipped:
+          type: boolean
+        purchasedAt:
+          type: string
+          format: date-time
+
+    BuyShopItemRequest:
+      type: object
+      required: [itemId]
+      properties:
+        itemId:
+          type: string
+
+    EquipShopItemRequest:
+      type: object
+      required: [ownedItemId]
+      properties:
+        ownedItemId:
+          type: string
+
+    Ticket:
+      type: object
+      required: [id, userId, subject, category, message, status, createdAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        subject:
+          type: string
+        category:
+          type: string
+          description: Ticket category (e.g. "bug", "domanda", "altro").
+        message:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateTicketRequest:
+      type: object
+      required: [subject, category, message]
+      properties:
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 128
+        category:
+          type: string
+          minLength: 1
+          description: Ticket category (e.g. "bug", "domanda", "altro").
+        message:
+          type: string
+          minLength: 1
+
+    LeaderboardEntry:
+      type: object
+      required: [username, wallet]
+      properties:
+        username:
+          type: string
+        wallet:
+          type: integer
+
+    InviteSummary:
+      type: object
+      required: [inviteCode, friends]
+      properties:
+        inviteCode:
+          type: string
+        friends:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendEntry"
+
+    FriendEntry:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+        level:
+          type: string
+          nullable: true
+          description: Full Italian study-path string. Null before onboarding.
+
+    UseInviteCodeRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6

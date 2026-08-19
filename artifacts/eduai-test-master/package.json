@@ -4,8 +4,8 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN pnpm exec expo start --localhost --port $PORT",
-    "build": "node scripts/build.js",
+    "dev": "EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN pnpm exec expo start --localhost --port $PORT",
+    "build": "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -56,6 +56,15 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "expo-document-picker": "~14.0.8"
+    "@clerk/expo": "^4.5.0",
+    "@fortawesome/fontawesome-svg-core": "~7.3.1",
+    "@fortawesome/free-solid-svg-icons": "^7.3.1",
+    "@fortawesome/react-native-fontawesome": "^1.0.0",
+    "@solana/web3.js": "^1.98.4",
+    "bs58": "^6.0.0",
+    "expo-auth-session": "~7.0.11",
+    "expo-crypto": "~15.0.9",
+    "expo-document-picker": "~14.0.8",
+    "expo-secure-store": "~15.0.8"
   }
 }

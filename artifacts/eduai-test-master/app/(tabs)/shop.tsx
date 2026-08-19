@@ -12,17 +12,31 @@ export default function ShopScreen() {
   const insets = useSafeAreaInsets();
   const { wallet, shop, buyItem, equipItem } = useApp();
   const [message, setMessage] = useState<{ title: string; message: string; success: boolean } | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const nextReward = shop.find((item) => !item.owned);
+  const rewardProgress = nextReward ? Math.min(100, Math.round((wallet / nextReward.cost) * 100)) : 100;
 
-  const purchase = (id: string, title: string, cost: number, owned: boolean) => {
+  const purchase = async (id: string, title: string, cost: number, owned: boolean) => {
+    if (busyId) return;
     if (owned) {
-      if (equipItem(id)) setMessage({ title: 'Oggetto equipaggiato', message: `${title} è ora attivo nel tuo profilo.`, success: true });
+      setBusyId(id);
+      const result = await equipItem(id);
+      setBusyId(null);
+      setMessage(result.ok
+        ? { title: 'Oggetto equipaggiato', message: `${title} è ora attivo nel tuo profilo.`, success: true }
+        : { title: 'Operazione non riuscita', message: result.message, success: false });
       return;
     }
     if (wallet < cost) {
       setMessage({ title: 'Punti insufficienti', message: `Ti servono ancora ${cost - wallet} punti per sbloccare questo premio.`, success: false });
       return;
     }
-    if (buyItem(id)) setMessage({ title: 'Oggetto sbloccato', message: `${title} è stato aggiunto alla tua collezione.`, success: true });
+    setBusyId(id);
+    const result = await buyItem(id);
+    setBusyId(null);
+    setMessage(result.ok
+      ? { title: 'Oggetto sbloccato', message: `${title} è stato aggiunto alla tua collezione.`, success: true }
+      : { title: 'Acquisto non riuscito', message: result.message, success: false });
   };
 
   return (
@@ -37,9 +51,30 @@ export default function ShopScreen() {
           <Text style={[styles.balanceLabel, { color: c.primaryForeground }]}>PUNTI DISPONIBILI</Text>
           <Text style={[styles.balanceValue, { color: c.primaryForeground }]}>{wallet} <Text style={styles.pts}>punti</Text></Text>
         </View>
+        <View style={[styles.rewardProgress, { backgroundColor: c.card, borderColor: c.border }]}>
+          <View style={styles.rewardRow}>
+            <View>
+              <Text style={[styles.rewardLabel, { color: c.primary }]}>PROSSIMO PREMIO</Text>
+              <Text style={[styles.rewardTitle, { color: c.foreground }]}>{nextReward?.title ?? 'Collezione completata'}</Text>
+            </View>
+            <Text style={[styles.rewardAmount, { color: c.mutedForeground }]}>
+              {nextReward ? `${wallet}/${nextReward.cost}` : '100%'}
+            </Text>
+          </View>
+          <View style={[styles.track, { backgroundColor: c.secondary }]}>
+            <View style={[styles.fill, { backgroundColor: c.primary, width: `${rewardProgress}%` }]} />
+          </View>
+          <Text style={[styles.small, { color: c.mutedForeground }]}>
+            {nextReward
+              ? wallet >= nextReward.cost
+                ? 'Hai abbastanza punti: puoi sbloccarlo ora.'
+                : `Ti mancano ${nextReward.cost - wallet} punti.`
+              : 'Hai sbloccato tutti gli oggetti disponibili.'}
+          </Text>
+        </View>
         <SectionTitle eyebrow="Collezione" title="Sblocca accessori" />
         {shop.map((item) => (
-          <Pressable key={item.id} testID={`negozio-${item.id}`} onPress={() => purchase(item.id, item.title, item.cost, item.owned)} style={({ pressed }) => [styles.item, { backgroundColor: c.card, borderColor: item.equipped ? c.primary : c.border, opacity: pressed ? 0.74 : 1 }]}>
+          <Pressable key={item.id} testID={`negozio-${item.id}`} disabled={Boolean(busyId)} onPress={() => { void purchase(item.id, item.title, item.cost, item.owned); }} style={({ pressed }) => [styles.item, { backgroundColor: c.card, borderColor: item.equipped ? c.primary : c.border, opacity: busyId === item.id ? 0.5 : pressed ? 0.74 : 1 }]}>
             <View style={[styles.itemIcon, { backgroundColor: item.equipped ? c.primary : c.secondary }]}><AppIcon name={item.icon} size={18} color={item.equipped ? c.primaryForeground : c.foreground} /></View>
             <View style={{ flex: 1 }}><Text style={[styles.itemTitle, { color: c.foreground }]}>{item.title}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>{item.subtitle}</Text></View>
             {item.equipped ? <Pill>Attivo</Pill> : item.owned ? <Pill>Equipaggia</Pill> : <View style={styles.price}><AppIcon name="zap" size={11} color={c.primary} /><Text style={[styles.priceText, { color: c.foreground }]}>{item.cost}</Text></View>}
@@ -67,4 +102,11 @@ const styles = StyleSheet.create({
   item: { borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 }, itemIcon: { width: 43, height: 43, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   itemTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, marginBottom: 4 }, small: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
   price: { flexDirection: 'row', alignItems: 'center', gap: 4 }, priceText: { fontFamily: 'Inter_700Bold', fontSize: 14 },
+  rewardProgress: { borderRadius: 18, borderWidth: 1, padding: 16, gap: 10 },
+  rewardRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
+  rewardLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.3, marginBottom: 4 },
+  rewardTitle: { fontFamily: 'Inter_700Bold', fontSize: 15 },
+  rewardAmount: { fontFamily: 'Inter_700Bold', fontSize: 12 },
+  track: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 4 },
 });

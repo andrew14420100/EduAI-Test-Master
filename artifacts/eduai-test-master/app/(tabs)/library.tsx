@@ -7,11 +7,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
 import { IconButton, PrimaryButton, SectionTitle } from '@/components/Ui';
-import { Material, MaterialKind, useApp } from '@/context/AppContext';
+import { Material, MaterialKind, UploadMaterialInput, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
 type ImportAsset = { name: string; uri: string; size?: number; mimeType?: string | null };
-type UploadItem = { id: string; name: string; kind: MaterialKind; progress: number; status: 'caricamento' | 'completato' };
+type UploadItem = { id: string; name: string; kind: MaterialKind; progress: number; status: 'caricamento' | 'completato' | 'errore' };
 type LibraryModal =
   | { kind: 'sorgente' }
   | { kind: 'messaggio'; title: string; message: string; icon: 'warning' | 'circle-check' | 'info' }
@@ -23,10 +23,31 @@ const imageExtensions = ['jpg', 'jpeg', 'png', 'heic', 'webp'];
 const videoExtensions = ['mp4', 'mov', 'm4v'];
 const audioExtensions = ['mp3', 'm4a', 'wav', 'aac'];
 
-const wait = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
-
 function extensionOf(name: string) {
   return name.split('.').pop()?.toLowerCase() ?? '';
+}
+
+function contentTypeOf(asset: ImportAsset, kind: MaterialKind) {
+  if (asset.mimeType) return asset.mimeType;
+  const extension = extensionOf(asset.name);
+  const known: Record<string, string> = {
+    pdf: 'application/pdf',
+    txt: 'text/plain',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    heic: 'image/heic',
+    webp: 'image/webp',
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    m4v: 'video/x-m4v',
+    mp3: 'audio/mpeg',
+    m4a: 'audio/mp4',
+    wav: 'audio/wav',
+    aac: 'audio/aac',
+  };
+  return known[extension] ?? (kind === 'documento' ? 'application/octet-stream' : `${kind}/*`);
 }
 
 function kindOf(asset: ImportAsset): MaterialKind | null {
@@ -45,7 +66,7 @@ function materialIcon(kind: MaterialKind) {
   return 'file' as const;
 }
 
-function automaticTitle(materials: Material[]) {
+function automaticTitle(materials: Array<{ name: string }>) {
   const cleanNames = materials.map((material) => material.name.replace(/\.[^/.]+$/, '').trim()).filter(Boolean);
   if (!cleanNames.length) return 'Pacchetto di studio';
   if (cleanNames.length === 1) return cleanNames[0];
@@ -56,7 +77,7 @@ function automaticTitle(materials: Material[]) {
 export default function LibraryScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { materials, studyGroups, addMaterials, addStudyGroup, removeMaterial } = useApp();
+  const { materials, studyGroups, uploadMaterials, removeMaterial } = useApp();
   const mounted = useRef(true);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -98,51 +119,47 @@ export default function LibraryScreen() {
       return;
     }
 
-    const batchId = `gruppo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const newMaterials = accepted.map(({ asset, kind }, index): Material => ({
-      id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+    const pendingMaterials = accepted.map(({ asset, kind }, index): UploadMaterialInput => ({
+      clientId: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
       name: asset.name,
       uri: asset.uri,
       kind,
       size: asset.size,
-      batchId,
-      addedAt: new Date().toISOString(),
+      contentType: contentTypeOf(asset, kind),
     }));
-    const uploadRows = newMaterials.map((material): UploadItem => ({
-      id: material.id,
+    const uploadRows = pendingMaterials.map((material): UploadItem => ({
+      id: material.clientId,
       name: material.name,
       kind: material.kind,
-      progress: 4,
+      progress: 1,
       status: 'caricamento',
     }));
 
     setUploads(uploadRows);
-    setSelectedIds((current) => Array.from(new Set([...newMaterials.map((material) => material.id), ...current])));
-
-    await Promise.all(newMaterials.map(async (material, index) => {
-      for (const progress of [22, 48, 76, 100]) {
-        await wait(110 + index * 20);
+    const result = await uploadMaterials(
+      pendingMaterials,
+      automaticTitle(pendingMaterials),
+      (clientId, progress) => {
         if (!mounted.current) return;
-        setUploads((current) => current.map((item) => item.id === material.id
+        setUploads((current) => current.map((item) => item.id === clientId
           ? { ...item, progress, status: progress === 100 ? 'completato' : 'caricamento' }
           : item));
-      }
-    }));
+      },
+    );
 
     if (!mounted.current) return;
-    addMaterials(newMaterials);
-    addStudyGroup({
-      id: batchId,
-      title: automaticTitle(newMaterials),
-      materialIds: newMaterials.map((material) => material.id),
-      createdAt: new Date().toISOString(),
-    });
+    if (!result.ok) {
+      setUploads((current) => current.map((item) => item.status === 'caricamento' ? { ...item, status: 'errore' } : item));
+      setModal({ kind: 'messaggio', title: 'Caricamento non riuscito', message: result.message, icon: 'warning' });
+      return;
+    }
+    setSelectedIds([]);
     setModal({
       kind: 'messaggio',
-      title: newMaterials.length === 1 ? 'Materiale importato' : `${newMaterials.length} materiali importati`,
+      title: pendingMaterials.length === 1 ? 'Materiale importato' : `${pendingMaterials.length} materiali importati`,
       message: rejectedCount
         ? `${rejectedCount} file non supportati sono stati ignorati. Gli altri sono pronti per l’analisi unificata.`
-        : 'Tutti i file selezionati sono pronti per essere analizzati insieme.',
+        : 'Tutti i file sono stati salvati online e sono pronti per essere analizzati insieme.',
       icon: 'circle-check',
     });
   };
@@ -234,10 +251,24 @@ export default function LibraryScreen() {
     if (modal.kind === 'elimina') {
       return {
         title: 'Rimuovere il materiale?',
-        message: `${modal.material.name} verrà eliminato dalla libreria locale.`,
+        message: `${modal.material.name} verrà eliminato dalla tua libreria online.`,
         icon: 'trash' as const,
         actions: [
-          { label: 'Elimina', variant: 'pericolo' as const, onPress: () => { removeMaterial(modal.material.id); setSelectedIds((current) => current.filter((id) => id !== modal.material.id)); setModal(null); } },
+          {
+            label: 'Elimina',
+            variant: 'pericolo' as const,
+            onPress: () => {
+              const materialId = modal.material.id;
+              setModal(null);
+              void removeMaterial(materialId).then((result) => {
+                if (result.ok) {
+                  setSelectedIds((current) => current.filter((id) => id !== materialId));
+                } else {
+                  setModal({ kind: 'messaggio', title: 'Eliminazione non riuscita', message: result.message, icon: 'warning' });
+                }
+              });
+            },
+          },
           { label: 'Annulla', onPress: () => setModal(null) },
         ],
       };
@@ -316,6 +347,7 @@ export default function LibraryScreen() {
                     </View>
                   </View>
                   {item.status === 'completato' ? <AppIcon name="circle-check" size={17} color={c.primary} /> : null}
+                  {item.status === 'errore' ? <AppIcon name="warning" size={17} color={c.destructive} /> : null}
                 </View>
               ))}
             </View>
@@ -339,6 +371,30 @@ export default function LibraryScreen() {
                 <Text style={[styles.small, { color: c.mutedForeground }]}>
                   {item.kind.toUpperCase()}{item.size ? ` · ${(item.size / 1024 / 1024).toFixed(1)} MB` : ''}
                 </Text>
+                {(() => {
+                  const ready = item.extractionStatus === 'ready';
+                  const failed = item.extractionStatus === 'failed';
+                  const badgeColor = ready ? '#4ADE80' : failed ? c.destructive : c.mutedForeground;
+                  const badgeLabel = ready
+                    ? 'Pronto per lo studio'
+                    : item.extractionStatus === 'unsupported'
+                    ? 'Solo archivio · OCR/trascrizione non disponibili'
+                    : failed
+                    ? 'Estrazione non riuscita'
+                    : 'Estrazione in corso';
+                  return (
+                    <View style={styles.readinessRow}>
+                      <AppIcon
+                        name={ready ? 'circle-check' : failed ? 'warning' : 'info'}
+                        size={12}
+                        color={badgeColor}
+                      />
+                      <Text style={[styles.readinessText, { color: badgeColor }]} numberOfLines={1}>
+                        {badgeLabel}
+                      </Text>
+                    </View>
+                  );
+                })()}
               </View>
               <Pressable accessibilityLabel={`Elimina ${item.name}`} onPress={() => setModal({ kind: 'elimina', material: item })} hitSlop={10} style={styles.deleteButton}>
                 <AppIcon name="trash" size={16} color={c.destructive} />
@@ -398,8 +454,8 @@ export default function LibraryScreen() {
         <View style={[styles.tip, { backgroundColor: c.card }]}>
           <AppIcon name="lock" size={16} color={c.primary} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.tipTitle, { color: c.foreground }]}>I contenuti restano sul dispositivo</Text>
-            <Text style={[styles.small, { color: c.mutedForeground }]}>Puoi selezionarli, raggrupparli o rimuoverli in qualsiasi momento.</Text>
+            <Text style={[styles.tipTitle, { color: c.foreground }]}>Libreria privata e sincronizzata</Text>
+            <Text style={[styles.small, { color: c.mutedForeground }]}>I file sono protetti dal tuo account e disponibili anche sugli altri dispositivi.</Text>
           </View>
         </View>
         <PrimaryButton onPress={askToGenerate} disabled={!selectedMaterials.length} icon="generate">
@@ -442,6 +498,8 @@ const styles = StyleSheet.create({
   selector: { width: 24, height: 24, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   fileIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   materialTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, marginBottom: 4 },
+  readinessRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  readinessText: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 11, lineHeight: 15 },
   deleteButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   empty: { borderRadius: 18, padding: 20, gap: 7, alignItems: 'flex-start' },
   emptyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },

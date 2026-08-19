@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
+import { AppModal } from '@/components/AppModal';
 import { IconButton, PrimaryButton } from '@/components/Ui';
 import { Level, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -53,19 +54,25 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { level, completeOnboarding } = useApp();
   const [selected, setSelected] = useState<Level | null>(level);
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const save = () => {
+  const save = async () => {
     if (!selected) return;
-    completeOnboarding(selected);
-    router.replace('/(tabs)');
+    setSaving(true);
+    const result = await completeOnboarding(selected);
+    setSaving(false);
+    if (result.ok) router.replace('/(tabs)');
+    else setErrorMessage(result.message);
   };
 
   return (
-    <ScrollView
-      style={{ backgroundColor: c.background }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 28 }]}
-      showsVerticalScrollIndicator={false}
-    >
+    <>
+      <ScrollView
+        style={{ backgroundColor: c.background }}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 28 }]}
+        showsVerticalScrollIndicator={false}
+      >
       {level ? <IconButton name="close" label="Chiudi" onPress={() => router.back()} /> : null}
       <View style={[styles.icon, { backgroundColor: c.accent }]}>
         <AppIcon name="graduation-cap" size={23} color={c.accentForeground} />
@@ -104,10 +111,19 @@ export default function OnboardingScreen() {
           })}
         </View>
       ))}
-      <PrimaryButton onPress={save} disabled={!selected} icon="check">
-        Salva il mio percorso
+      <PrimaryButton onPress={() => { void save(); }} disabled={!selected || saving} icon="check">
+        {saving ? 'Salvataggio…' : 'Salva il mio percorso'}
       </PrimaryButton>
-    </ScrollView>
+      </ScrollView>
+      <AppModal
+        visible={Boolean(errorMessage)}
+        title="Salvataggio non riuscito"
+        message={errorMessage ?? undefined}
+        icon="warning"
+        onDismiss={() => setErrorMessage(null)}
+        actions={[{ label: 'Riprova', variant: 'primaria', onPress: () => setErrorMessage(null) }]}
+      />
+    </>
   );
 }
 
