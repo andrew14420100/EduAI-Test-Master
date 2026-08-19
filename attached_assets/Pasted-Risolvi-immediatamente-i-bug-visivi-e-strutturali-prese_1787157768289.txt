@@ -1,0 +1,27 @@
+Risolvi immediatamente i bug visivi e strutturali presenti nelle schermate e implementa le funzioni mancanti per completare il flusso dell'applicazione. L'intera interfaccia deve rimanere in italiano.
+
+1. RISOLUZIONE BUG DELLE ICONE (FONT AWESOME CORRETTO):
+- Attualmente su smartphone tutte le icone mostrano un rettangolo vuoto o sbarrato (☒).
+- Correggi includendo nel tag <head> di index.html il link CDN ufficiale e aggiornato di FontAwesome:
+  <link rel="stylesheet" href="https://cloudflare.com">
+- Sostituisci tutte le icone nel codice usando la sintassi corretta standard. Ad esempio, per la bottom bar usa:
+  * Oggi: <i class="fa-solid fa-calendar-day"></i>
+  * Genera: <i class="fa-solid fa-layer-group"></i>
+  * Negozio: <i class="fa-solid fa-store"></i>
+  * Profilo: <i class="fa-solid fa-user"></i>
+- Applica la stessa correzione a tutte le icone interne alle card del profilo, del negozio e della sezione materiali.
+
+2. CONFIGURAZIONE PRE-QUIZ (NUMERO DOMANDE E DURATA):
+- Nella sezione "Genera", quando l'utente seleziona uno o più materiali dall'elenco (o clicca su "Prepara un contenuto"), non avviare subito il test.
+- Fai comparire un modale grafico o una sezione di configurazione intitolata "Personalizza la tua verifica" contenente:
+  * Selettore Numero Domande: Tre pulsanti radio o un menu a tendina per scegliere tra "10 Domande", "20 Domande" o "30 Domande".
+  * Selettore Durata: Un menu a tendina con opzioni "Nessun limite", "5 Minuti", "15 Minuti", "30 Minuti".
+- Aggiungi sotto un pulsante grande "Avvia Verifica Generata da AI". Al click, avvia la simulazione reale bloccando l'interfaccia se il tempo scade.
+
+3. RISOLUZIONE BUG GENERAZIONE TEST (COLLEGAMENTO REALE):
+- Assicurati che i materiali selezionati (come il file "14855.mp4" visibile nello screenshot) vengano effettivamente elaborati. Quando l'utente clicca su "Avvia Verifica", leggi i file associati e genera un finto archivio di 10/20/30 domande (o simula la chiamata all'AI) coerenti con il percorso di "Ingegneria" o la scuola selezionata.
+
+4. AGGIUNTA NUOVE FUNZIONI CONCORDATE:
+- BARRA DI PROGRESSO IN ALTO: Inserisci in cima alle schermate "Oggi" e "Negozio" una barra di progresso orizzontale verde che mostra graficamente quanti punti mancano per sbloccare il premio più vicino nello shop (es. "Ti mancano 10 punti per sbloccare lo stemma Studente Brillante").
+- SISTEMA DI TICKET ASSISTENZA: Nella sezione "Profilo", aggiungi un pulsante "Assistenza e Segnalazioni". Cliccando, si deve aprire un modale interno in italiano per inviare un ticket con Oggetto, Tipo ("Segnala un Bug", "Proponi Modifica") e Descrizione, salvando lo stato in LocalStorage.
+- CLASSIFICA SOCIAL & INVITI: Nella sezione "Oggi" o in una nuova scheda, aggiungi una sezione Classifica con due tab: "Globale" (classifica simulata con altri utenti) e "Amici". Aggiungi un pulsante "Invita Amici" che genera un codice di 6 lettere (es. UTX481) per creare un gruppo privato.
