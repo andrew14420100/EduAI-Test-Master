@@ -1,0 +1,15 @@
+appId: com.eduai.testmaster
+name: Theme restart visual guard
+
+---
+# The device must already contain a signed-in test account. The companion
+# runner seeds AsyncStorage before this flow starts (see theme-restart.mjs).
+- launchApp:
+    clearState: false
+    stopApp: true
+- takeScreenshot: first-frame
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 15000
+- takeScreenshot: settled-frame

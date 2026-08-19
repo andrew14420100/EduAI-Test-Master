@@ -58,6 +58,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
 import { ThemeProvider, type AppTheme } from '@/context/ThemeContext';
 
 export type Level = string;
@@ -483,6 +484,28 @@ export function AppProvider({
       cancelled = true;
     };
   }, [isLoaded, onThemeReady, user?.id]);
+
+  // Native visual tests seed the same persisted value through a deep link,
+  // then cold-start the app again. This branch is stripped from production
+  // builds and cannot change a user's theme outside development builds.
+  useEffect(() => {
+    if (!__DEV__ || !isLoaded || !user?.id) return;
+    let cancelled = false;
+    void Linking.getInitialURL().then((url) => {
+      if (cancelled || !url) return;
+      const value = Linking.parse(url).queryParams?.value;
+      const key = `eduai:theme:${user.id}`;
+      if (value === 'none') {
+        void AsyncStorage.removeItem(key);
+        return;
+      }
+      if (value !== 'dark' && value !== 'light') return;
+      void AsyncStorage.setItem(key, value);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, user?.id]);
 
   useEffect(() => {
     if (!user?.id || !inventoryQuery.data) return;
