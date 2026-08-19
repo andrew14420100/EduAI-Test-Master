@@ -1,0 +1,1 @@
+ALTER TABLE "quick_explanations" ADD COLUMN "status" text DEFAULT 'ready' NOT NULL;

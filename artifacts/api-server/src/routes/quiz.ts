@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { createHash, randomUUID } from "crypto";
-import { eq, sql, and, inArray } from "drizzle-orm";
+import { eq, sql, and, inArray, lt } from "drizzle-orm";
 import {
   db,
   quizAttemptsTable,
@@ -32,6 +32,9 @@ const FLASHCARDS_PER_MATERIAL = 4;
 const COINS_PER_CORRECT = 5;
 const RECOVERY_COINS_PER_CORRECT = 2;
 const QUICK_EXPLANATION_COST = 2;
+// A process can stop after a debit and before the model response is persisted.
+// A later retry reclaims any reservation older than this lease.
+const QUICK_EXPLANATION_RESERVATION_TTL_MS = 2 * 60 * 1000;
 
 // Valid session duration (1 hour)
 const SESSION_TTL_MS = 60 * 60 * 1000;
@@ -537,71 +540,184 @@ router.post(
         return;
       }
 
-      const [alreadyGenerated] = await db
-        .select()
-        .from(quickExplanationsTable)
-        .where(
-          and(
-            eq(quickExplanationsTable.ownerId, userId),
-            eq(quickExplanationsTable.sessionId, sessionId),
-            eq(quickExplanationsTable.questionIndex, questionIndex as number),
-          ),
-        );
-      if (alreadyGenerated) {
-        const [profile] = await db.select().from(profilesTable).where(eq(profilesTable.userId, userId));
-        res.json({
-          explanation: alreadyGenerated.explanation,
-          chargedPoints: 0,
-          remainingPoints: profile?.wallet ?? 0,
-        });
-        return;
-      }
+      const explanationWhere = and(
+        eq(quickExplanationsTable.ownerId, userId),
+        eq(quickExplanationsTable.sessionId, sessionId),
+        eq(quickExplanationsTable.questionIndex, questionIndex as number),
+      );
+      const reservationExpiry = new Date(
+        Date.now() - QUICK_EXPLANATION_RESERVATION_TTL_MS,
+      );
 
-      const explanation = await generateQuickExplanation(question.question, question.options);
-      const result = await db.transaction(async (tx) => {
-        const inserted = await tx
-          .insert(quickExplanationsTable)
-          .values({
-            id: randomUUID(),
-            ownerId: userId,
-            sessionId,
-            questionIndex: questionIndex as number,
-            explanation,
-            chargedPoints: QUICK_EXPLANATION_COST,
-          })
-          .onConflictDoNothing()
-          .returning();
-        if (inserted.length === 0) {
-          const [existing] = await tx
+      // Reserve the points and the unique (user, session, question) slot
+      // BEFORE calling the paid model. This prevents zero-balance or concurrent
+      // requests from repeatedly consuming model capacity.
+      const reservation = await db.transaction(async (tx) => {
+        const [existing] = await tx
+          .select()
+          .from(quickExplanationsTable)
+          .where(explanationWhere);
+        if (existing?.status === "ready") {
+          const [profile] = await tx
             .select()
-            .from(quickExplanationsTable)
+            .from(profilesTable)
+            .where(eq(profilesTable.userId, userId));
+          return {
+            kind: "ready" as const,
+            explanation: existing.explanation,
+            remainingPoints: profile?.wallet ?? 0,
+          };
+        }
+        if (existing?.status === "pending") {
+          if (existing.createdAt > reservationExpiry) {
+            return { kind: "pending" as const };
+          }
+
+          // Recover a lease left behind by a crashed/timed-out request. The
+          // conditional delete makes the refund safe if another retry wins.
+          const reclaimed = await tx
+            .delete(quickExplanationsTable)
             .where(
               and(
-                eq(quickExplanationsTable.ownerId, userId),
-                eq(quickExplanationsTable.sessionId, sessionId),
-                eq(quickExplanationsTable.questionIndex, questionIndex as number),
+                eq(quickExplanationsTable.id, existing.id),
+                eq(quickExplanationsTable.status, "pending"),
+                lt(quickExplanationsTable.createdAt, reservationExpiry),
               ),
-            );
-          const [profile] = await tx.select().from(profilesTable).where(eq(profilesTable.userId, userId));
-          return { explanation: existing!.explanation, chargedPoints: 0, remainingPoints: profile?.wallet ?? 0 };
+            )
+            .returning();
+          if (reclaimed.length === 0) {
+            return { kind: "pending" as const };
+          }
+          await tx
+            .update(profilesTable)
+            .set({
+              wallet: sql`${profilesTable.wallet} + ${reclaimed[0]!.chargedPoints}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(profilesTable.userId, userId));
         }
+
         const [profile] = await tx
           .update(profilesTable)
           .set({
             wallet: sql`${profilesTable.wallet} - ${QUICK_EXPLANATION_COST}`,
             updatedAt: new Date(),
           })
-          .where(and(eq(profilesTable.userId, userId), sql`${profilesTable.wallet} >= ${QUICK_EXPLANATION_COST}`))
+          .where(
+            and(
+              eq(profilesTable.userId, userId),
+              sql`${profilesTable.wallet} >= ${QUICK_EXPLANATION_COST}`,
+            ),
+          )
           .returning();
-        if (!profile) throw new Error("PUNTI_INSUFFICIENTI");
-        return { explanation, chargedPoints: QUICK_EXPLANATION_COST, remainingPoints: profile.wallet };
+        if (!profile) return { kind: "insufficient" as const };
+
+        const reservationId = randomUUID();
+        const inserted = await tx
+          .insert(quickExplanationsTable)
+          .values({
+            id: reservationId,
+            ownerId: userId,
+            sessionId,
+            questionIndex: questionIndex as number,
+            status: "pending",
+            // The column is non-null for historic rows; pending values are never
+            // returned to clients and are replaced before the row becomes ready.
+            explanation: "",
+            chargedPoints: QUICK_EXPLANATION_COST,
+          })
+          .onConflictDoNothing()
+          .returning();
+
+        if (inserted.length > 0) {
+          return { kind: "reserved" as const, reservationId, remainingPoints: profile.wallet };
+        }
+
+        // A concurrent request won the unique-slot race after this transaction
+        // checked for an existing row. Undo this request's debit before returning.
+        await tx
+          .update(profilesTable)
+          .set({
+            wallet: sql`${profilesTable.wallet} + ${QUICK_EXPLANATION_COST}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(profilesTable.userId, userId));
+        const [raced] = await tx
+          .select()
+          .from(quickExplanationsTable)
+          .where(explanationWhere);
+        if (raced?.status === "ready") {
+          return {
+            kind: "ready" as const,
+            explanation: raced.explanation,
+            remainingPoints: profile.wallet,
+          };
+        }
+        return { kind: "pending" as const };
       });
-      res.json(result);
-    } catch (err) {
-      if (err instanceof Error && err.message === "PUNTI_INSUFFICIENTI") {
+
+      if (reservation.kind === "ready") {
+        res.json({
+          explanation: reservation.explanation,
+          chargedPoints: 0,
+          remainingPoints: reservation.remainingPoints,
+        });
+        return;
+      }
+      if (reservation.kind === "pending") {
+        res.status(409).json({ error: "La spiegazione rapida è già in preparazione. Attendi un momento." });
+        return;
+      }
+      if (reservation.kind === "insufficient") {
         res.status(400).json({ error: "Ti servono almeno 2 punti per una spiegazione rapida." });
         return;
       }
+
+      try {
+        const explanation = await generateQuickExplanation(question.question, question.options);
+        const [readyExplanation] = await db
+          .update(quickExplanationsTable)
+          .set({ status: "ready", explanation })
+          .where(
+            and(
+              eq(quickExplanationsTable.id, reservation.reservationId),
+              eq(quickExplanationsTable.status, "pending"),
+            ),
+          )
+          .returning();
+        if (!readyExplanation) throw new Error("RISERVAZIONE_SCOMPARSA");
+        res.json({
+          explanation,
+          chargedPoints: QUICK_EXPLANATION_COST,
+          remainingPoints: reservation.remainingPoints,
+        });
+      } catch (err) {
+        // Refund only a still-pending reservation. If it became ready, the charge
+        // is valid and a retry will return the stored explanation for free.
+        await db.transaction(async (tx) => {
+          const released = await tx
+            .delete(quickExplanationsTable)
+            .where(
+              and(
+                eq(quickExplanationsTable.id, reservation.reservationId),
+                eq(quickExplanationsTable.status, "pending"),
+              ),
+            )
+            .returning();
+          if (released.length > 0) {
+            await tx
+              .update(profilesTable)
+              .set({
+                wallet: sql`${profilesTable.wallet} + ${QUICK_EXPLANATION_COST}`,
+                updatedAt: new Date(),
+              })
+              .where(eq(profilesTable.userId, userId));
+          }
+        });
+        req.log.error({ err }, "Errore generazione spiegazione rapida");
+        res.status(503).json({ error: "La spiegazione rapida non è disponibile. Non ti sono stati addebitati punti." });
+      }
+    } catch (err) {
       req.log.error({ err }, "Errore spiegazione rapida");
       res.status(503).json({ error: "La spiegazione rapida non è disponibile. Non ti sono stati addebitati punti." });
     }

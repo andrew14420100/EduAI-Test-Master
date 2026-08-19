@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
+import { AppModal } from '@/components/AppModal';
 import { IconButton, PrimaryButton } from '@/components/Ui';
 import { useApp } from '@/context/AppContext';
 import type { StartQuizResult, StudyFlashcard } from '@/context/AppContext';
@@ -22,6 +23,7 @@ type QuizPhase =
   | 'flashcardError' // server flashcards failed / not ready
   | 'flashcard'      // flashcard interactive mode
   | 'loading'        // fetching server questions
+  | 'recoveryError'  // recovery questions could not be prepared
   | 'quiz'           // active quiz
   | 'submitting'     // completing quiz on server
   | 'result';        // finish screen
@@ -33,6 +35,7 @@ type MCQuestion = {
 };
 
 type FlashCard = StudyFlashcard;
+type ExplanationModal = { title: string; message: string; icon: 'book-open' | 'warning' | 'zap' } | null;
 
 // ─── Duration options ─────────────────────────────────────────────────────────
 
@@ -83,13 +86,22 @@ export default function QuizScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ materialIds?: string; mode?: string; title?: string }>();
-  const { materials, level, startQuizSession, completeQuizSession, generateFlashcards } = useApp();
+  const {
+    materials,
+    level,
+    wallet,
+    startQuizSession,
+    startRecoverySession,
+    completeQuizSession,
+    getQuickExplanation,
+    generateFlashcards,
+  } = useApp();
 
   const rawIds = Array.isArray(params.materialIds) ? params.materialIds[0] : params.materialIds;
   const ids = rawIds?.split(',').filter(Boolean) ?? [];
   const selectedMaterials = materials.filter((m) => ids.includes(m.id));
   const materialNames = selectedMaterials.map((m) => m.name.replace(/\.[^/.]+$/, '').trim());
-  const mode = params.mode === 'flashcard' ? 'flashcard' : 'verifica';
+  const mode = params.mode === 'flashcard' ? 'flashcard' : params.mode === 'recovery' ? 'recovery' : 'verifica';
   const titleParam = Array.isArray(params.title) ? params.title[0] : params.title;
   const quizTitle = titleParam ?? (materialNames.length ? materialNames[0] : 'Pacchetto di studio');
 
@@ -97,7 +109,9 @@ export default function QuizScreen() {
 
   // ─── Phase state ────────────────────────────────────────────────────────────
 
-  const [phase, setPhase] = useState<QuizPhase>(mode === 'flashcard' ? 'flashcardLoad' : 'setup');
+  const [phase, setPhase] = useState<QuizPhase>(
+    mode === 'flashcard' ? 'flashcardLoad' : mode === 'recovery' ? 'loading' : 'setup',
+  );
 
   // ─── Setup panel state ───────────────────────────────────────────────────────
 
@@ -148,6 +162,10 @@ export default function QuizScreen() {
   // ─── Loading error state ─────────────────────────────────────────────────────
 
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const recoveryRequestedRef = useRef(false);
+  const [explanationLoading, setExplanationLoading] = useState(false);
+  const [explanationModal, setExplanationModal] = useState<ExplanationModal>(null);
 
   // ─── finishQuiz — calls server to score and complete ─────────────────────────
 
@@ -217,12 +235,47 @@ export default function QuizScreen() {
     setPhase('flashcard');
   }, [generateFlashcards, ids]);
 
+  const loadRecoverySession = useCallback(async () => {
+    setRecoveryError(null);
+    setPhase('loading');
+    submittingRef.current = false;
+    idempotencyKeyRef.current = `recovery-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const result = await startRecoverySession();
+    if (!result.ok) {
+      setRecoveryError(result.message);
+      setPhase('recoveryError');
+      return;
+    }
+
+    const { session } = result;
+    if (!session.questions.length) {
+      setRecoveryError('Non ci sono domande da recuperare in questo momento.');
+      setPhase('recoveryError');
+      return;
+    }
+    setActiveSession(session);
+    setQuestions(session.questions);
+    setSelectedAnswers(new Array(session.questions.length).fill(null));
+    setCurrentQ(0);
+    setAnswerLocked(false);
+    setSubmitError(null);
+    setTimeLeft(null);
+    setPhase('quiz');
+  }, [startRecoverySession]);
+
   // Fetch server flashcards once when entering flashcard mode.
   useEffect(() => {
     if (mode !== 'flashcard' || flashcardsRequestedRef.current) return;
     flashcardsRequestedRef.current = true;
     void loadFlashcards();
   }, [mode, loadFlashcards]);
+
+  useEffect(() => {
+    if (mode !== 'recovery' || recoveryRequestedRef.current) return;
+    recoveryRequestedRef.current = true;
+    void loadRecoverySession();
+  }, [mode, loadRecoverySession]);
 
   // ─── Timer effect ─────────────────────────────────────────────────────────────
 
@@ -334,9 +387,34 @@ export default function QuizScreen() {
       setFcIndex(0);
       setFcRevealed(false);
       void loadFlashcards();
+    } else if (mode === 'recovery') {
+      void loadRecoverySession();
     } else {
       setPhase('setup');
     }
+  };
+
+  const requestQuickExplanation = async () => {
+    if (!activeSession || explanationLoading) return;
+    setExplanationLoading(true);
+    const result = await getQuickExplanation(activeSession.sessionId, currentQ);
+    setExplanationLoading(false);
+    if (result.ok) {
+      setExplanationModal({
+        title: result.chargedPoints > 0 ? 'Spiegazione rapida' : 'Spiegazione già sbloccata',
+        message: `${result.explanation}${result.chargedPoints > 0 ? `\n\nSono stati usati ${result.chargedPoints} punti. Saldo aggiornato: ${Math.max(0, wallet - result.chargedPoints)} punti.` : '\n\nNon sono stati scalati altri punti.'}`,
+        icon: 'book-open',
+      });
+      return;
+    }
+    const insufficientPoints = /punti|saldo|credito/i.test(result.message);
+    setExplanationModal({
+      title: insufficientPoints ? 'Punti insufficienti' : 'Spiegazione non disponibile',
+      message: insufficientPoints
+        ? `${result.message} Ti servono 2 punti per sbloccare una spiegazione rapida.`
+        : result.message,
+      icon: insufficientPoints ? 'zap' : 'warning',
+    });
   };
 
   const goLibrary = () => {
@@ -531,8 +609,41 @@ export default function QuizScreen() {
           <AppIcon name="question" size={26} color={c.accentForeground} />
         </View>
         <Text style={[styles.kicker, { color: c.primary }]}>PREPARAZIONE VERIFICA</Text>
-        <Text style={[styles.body, { color: c.mutedForeground }]}>Generazione domande in corso…</Text>
+        <Text style={[styles.body, { color: c.mutedForeground }]}>
+          {mode === 'recovery' ? 'Preparazione del ripasso dagli errori in corso…' : 'Generazione domande in corso…'}
+        </Text>
       </View>
+    );
+  }
+
+  if (phase === 'recoveryError') {
+    return (
+      <ScrollView
+        style={{ backgroundColor: c.background }}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 28 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.top}>
+          <IconButton name="close" label="Chiudi" onPress={goLibrary} />
+        </View>
+        <View style={[styles.resultIconWrap, { backgroundColor: '#3D1921' }]}>
+          <AppIcon name="warning" size={30} color={c.destructive} />
+        </View>
+        <Text style={[styles.kicker, { color: c.destructive }]}>RECUPERO ERRORI</Text>
+        <Text style={[styles.heading, { color: c.foreground }]}>Ripasso non disponibile</Text>
+        <Text style={[styles.body, { color: c.mutedForeground }]}>
+          {recoveryError ?? 'Non è stato possibile preparare il ripasso. Riprova tra poco.'}
+        </Text>
+        <PrimaryButton onPress={() => { void loadRecoverySession(); }} icon="arrow-up-right">
+          Riprova
+        </PrimaryButton>
+        <Pressable
+          onPress={goLibrary}
+          style={({ pressed }) => [styles.secondaryBtn, { backgroundColor: c.secondary, opacity: pressed ? 0.72 : 1 }]}
+        >
+          <Text style={[styles.secondaryBtnText, { color: c.secondaryForeground }]}>Torna alla libreria</Text>
+        </Pressable>
+      </ScrollView>
     );
   }
 
@@ -704,6 +815,7 @@ export default function QuizScreen() {
     if (!q) return null;
 
     return (
+      <>
       <ScrollView
         style={{ backgroundColor: c.background }}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 28 }]}
@@ -745,6 +857,29 @@ export default function QuizScreen() {
         <View style={[styles.questionCard, { backgroundColor: c.card, borderColor: c.border }]}>
           <Text style={[styles.questionText, { color: c.foreground }]}>{q.question}</Text>
         </View>
+
+        <Pressable
+          testID="spiegazione-rapida"
+          onPress={() => { void requestQuickExplanation(); }}
+          disabled={isSubmitting || explanationLoading}
+          style={({ pressed }) => [
+            styles.explanationButton,
+            { backgroundColor: c.accent, borderColor: c.primary, opacity: isSubmitting || explanationLoading ? 0.5 : pressed ? 0.76 : 1 },
+          ]}
+        >
+          <View style={[styles.explanationIcon, { backgroundColor: c.primary }]}>
+            <AppIcon name="book-open" size={15} color={c.primaryForeground} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.explanationTitle, { color: c.accentForeground }]}>
+              {explanationLoading ? 'Preparazione spiegazione…' : 'Spiegazione Rapida'}
+            </Text>
+            <Text style={[styles.explanationDetail, { color: c.accentForeground }]}>
+              {explanationLoading ? 'Attendi un momento.' : `Costa 2 punti · Saldo: ${wallet} punti`}
+            </Text>
+          </View>
+          <AppIcon name="chevron-right" size={15} color={c.accentForeground} />
+        </Pressable>
 
         {/* Submit error banner shown in quiz phase */}
         {submitError !== null && phase === 'quiz' && (
@@ -836,6 +971,15 @@ export default function QuizScreen() {
           </View>
         )}
       </ScrollView>
+      <AppModal
+        visible={Boolean(explanationModal)}
+        title={explanationModal?.title ?? ''}
+        message={explanationModal?.message}
+        icon={explanationModal?.icon ?? 'info'}
+        onDismiss={() => setExplanationModal(null)}
+        actions={[{ label: 'Ho capito', variant: 'primaria', onPress: () => setExplanationModal(null) }]}
+      />
+      </>
     );
   }
 
@@ -1021,6 +1165,10 @@ const styles = StyleSheet.create({
   answerBullet: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   answerBulletText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
   answerText: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 21 },
+  explanationButton: { borderWidth: 1, borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  explanationIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  explanationTitle: { fontFamily: 'Inter_700Bold', fontSize: 13, marginBottom: 2 },
+  explanationDetail: { fontFamily: 'Inter_500Medium', fontSize: 11, lineHeight: 15 },
 
   // Result
   resultIconWrap: { width: 80, height: 80, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginTop: 22 },

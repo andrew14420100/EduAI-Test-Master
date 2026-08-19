@@ -25,6 +25,7 @@ export default function HomeScreen() {
     leaderboard,
     friends,
     inviteCode,
+    recoveryCount,
     useInvite,
   } = useApp();
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -32,6 +33,17 @@ export default function HomeScreen() {
   const [friendCode, setFriendCode] = useState('');
   const [addingFriend, setAddingFriend] = useState(false);
   const start = () => router.push('/(tabs)/library');
+  const openRecovery = () => {
+    if (!recoveryCount) {
+      setNotice({
+        title: 'Nessun errore da recuperare',
+        message: 'Completa una verifica: le risposte da ripassare compariranno qui.',
+        icon: 'info',
+      });
+      return;
+    }
+    router.push({ pathname: '/quiz', params: { mode: 'recovery', title: 'Recupero Errori' } });
+  };
   const nextReward = shop.find((item) => !item.owned);
   const rewardProgress = nextReward ? Math.min(100, Math.round((wallet / nextReward.cost) * 100)) : 100;
 
@@ -106,6 +118,34 @@ export default function HomeScreen() {
           </View>
           <View style={[styles.orbit, { borderColor: c.primaryForeground }]}><AppIcon name="book" size={26} color={c.primaryForeground} /></View>
         </View>
+
+        <Pressable
+          testID="recupero-errori"
+          onPress={openRecovery}
+          style={({ pressed }) => [
+            styles.recoveryCard,
+            { backgroundColor: c.card, borderColor: recoveryCount ? c.primary : c.border, opacity: pressed ? 0.76 : 1 },
+          ]}
+        >
+          <View style={[styles.recoveryIcon, { backgroundColor: recoveryCount ? c.accent : c.secondary }]}>
+            <AppIcon name="book-open" size={19} color={recoveryCount ? c.accentForeground : c.mutedForeground} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.recoveryLabel, { color: c.primary }]}>RIPASSO MIRATO</Text>
+            <Text style={[styles.recoveryTitle, { color: c.foreground }]}>Recupero Errori</Text>
+            <Text style={[styles.small, { color: c.mutedForeground }]}>
+              {recoveryCount
+                ? `${recoveryCount} ${recoveryCount === 1 ? 'domanda da ripassare' : 'domande da ripassare'} · fino a 2 punti per risposta.`
+                : 'Nessun errore in attesa: qui troverai i prossimi ripassi.'}
+            </Text>
+          </View>
+          <View style={[styles.recoveryAction, { backgroundColor: recoveryCount ? c.primary : c.secondary }]}>
+            <Text style={[styles.recoveryActionText, { color: recoveryCount ? c.primaryForeground : c.secondaryForeground }]}>
+              {recoveryCount ? 'Avvia' : 'Vedi'}
+            </Text>
+            <AppIcon name="chevron-right" size={14} color={recoveryCount ? c.primaryForeground : c.secondaryForeground} />
+          </View>
+        </Pressable>
 
         <SectionTitle eyebrow="Premi" title="Prossimo sblocco" />
         <Pressable onPress={() => router.push('/(tabs)/shop')} style={[styles.progressCard, { backgroundColor: c.card, borderColor: c.border }]}>
@@ -230,6 +270,12 @@ const styles = StyleSheet.create({
   heroTitle: { fontFamily: 'Inter_700Bold', fontSize: 27, lineHeight: 32, letterSpacing: -0.8, marginTop: 18, maxWidth: 220 },
   heroBody: { fontFamily: 'Inter_500Medium', fontSize: 13, lineHeight: 18, opacity: 0.84, marginVertical: 12, maxWidth: 230 },
   orbit: { width: 65, height: 65, borderWidth: 1, borderRadius: 33, alignItems: 'center', justifyContent: 'center', marginTop: 8, marginLeft: 8 },
+  recoveryCard: { borderWidth: 1, borderRadius: 20, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  recoveryIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  recoveryLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.25, marginBottom: 3 },
+  recoveryTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, marginBottom: 3 },
+  recoveryAction: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  recoveryActionText: { fontFamily: 'Inter_700Bold', fontSize: 11 },
   progressCard: { borderRadius: 18, borderWidth: 1, padding: 16 },
   progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   progressBig: { fontFamily: 'Inter_700Bold', fontSize: 17 },

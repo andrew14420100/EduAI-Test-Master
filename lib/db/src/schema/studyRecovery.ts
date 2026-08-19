@@ -24,6 +24,9 @@ export const quickExplanationsTable = pgTable(
     ownerId: text("owner_id").notNull(),
     sessionId: text("session_id").notNull(),
     questionIndex: integer("question_index").notNull(),
+    // A pending row has reserved the user's points while the AI response is
+    // generated. Ready rows are safe to return without another charge.
+    status: text("status").notNull().default("ready"),
     explanation: text("explanation").notNull(),
     chargedPoints: integer("charged_points").notNull().default(2),
     createdAt: timestamp("created_at").notNull().defaultNow(),

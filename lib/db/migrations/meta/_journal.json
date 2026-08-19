@@ -22,6 +22,13 @@
       "when": 1787170761170,
       "tag": "0002_adorable_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787172264493,
+      "tag": "0003_true_mercury",
+      "breakpoints": true
     }
   ]
 }
