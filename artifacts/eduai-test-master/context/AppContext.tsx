@@ -34,6 +34,7 @@ import {
   useUpdateLevel,
   useUpsertProfile,
   useUseInviteCode,
+  useUseLightTheme,
   type FriendEntry,
   type LeaderboardEntry,
   type Profile,
@@ -46,6 +47,7 @@ import {
 import { File } from 'expo-file-system';
 import { fetch as expoFetch } from 'expo/fetch';
 import React, { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { ThemeProvider, type AppTheme } from '@/context/ThemeContext';
 
 export type Level = string;
 export type Account = { username: string; email: string };
@@ -123,6 +125,7 @@ type AppState = {
   profileSyncError: string | null;
   retryProfileSync: () => void;
   wallet: number;
+  theme: AppTheme;
   streak: number;
   quizzes: QuizRecord[];
   materials: Material[];
@@ -145,6 +148,7 @@ type AppState = {
   removeMaterial: (id: string) => Promise<ActionResult>;
   buyItem: (id: string) => Promise<ActionResult>;
   equipItem: (id: string) => Promise<ActionResult>;
+  useLightTheme: () => Promise<ActionResult>;
   createTicket: (subject: string, category: string, message: string) => Promise<ActionResult>;
   useInvite: (code: string) => Promise<ActionResult>;
   refresh: () => Promise<void>;
@@ -173,9 +177,14 @@ function kindFromContentType(contentType: string): MaterialKind {
 
 function accountName(user: ReturnType<typeof useUser>['user']) {
   const metadataName = user?.unsafeMetadata?.eduaiUsername;
-  if (typeof metadataName === 'string' && metadataName.trim().length >= 2) return metadataName.trim();
+  if (typeof metadataName === 'string' && metadataName.trim().length >= 2) {
+    return metadataName.trim().slice(0, 32);
+  }
+  const suffix = `-${user?.id.slice(-4) ?? 'EduAI'}`;
   const prefix = user?.primaryEmailAddress?.emailAddress.split('@')[0]?.trim();
-  if (prefix && prefix.length >= 2) return `${prefix}-${user?.id.slice(-4)}`;
+  if (prefix && prefix.length >= 2) {
+    return `${prefix.slice(0, 32 - suffix.length)}${suffix}`;
+  }
   return `Studente-${user?.id.slice(-4) ?? 'EduAI'}`;
 }
 
@@ -240,6 +249,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const quickExplanationMutation = useGetQuickExplanation();
   const buyItemMutation = useBuyShopItem();
   const equipItemMutation = useEquipShopItem();
+  const useLightThemeMutation = useUseLightTheme();
   const createTicketMutation = useCreateTicketMutation();
   const useInviteMutation = useUseInviteCode();
 
@@ -335,6 +345,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ownedItemId: owned?.id,
     };
   }), [inventoryQuery.data]);
+  const theme: AppTheme = shop.some((item) => item.id === 'dark' && item.equipped)
+    ? 'dark'
+    : 'light';
 
   const refresh = async () => {
     if (!dataEnabled) return;
@@ -370,6 +383,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setProfileSyncNonce((n) => n + 1);
     },
     wallet: profile?.wallet ?? 0,
+    theme,
     streak: profile?.streak ?? 0,
     quizzes,
     materials,
@@ -520,6 +534,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return { ok: false, message: messageFromError(error) };
       }
     },
+    useLightTheme: async () => {
+      try {
+        await useLightThemeMutation.mutateAsync();
+        await inventoryQuery.refetch();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
+      }
+    },
     createTicket: async (subject, category, message) => {
       try {
         await createTicketMutation.mutateAsync({ data: { subject, category, message } });
@@ -575,10 +598,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ticketsQuery,
     updateLevelMutation,
     useInviteMutation,
+    useLightThemeMutation,
     user,
   ]);
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={value}>
+      <ThemeProvider theme={theme}>{children}</ThemeProvider>
+    </AppContext.Provider>
+  );
 }
 
 export function useApp() {

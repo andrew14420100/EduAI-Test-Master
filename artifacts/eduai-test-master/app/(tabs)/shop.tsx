@@ -10,7 +10,7 @@ import { useColors } from '@/hooks/useColors';
 export default function ShopScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { wallet, shop, buyItem, equipItem } = useApp();
+  const { wallet, theme, shop, buyItem, equipItem, useLightTheme } = useApp();
   const [message, setMessage] = useState<{ title: string; message: string; success: boolean } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const nextReward = shop.find((item) => !item.owned);
@@ -37,6 +37,24 @@ export default function ShopScreen() {
     setMessage(result.ok
       ? { title: 'Oggetto sbloccato', message: `${title} è stato aggiunto alla tua collezione.`, success: true }
       : { title: 'Acquisto non riuscito', message: result.message, success: false });
+  };
+  const darkTheme = shop.find((item) => item.id === 'dark');
+  const toggleTheme = async () => {
+    if (!darkTheme?.owned || busyId) return;
+    setBusyId('theme-toggle');
+    const result = theme === 'dark'
+      ? await useLightTheme()
+      : await equipItem(darkTheme.id);
+    setBusyId(null);
+    setMessage(result.ok
+      ? {
+        title: theme === 'dark' ? 'Tema chiaro attivo' : 'Tema scuro attivo',
+        message: theme === 'dark'
+          ? 'Hai ripristinato l’aspetto chiaro di EduAI.'
+          : 'La modalità scura è ora attiva su tutti i tuoi dispositivi.',
+        success: true,
+      }
+      : { title: 'Tema non aggiornato', message: result.message, success: false });
   };
 
   return (
@@ -72,6 +90,33 @@ export default function ShopScreen() {
               : 'Hai sbloccato tutti gli oggetti disponibili.'}
           </Text>
         </View>
+        <View style={[styles.themeCard, { backgroundColor: c.card, borderColor: c.border }]}>
+          <View style={[styles.themeIcon, { backgroundColor: theme === 'dark' ? c.primary : c.accent }]}>
+            <AppIcon name={theme === 'dark' ? 'moon' : 'sun'} size={19} color={theme === 'dark' ? c.primaryForeground : c.accentForeground} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.themeLabel, { color: c.primary }]}>ASPETTO DELL’APP</Text>
+            <Text style={[styles.themeTitle, { color: c.foreground }]}>{theme === 'dark' ? 'Modalità scura attiva' : 'Tema chiaro attivo'}</Text>
+            <Text style={[styles.small, { color: c.mutedForeground }]}>
+              {darkTheme?.owned
+                ? 'Puoi cambiare tema quando vuoi.'
+                : 'Sblocca il tema scuro dalla collezione per attivarlo.'}
+            </Text>
+          </View>
+          {darkTheme?.owned ? (
+            <Pressable
+              testID="interruttore-tema"
+              accessibilityLabel={theme === 'dark' ? 'Usa tema chiaro' : 'Attiva tema scuro'}
+              disabled={Boolean(busyId)}
+              onPress={() => { void toggleTheme(); }}
+              style={({ pressed }) => [styles.themeButton, { backgroundColor: theme === 'dark' ? c.secondary : c.primary, opacity: busyId ? 0.5 : pressed ? 0.75 : 1 }]}
+            >
+              <Text style={[styles.themeButtonText, { color: theme === 'dark' ? c.secondaryForeground : c.primaryForeground }]}>
+                {theme === 'dark' ? 'Chiaro' : 'Scuro'}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
         <SectionTitle eyebrow="Collezione" title="Sblocca accessori" />
         {shop.map((item) => (
           <Pressable key={item.id} testID={`negozio-${item.id}`} disabled={Boolean(busyId)} onPress={() => { void purchase(item.id, item.title, item.cost, item.owned); }} style={({ pressed }) => [styles.item, { backgroundColor: c.card, borderColor: item.equipped ? c.primary : c.border, opacity: busyId === item.id ? 0.5 : pressed ? 0.74 : 1 }]}>
@@ -103,6 +148,12 @@ const styles = StyleSheet.create({
   itemTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, marginBottom: 4 }, small: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
   price: { flexDirection: 'row', alignItems: 'center', gap: 4 }, priceText: { fontFamily: 'Inter_700Bold', fontSize: 14 },
   rewardProgress: { borderRadius: 18, borderWidth: 1, padding: 16, gap: 10 },
+  themeCard: { borderRadius: 18, borderWidth: 1, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  themeIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  themeLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.1, marginBottom: 3 },
+  themeTitle: { fontFamily: 'Inter_700Bold', fontSize: 14, marginBottom: 3 },
+  themeButton: { borderRadius: 12, paddingHorizontal: 11, paddingVertical: 9 },
+  themeButtonText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
   rewardRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
   rewardLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.3, marginBottom: 4 },
   rewardTitle: { fontFamily: 'Inter_700Bold', fontSize: 15 },

@@ -1708,6 +1708,77 @@ export const useEquipShopItem = <TError = ErrorType<ErrorEnvelope>,
       return useMutation(getEquipShopItemMutationOptions(options));
     }
 
+export const getUseLightThemeUrl = () => {
+
+
+
+
+  return `/api/shop/themes/use-light`
+}
+
+/**
+ * @summary Return to the free light theme
+ */
+export const useLightTheme = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getUseLightThemeUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getUseLightThemeMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof useLightTheme>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof useLightTheme>>, TError,void, TContext> => {
+
+const mutationKey = ['useLightTheme'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof useLightTheme>>, void> = () => {
+
+
+          return  useLightTheme(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UseLightThemeMutationResult = NonNullable<Awaited<ReturnType<typeof useLightTheme>>>
+
+    export type UseLightThemeMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Return to the free light theme
+ */
+export const useUseLightTheme = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof useLightTheme>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof useLightTheme>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getUseLightThemeMutationOptions(options));
+    }
+
 export const getGetInventoryUrl = () => {
 
 

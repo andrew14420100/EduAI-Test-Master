@@ -19,6 +19,20 @@ const SHOP_CATALOG: Record<string, CatalogEntry> = {
 };
 
 /**
+ * Theme selection is shared across a user's devices. Serializing mutations on
+ * a per-user PostgreSQL advisory lock prevents an equip and a reset-to-light
+ * request from interleaving and leaving a stale active palette.
+ */
+async function lockUserThemeSelection(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+) {
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(hashtext(${userId}))`,
+  );
+}
+
+/**
  * GET /shop/inventory — get owned/equipped items for current user
  */
 router.get(
@@ -160,6 +174,36 @@ router.post("/shop/buy", requireAuth, async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /shop/themes/use-light — remove the equipped theme reward.
+ * Light is the free, default palette; no owned item is required to return to it.
+ */
+router.post(
+  "/shop/themes/use-light",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthedRequest).clerkUserId;
+    try {
+      await db.transaction(async (tx) => {
+        await lockUserThemeSelection(tx, userId);
+        await tx
+          .update(ownedShopItemsTable)
+          .set({ equipped: false })
+          .where(
+            and(
+              eq(ownedShopItemsTable.userId, userId),
+              eq(ownedShopItemsTable.itemType, "tema"),
+            ),
+          );
+      });
+      res.status(204).end();
+    } catch (err) {
+      req.log.error({ err }, "Errore ripristino tema chiaro");
+      res.status(500).json({ error: "Impossibile ripristinare il tema chiaro" });
+    }
+  },
+);
+
+/**
  * POST /shop/equip — equip an owned shop item
  */
 router.post(
@@ -175,43 +219,49 @@ router.post(
     }
 
     try {
-      const [owned] = await db
-        .select()
-        .from(ownedShopItemsTable)
-        .where(
-          and(
-            eq(ownedShopItemsTable.id, ownedItemId),
-            eq(ownedShopItemsTable.userId, userId),
-          ),
-        );
+      const updated = await db.transaction(async (tx) => {
+        await lockUserThemeSelection(tx, userId);
+        const [owned] = await tx
+          .select()
+          .from(ownedShopItemsTable)
+          .where(
+            and(
+              eq(ownedShopItemsTable.id, ownedItemId),
+              eq(ownedShopItemsTable.userId, userId),
+            ),
+          );
 
-      if (!owned) {
+        if (!owned) return null;
+
+        // Unequip all items of the selected type before equipping this item.
+        await tx
+          .update(ownedShopItemsTable)
+          .set({ equipped: false })
+          .where(
+            and(
+              eq(ownedShopItemsTable.userId, userId),
+              eq(ownedShopItemsTable.itemType, owned.itemType),
+            ),
+          );
+
+        const [equipped] = await tx
+          .update(ownedShopItemsTable)
+          .set({ equipped: true })
+          .where(
+            and(
+              eq(ownedShopItemsTable.id, ownedItemId),
+              eq(ownedShopItemsTable.userId, userId),
+            ),
+          )
+          .returning();
+
+        return equipped;
+      });
+
+      if (!updated) {
         res.status(400).json({ error: "Oggetto non posseduto" });
         return;
       }
-
-      // Unequip all items of same type first
-      await db
-        .update(ownedShopItemsTable)
-        .set({ equipped: false })
-        .where(
-          and(
-            eq(ownedShopItemsTable.userId, userId),
-            eq(ownedShopItemsTable.itemType, owned.itemType),
-          ),
-        );
-
-      // Equip the selected item
-      const [updated] = await db
-        .update(ownedShopItemsTable)
-        .set({ equipped: true })
-        .where(
-          and(
-            eq(ownedShopItemsTable.id, ownedItemId),
-            eq(ownedShopItemsTable.userId, userId),
-          ),
-        )
-        .returning();
 
       res.json(updated);
     } catch (err) {

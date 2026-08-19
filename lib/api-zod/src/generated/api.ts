@@ -445,6 +445,12 @@ export const EquipShopItemResponse = zod.object({
 
 
 /**
+ * @summary Return to the free light theme
+ */
+export const UseLightThemeResponse = zod.void()
+
+
+/**
  * @summary Get owned/equipped shop items for current user
  */
 export const GetInventoryResponseItem = zod.object({

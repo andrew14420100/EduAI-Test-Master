@@ -767,6 +767,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
 
+  /shop/themes/use-light:
+    post:
+      operationId: useLightTheme
+      tags: [shop]
+      summary: Return to the free light theme
+      responses:
+        "204":
+          description: All equipped theme rewards were removed
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   /shop/inventory:
     get:
       operationId: getInventory

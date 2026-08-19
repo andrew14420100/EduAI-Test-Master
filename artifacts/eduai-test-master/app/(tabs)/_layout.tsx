@@ -3,10 +3,12 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { AppIcon } from '@/components/AppIcon';
+import { useAppTheme } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 
 export default function TabLayout() {
   const colors = useColors();
+  const theme = useAppTheme();
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
 
@@ -25,7 +27,7 @@ export default function TabLayout() {
           ...(isWeb ? { height: 84 } : {}),
         },
         tabBarBackground: () => isIOS
-          ? <BlurView intensity={100} tint="dark" style={StyleSheet.absoluteFill} />
+          ? <BlurView intensity={100} tint={theme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
           : isWeb
             ? <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
             : null,

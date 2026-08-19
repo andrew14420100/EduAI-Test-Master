@@ -40,6 +40,7 @@ import {
   faShieldHalved,
   faStar,
   faStore,
+  faSun,
   faTrashCan,
   faTriangleExclamation,
   faUser,
@@ -74,6 +75,7 @@ export type AppIconName =
   | 'award'
   | 'zap'
   | 'moon'
+  | 'sun'
   | 'star'
   | 'folder'
   | 'circle-check'
@@ -121,6 +123,7 @@ const iconMap: Record<AppIconName, IconDefinition> = {
   award: faAward,
   zap: faBolt,
   moon: faMoon,
+  sun: faSun,
   star: faStar,
   folder: faFolder,
   'circle-check': faCircleCheck,
