@@ -14,6 +14,29 @@ export interface AdminSessionRequest extends Request {
   adminId: string;
 }
 
+function safeTokenDiagnostics(value: string | undefined) {
+  if (!value) return { tokenFormat: "missing" };
+  const token = value.startsWith("Bearer ") ? value.slice(7).trim() : "";
+  if (!token) return { tokenFormat: "not-bearer" };
+  const parts = token.split(".");
+  if (parts.length !== 3) return { tokenFormat: "not-jwt" };
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1]!, "base64url").toString("utf8")) as {
+      iss?: unknown;
+      exp?: unknown;
+      azp?: unknown;
+    };
+    return {
+      tokenFormat: "jwt",
+      issuer: typeof payload.iss === "string" ? payload.iss : "unknown",
+      authorizedParty: typeof payload.azp === "string" ? payload.azp : "unknown",
+      expired: typeof payload.exp === "number" ? payload.exp * 1000 <= Date.now() : "unknown",
+    };
+  } catch {
+    return { tokenFormat: "invalid-payload" };
+  }
+}
+
 /**
  * Requires a valid Clerk session. Attaches `clerkUserId` to the request.
  * Returns 401 if no authenticated session is found.
@@ -29,7 +52,10 @@ export const requireAuth = (
     typeof claimedUserId === "string" ? claimedUserId : auth?.userId;
   if (!userId) {
     req.log.warn(
-      { hasAuthorizationHeader: Boolean(req.headers.authorization) },
+      {
+        hasAuthorizationHeader: Boolean(req.headers.authorization),
+        token: safeTokenDiagnostics(req.headers.authorization),
+      },
       "Richiesta autenticata senza sessione Clerk valida",
     );
     res.status(401).json({ error: "Non autorizzato" });
