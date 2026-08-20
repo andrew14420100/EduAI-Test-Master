@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db, profilesTable } from "@workspace/db";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 import { generateInviteCode } from "../lib/inviteCode";
@@ -142,11 +142,19 @@ router.patch(
       const [updated] = await db
         .update(profilesTable)
         .set({ level: level.trim(), updatedAt: new Date() })
-        .where(eq(profilesTable.userId, userId))
+        .where(and(eq(profilesTable.userId, userId), isNull(profilesTable.level)))
         .returning();
 
       if (!updated) {
-        res.status(404).json({ error: "Profilo non trovato" });
+        const [profile] = await db
+          .select({ userId: profilesTable.userId, level: profilesTable.level })
+          .from(profilesTable)
+          .where(eq(profilesTable.userId, userId));
+        res.status(profile?.level ? 409 : 404).json({
+          error: profile?.level
+            ? "Il percorso di studio è già stato scelto e non può essere modificato."
+            : "Profilo non trovato",
+        });
         return;
       }
       res.json(toPublicProfile(updated));
