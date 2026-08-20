@@ -80,7 +80,9 @@ export default function OnboardingScreen() {
       <Text style={[styles.kicker, { color: c.primary }]}>PERSONALIZZA EDUAI</Text>
       <Text style={[styles.heading, { color: c.foreground }]}>Qual è il tuo percorso di studio?</Text>
       <Text style={[styles.body, { color: c.mutedForeground }]}>
-        Scegli l’indirizzo più vicino ai tuoi obiettivi. Potrai modificarlo in qualsiasi momento dal profilo.
+        {level
+          ? 'Il tuo percorso è stato salvato e non può essere modificato. Questa scelta determina i contenuti e i laboratori che vedrai.'
+          : 'Scegli l’indirizzo più vicino ai tuoi obiettivi. Dopo il salvataggio la scelta sarà definitiva.'}
       </Text>
 
       {levels.map((group) => (
@@ -92,6 +94,7 @@ export default function OnboardingScreen() {
               <Pressable
                 key={item}
                 testID={`percorso-${item}`}
+                disabled={Boolean(level)}
                 onPress={() => setSelected(item)}
                 style={({ pressed }) => [
                   styles.option,
@@ -111,9 +114,16 @@ export default function OnboardingScreen() {
           })}
         </View>
       ))}
-      <PrimaryButton onPress={() => { void save(); }} disabled={!selected || saving} icon="check">
-        {saving ? 'Salvataggio…' : 'Salva il mio percorso'}
-      </PrimaryButton>
+      {level ? (
+        <View style={[styles.lockedNotice, { backgroundColor: c.accent, borderColor: c.border }]}>
+          <AppIcon name="shield" size={16} color={c.accentForeground} />
+          <Text style={[styles.body, { color: c.accentForeground, flex: 1 }]}>Percorso bloccato dopo la prima scelta.</Text>
+        </View>
+      ) : (
+        <PrimaryButton onPress={() => { void save(); }} disabled={!selected || saving} icon="check">
+          {saving ? 'Salvataggio…' : 'Salva il mio percorso'}
+        </PrimaryButton>
+      )}
       </ScrollView>
       <AppModal
         visible={Boolean(errorMessage)}
@@ -138,4 +148,5 @@ const styles = StyleSheet.create({
   option: { minHeight: 58, borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   optionText: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 14, lineHeight: 20 },
   radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  lockedNotice: { borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

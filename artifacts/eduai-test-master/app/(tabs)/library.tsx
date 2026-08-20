@@ -15,7 +15,6 @@ type UploadItem = { id: string; name: string; kind: MaterialKind; progress: numb
 type LibraryModal =
   | { kind: 'sorgente' }
   | { kind: 'messaggio'; title: string; message: string; icon: 'warning' | 'circle-check' | 'info' }
-  | { kind: 'laboratori'; material: Material }
   | { kind: 'elimina'; material: Material }
   | { kind: 'generazione' };
 
@@ -78,7 +77,7 @@ function automaticTitle(materials: Array<{ name: string }>) {
 export default function LibraryScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { materials, studyGroups, uploadMaterials, removeMaterial, retryMaterialAnalysis, generateLabsForMaterial } = useApp();
+  const { materials, studyGroups, uploadMaterials, removeMaterial, retryMaterialAnalysis } = useApp();
   const mounted = useRef(true);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -285,32 +284,6 @@ export default function LibraryScreen() {
         ],
       };
     }
-    if (modal.kind === 'laboratori') {
-      return {
-        title: 'Crea laboratori pratici',
-        message: `Genera 15 esercizi basati su ${modal.material.name}? Saranno disponibili nella sezione Laboratori.`,
-        icon: 'generate' as const,
-        actions: [
-          {
-            label: 'Crea 15 esercizi',
-            variant: 'primaria' as const,
-            onPress: () => {
-              const material = modal.material;
-              setModal({ kind: 'messaggio', title: 'Generazione in corso', message: 'Sto leggendo il materiale e preparando gli esercizi pratici…', icon: 'info' });
-              void generateLabsForMaterial(material.id).then((result) => {
-                setModal({
-                  kind: 'messaggio',
-                  title: result.ok ? 'Laboratori creati' : 'Generazione non riuscita',
-                  message: result.ok ? 'I 15 esercizi pratici sono disponibili nella sezione Laboratori.' : result.message,
-                  icon: result.ok ? 'circle-check' : 'warning',
-                });
-              });
-            },
-          },
-          { label: 'Annulla', onPress: () => setModal(null) },
-        ],
-      };
-    }
     if (modal.kind === 'generazione') {
       return {
         title: groupTitle,
@@ -443,15 +416,6 @@ export default function LibraryScreen() {
                       {failed ? (
                         <Pressable accessibilityLabel={`Riprova analisi ${item.name}`} onPress={() => void retryAnalysis(item)} hitSlop={8}>
                           <Text style={[styles.retryText, { color: c.primary }]}>Riprova analisi</Text>
-                        </Pressable>
-                      ) : null}
-                      {ready ? (
-                        <Pressable
-                          accessibilityLabel={`Crea laboratori da ${item.name}`}
-                          onPress={() => setModal({ kind: 'laboratori', material: item })}
-                          hitSlop={8}
-                        >
-                          <Text style={[styles.retryText, { color: c.primary }]}>Crea laboratori (15)</Text>
                         </Pressable>
                       ) : null}
                     </View>
