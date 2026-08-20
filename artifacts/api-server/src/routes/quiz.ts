@@ -163,9 +163,12 @@ router.post(
          );
        } catch (error) {
          req.log.error({ err: error }, "Generazione IA delle domande non riuscita");
+          const providerMessage =
+            error instanceof Error && /ApiKeyNotApproved|not approved|account.*restricted/i.test(error.message)
+              ? "Il servizio IA non è al momento disponibile per questo account. Verifica lo stato dell’integrazione IA e riprova."
+              : "Non è stato possibile preparare il fac-simile dai materiali selezionati. Riprova tra poco.";
          res.status(503).json({
-           error:
-             "Non è stato possibile preparare un fac-simile affidabile dal contenuto selezionato. Riprova tra poco.",
+            error: providerMessage,
          });
          return;
        }
