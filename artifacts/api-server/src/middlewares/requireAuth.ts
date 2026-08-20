@@ -51,10 +51,14 @@ export const requireAuth = (
   const userId =
     typeof claimedUserId === "string" ? claimedUserId : auth?.userId;
   if (!userId) {
+    const authDetails = auth as unknown as Record<string, unknown>;
     req.log.warn(
       {
         hasAuthorizationHeader: Boolean(req.headers.authorization),
         token: safeTokenDiagnostics(req.headers.authorization),
+        clerkAuthStatus: authDetails.isSignedIn ?? "unknown",
+        clerkAuthReason: authDetails.reason ?? "unknown",
+        clerkTokenType: authDetails.tokenType ?? "unknown",
       },
       "Richiesta autenticata senza sessione Clerk valida",
     );
