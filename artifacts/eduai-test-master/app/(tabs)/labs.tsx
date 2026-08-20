@@ -47,11 +47,13 @@ export default function LabsScreen() {
   const {
     labExercises,
     labAttempts,
+    materials,
     labsEnabled,
     hasLabsByDefault,
     submitLabAttempt,
     enableLabs,
     labsLoading,
+    generateLabsForMaterials,
   } = useApp();
 
   const [view, setView] = useState<ViewMode>('list');
@@ -61,6 +63,10 @@ export default function LabsScreen() {
   const [result, setResult] = useState<{ score: number; feedback: string; earnedPoints: number; totalPoints: number } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [enablingLabs, setEnablingLabs] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generationMessage, setGenerationMessage] = useState<string | null>(null);
+  const readyMaterials = materials.filter((material) => material.isStudyReady);
+  const analyzingMaterials = materials.filter((material) => material.extractionStatus === 'pending' || material.extractionStatus === 'processing');
 
   // ── labs not enabled + not STEM ──────────────────────────────────────────
   if (!hasLabsByDefault && !labsEnabled) {
@@ -93,6 +99,44 @@ export default function LabsScreen() {
     return (
       <View style={[styles.centerWrap, { backgroundColor: c.background }]}>
         <Text style={[styles.emptyBody, { color: c.mutedForeground }]}>Caricamento esercizi…</Text>
+      </View>
+    );
+  }
+
+  if (materials.length === 0 || (readyMaterials.length === 0 && labExercises.length === 0)) {
+    return (
+      <View style={[styles.centerWrap, { backgroundColor: c.background, paddingTop: insets.top + 18, paddingBottom: insets.bottom + 100 }]}>
+        <View style={[styles.emptyIcon, { backgroundColor: c.accent }]}>
+          <AppIcon name="flask" size={28} color={c.accentForeground} />
+        </View>
+        <Text style={[styles.emptyTitle, { color: c.foreground }]}>Laboratori dai tuoi materiali</Text>
+        <Text style={[styles.emptyBody, { color: c.mutedForeground }]}>
+          {materials.length === 0
+            ? 'Carica almeno un materiale nella Libreria per creare il tuo laboratorio.'
+            : `Stiamo ancora analizzando ${analyzingMaterials.length} ${analyzingMaterials.length === 1 ? 'materiale' : 'materiali'}.`}
+        </Text>
+        {readyMaterials.length > 0 ? (
+          <Pressable
+            disabled={generating}
+            onPress={() => {
+              setGenerating(true);
+              void generateLabsForMaterials().then((result) => {
+                setGenerating(false);
+                setGenerationMessage(result.ok
+                  ? result.created
+                    ? `${result.created} esercizi pratici creati usando ${result.materialCount} materiali.`
+                    : 'I laboratori per questi materiali sono già disponibili.'
+                  : result.message);
+              });
+            }}
+            style={[styles.enableButton, { backgroundColor: c.primary, opacity: generating ? 0.6 : 1 }]}
+          >
+            <Text style={[styles.enableButtonText, { color: c.primaryForeground }]}>
+              {generating ? 'Creazione in corso…' : `Crea laboratorio · ${readyMaterials.length} materiali`}
+            </Text>
+          </Pressable>
+        ) : null}
+        {generationMessage ? <Text style={[styles.emptyBody, { color: c.mutedForeground }]}>{generationMessage}</Text> : null}
       </View>
     );
   }

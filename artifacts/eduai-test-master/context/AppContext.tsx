@@ -42,6 +42,7 @@ import {
   useUpsertProfile,
   useUseInviteCode,
   useUseLightTheme,
+  customFetch,
   type FriendEntry,
   type LeaderboardEntry,
   type Profile,
@@ -162,6 +163,7 @@ type AppState = {
   uploadMaterials: (files: UploadMaterialInput[], groupTitle: string, onProgress: UploadProgress) => Promise<ActionResult>;
   retryMaterialAnalysis: (id: string) => Promise<ActionResult>;
   generateLabsForMaterial: (id: string) => Promise<ActionResult>;
+  generateLabsForMaterials: () => Promise<ActionResult & { created?: number; existing?: number; materialCount?: number }>;
   removeMaterial: (id: string) => Promise<ActionResult>;
   buyItem: (id: string) => Promise<ActionResult>;
   equipItem: (id: string) => Promise<ActionResult>;
@@ -744,6 +746,18 @@ export function AppProvider({
         return { ok: true };
       } catch {
         return { ok: false, message: 'Impossibile creare i laboratori. Controlla la connessione.' };
+      }
+    },
+    generateLabsForMaterials: async () => {
+      try {
+        const response = await customFetch<{ created: number; existing: number; materialCount: number }>('/api/labs/generate', {
+          method: 'POST',
+          responseType: 'json',
+        });
+        await labExercisesQuery.refetch();
+        return { ok: true, ...response };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
       }
     },
     removeMaterial: async (id) => {
