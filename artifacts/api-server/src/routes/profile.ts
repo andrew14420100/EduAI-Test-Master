@@ -68,13 +68,8 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
       .where(eq(profilesTable.userId, userId));
 
     if (existing) {
-      if (existing.level) {
-        res.status(409).json({
-          error: "Il percorso di studio è già stato scelto e non può essere modificato.",
-        });
-        return;
-      }
-      // Update existing profile — only username can change here
+      // Bootstrap is idempotent: keep the saved study path untouched while
+      // allowing Clerk username/email synchronization to complete.
       const [updated] = await db
         .update(profilesTable)
         .set({ username: username.trim(), updatedAt: new Date() })
