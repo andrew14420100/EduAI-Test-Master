@@ -60,7 +60,7 @@ function AuthTokenBridge({ children }: { children: React.ReactNode }) {
   const { getToken } = useAuth();
 
   useEffect(() => {
-    setAuthTokenGetter(() => getToken());
+    setAuthTokenGetter(() => getToken({ skipCache: true }));
     return () => setAuthTokenGetter(null);
   }, [getToken]);
 
