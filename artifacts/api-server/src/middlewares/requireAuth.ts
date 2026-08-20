@@ -24,7 +24,7 @@ export const requireAuth = (
   next: NextFunction,
 ): void => {
   const auth = getAuth(req);
-  const userId = auth?.userId;
+  const userId = auth?.sessionClaims?.userId || auth?.userId;
   if (!userId) {
     req.log.warn(
       { hasAuthorizationHeader: Boolean(req.headers.authorization) },
