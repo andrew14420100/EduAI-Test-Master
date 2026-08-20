@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -30,7 +31,14 @@ function RootLayoutNav() {
   const router = useRouter();
   const segments = useSegments();
   const { isLoaded, isSignedIn } = useAuth();
-  const { level, ready } = useApp();
+  const { level, ready, refreshing } = useApp();
+  const [navigating, setNavigating] = useState(false);
+
+  useEffect(() => {
+    setNavigating(true);
+    const timer = setTimeout(() => setNavigating(false), 350);
+    return () => clearTimeout(timer);
+  }, [segments.join('/')]);
 
   useEffect(() => {
     if (!isLoaded || !ready) return;
@@ -47,15 +55,44 @@ function RootLayoutNav() {
   }, [isLoaded, isSignedIn, level, ready, router, segments]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="quiz" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="onboarding" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="admin" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="accesso" options={{ animation: 'fade' }} />
-    </Stack>
+    <View style={styles.root}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="quiz" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="onboarding" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="admin" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="accesso" options={{ animation: 'fade' }} />
+      </Stack>
+      {(navigating || refreshing) ? (
+        <View pointerEvents="none" style={styles.loadingBar}>
+          <ActivityIndicator size="small" color="#0D8F72" />
+          <Text style={styles.loadingText}>{refreshing ? 'Aggiornamento…' : 'Caricamento…'}</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  loadingBar: {
+    position: 'absolute',
+    top: 48,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 99,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  loadingText: { color: '#153A35', fontSize: 12, fontWeight: '600' },
+});
 
 function AuthTokenBridge({ children }: { children: React.ReactNode }) {
   const { getToken } = useAuth();

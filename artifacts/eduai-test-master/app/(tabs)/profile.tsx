@@ -98,17 +98,17 @@ export default function ProfileScreen() {
             <Text style={[styles.name, { color: c.foreground }]}>{account?.username ?? 'Il tuo profilo'}</Text>
             <Text style={[styles.subtitle, { color: c.mutedForeground }]}>{account?.email ?? 'Account EduAI'}</Text>
           </View>
-          <Pressable accessibilityLabel="Modifica percorso" onPress={() => router.push('/onboarding')} style={[styles.edit, { backgroundColor: c.card }]}><AppIcon name="edit" size={15} color={c.foreground} /></Pressable>
+          <View accessibilityLabel="Percorso bloccato" style={[styles.edit, { backgroundColor: c.card }]}><AppIcon name="shield" size={15} color={c.mutedForeground} /></View>
         </View>
 
-        <Pressable onPress={() => router.push('/onboarding')} style={[styles.rank, { backgroundColor: c.card, borderColor: c.border }]}>
+        <View style={[styles.rank, { backgroundColor: c.card, borderColor: c.border }]}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.eyebrow, { color: c.primary }]}>PERCORSO ATTUALE</Text>
             <Text style={[styles.rankTitle, { color: c.foreground }]}>{level ?? 'Non selezionato'}</Text>
-            <Text style={[styles.small, { color: c.mutedForeground }]}>Tocca per modificarlo</Text>
+            <Text style={[styles.small, { color: c.mutedForeground }]}>Scelta definitiva</Text>
           </View>
           <View style={[styles.rankBadge, { backgroundColor: c.accent }]}><AppIcon name="award" size={22} color={c.accentForeground} /></View>
-        </Pressable>
+        </View>
 
         <SectionTitle eyebrow="I tuoi dati" title="Riepilogo" />
         <View style={styles.metrics}>
