@@ -79,11 +79,21 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
       // First-time creation — use request-provided username and email.
       // level starts as null (not yet onboarded).
       const inviteCode = generateInviteCode();
+      let profileUsername = username.trim();
+      const [usernameOwner] = await db
+        .select({ userId: profilesTable.userId })
+        .from(profilesTable)
+        .where(eq(profilesTable.username, profileUsername))
+        .limit(1);
+      if (usernameOwner && usernameOwner.userId !== userId) {
+        const suffix = `-${userId.slice(-4)}`;
+        profileUsername = `${profileUsername.slice(0, 32 - suffix.length)}${suffix}`;
+      }
       const [created] = await db
         .insert(profilesTable)
         .values({
           userId,
-          username: username.trim(),
+          username: profileUsername,
           email: email ?? "",
           level: null,
           wallet: 0,
@@ -94,12 +104,9 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
       res.json(toPublicProfile(created));
     }
   } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      err.message.includes("unique constraint") &&
-      err.message.includes("username")
-    ) {
-      res.status(400).json({ error: "Username già in uso" });
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    if (errorMessage.includes("profiles_username_unique")) {
+      res.status(400).json({ error: "Username già in uso. Scegline uno diverso." });
       return;
     }
     req.log.error({ err }, "Errore upsert profilo");
