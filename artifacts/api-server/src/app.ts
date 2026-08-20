@@ -73,12 +73,12 @@ app.use(express.urlencoded({ extended: true }));
 // Resolve publishable key from incoming request host so the same server can
 // serve multiple Clerk custom domains.
 app.use(
-  clerkMiddleware((req) => ({
-    publishableKey: publishableKeyFromHost(
-      getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY,
-    ),
-  })),
+  clerkMiddleware({
+    // The mobile app signs tokens with the single Replit-managed Clerk
+    // publishable key. Do not infer a different key from the proxied host:
+    // the preview host is not a Clerk frontend API domain.
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+  }),
 );
 
 app.use("/api", router);
