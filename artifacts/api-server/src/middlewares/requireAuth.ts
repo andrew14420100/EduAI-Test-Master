@@ -1,4 +1,4 @@
-import { clerkClient, getAuth } from "@clerk/express";
+import { getAuth } from "@clerk/express";
 import type { Request, Response, NextFunction } from "express";
 
 export interface AuthedRequest extends Request {
@@ -7,6 +7,11 @@ export interface AuthedRequest extends Request {
 
 export interface AdminRequest extends AuthedRequest {
   isAdmin: true;
+}
+
+export interface AdminSessionRequest extends Request {
+  adminSessionId: string;
+  adminId: string;
 }
 
 /**
@@ -32,31 +37,26 @@ export const requireAuth = (
   next();
 };
 
-/**
- * Requires a signed-in Clerk user whose public metadata explicitly grants the
- * admin role. The server reads Clerk directly so a client-side route guard can
- * never grant access by itself.
- */
-export const requireAdmin = async (
+export const requireAdminSession = (
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<void> => {
-  const userId = (req as AuthedRequest).clerkUserId;
-  if (!userId) {
-    res.status(401).json({ error: "Non autorizzato" });
+): void => {
+  const sessionId = req.header("x-admin-session");
+  if (!sessionId) {
+    res.status(401).json({ error: "Sessione amministratore richiesta" });
     return;
   }
-  try {
-    const user = await clerkClient.users.getUser(userId);
-    if (user.publicMetadata?.role !== "admin") {
-      res.status(403).json({ error: "Accesso riservato all'amministratore" });
-      return;
-    }
-    (req as AdminRequest).isAdmin = true;
-    next();
-  } catch (error) {
-    req.log.error({ err: error, userId }, "Verifica ruolo amministratore non riuscita");
-    res.status(503).json({ error: "Impossibile verificare i permessi amministrativi" });
+  const session = adminSessions.get(sessionId);
+  if (!session || session.expiresAt <= Date.now()) {
+    if (session) adminSessions.delete(sessionId);
+    res.status(401).json({ error: "Sessione amministratore scaduta" });
+    return;
   }
+  (req as AdminSessionRequest).adminSessionId = sessionId;
+  (req as AdminSessionRequest).adminId = session.adminId;
+  next();
 };
+
+type AdminSession = { adminId: string; expiresAt: number };
+export const adminSessions = new Map<string, AdminSession>();

@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
 import { desc, eq, inArray } from "drizzle-orm";
 import { db, profilesTable, ticketMessagesTable, ticketsTable } from "@workspace/db";
-import { requireAdmin, requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
+import { requireAdminSession, requireAuth, type AdminSessionRequest } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -112,7 +112,7 @@ router.post("/tickets", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.get("/admin/users", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+router.get("/admin/users", requireAdminSession, async (req: Request, res: Response) => {
   try {
     const users = await db
       .select({
@@ -132,7 +132,7 @@ router.get("/admin/users", requireAuth, requireAdmin, async (req: Request, res: 
   }
 });
 
-router.get("/admin/tickets", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+router.get("/admin/tickets", requireAdminSession, async (req: Request, res: Response) => {
   try {
     const tickets = await db.select().from(ticketsTable).orderBy(desc(ticketsTable.updatedAt)).limit(300);
     const profiles = await db
@@ -147,8 +147,8 @@ router.get("/admin/tickets", requireAuth, requireAdmin, async (req: Request, res
   }
 });
 
-router.post("/admin/tickets/:ticketId/reply", requireAuth, requireAdmin, async (req: Request, res: Response) => {
-  const adminId = (req as AuthedRequest).clerkUserId;
+router.post("/admin/tickets/:ticketId/reply", requireAdminSession, async (req: Request, res: Response) => {
+  const adminId = (req as AdminSessionRequest).adminId;
   const ticketId = req.params.ticketId as string;
   const { message, close } = req.body as { message?: unknown; close?: unknown };
   if (typeof message !== "string" || message.trim().length < 2 || message.trim().length > 4_000) {

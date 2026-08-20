@@ -10,6 +10,7 @@ import ticketsRouter from "./tickets";
 import leaderboardRouter from "./leaderboard";
 import socialRouter from "./social";
 import labsRouter from "./labs";
+import adminAuthRouter from "./adminAuth";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(ticketsRouter);
 router.use(leaderboardRouter);
 router.use(socialRouter);
 router.use(labsRouter);
+router.use(adminAuthRouter);
 
 export default router;

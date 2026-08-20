@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { useUser } from '@clerk/expo';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +13,6 @@ const ticketCategories = ['Problema tecnico', 'Account', 'Materiali', 'Verifiche
 
 export default function ProfileScreen() {
   const c = useColors();
-  const { user } = useUser();
   const insets = useSafeAreaInsets();
   const { account, level, wallet, quizzes, streak, tickets, logout, createTicket, labsEnabled, hasLabsByDefault, enableLabs } = useApp();
   const [modal, setModal] = useState<ProfileModal>(null);
@@ -25,7 +23,6 @@ export default function ProfileScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState({ title: '', message: '', success: false });
 
-  const isAdmin = user?.publicMetadata?.role === 'admin';
   const preferences: { label: string; icon: AppIconName; action: () => void }[] = [
     { label: 'Percorso di studio', icon: 'book', action: () => router.push('/onboarding') },
     { label: 'Assistenza', icon: 'support', action: () => setModal('ticket') },
@@ -34,7 +31,7 @@ export default function ProfileScreen() {
     { label: 'Impostazioni account', icon: 'book', action: () => router.push('/account-settings') },
     { label: 'Esci dall’account', icon: 'logout', action: () => setModal('uscita') },
   ];
-  if (isAdmin) preferences.splice(2, 0, { label: 'Console assistenza', icon: 'shield', action: () => router.push('/admin') });
+  preferences.splice(2, 0, { label: 'Console assistenza', icon: 'shield', action: () => router.push('/admin') });
 
   const submitTicket = async () => {
     if (submitting) return;
