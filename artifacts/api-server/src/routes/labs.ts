@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
-import { eq, and, inArray, sql, exists, or, isNull } from "drizzle-orm";
+import { eq, and, inArray, sql, exists, or, isNull, desc } from "drizzle-orm";
 import {
   db,
   labExercisesTable,
@@ -16,6 +16,89 @@ const router: IRouter = Router();
 
 // Points fraction for partial AI-graded answers
 const PARTIAL_SCORE = 0.5;
+
+/**
+ * Generate one practical laboratory from the complete set of ready materials.
+ * The generated exercises are distributed across the source materials so every
+ * source remains traceable without exposing extracted text to the client.
+ */
+router.post("/labs/generate", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthedRequest).clerkUserId;
+  try {
+    const materials = await db
+      .select()
+      .from(materialsTable)
+      .where(and(eq(materialsTable.ownerId, userId), eq(materialsTable.extractionStatus, "ready")))
+      .orderBy(desc(materialsTable.createdAt));
+
+    const readyMaterials = materials.filter((material) => material.extractedText?.trim());
+    if (!readyMaterials.length) {
+      res.status(409).json({ error: "Carica e attendi l'analisi di almeno un materiale prima di creare i laboratori." });
+      return;
+    }
+
+    const existing = await db
+      .select({ id: labExercisesTable.id })
+      .from(labExercisesTable)
+      .where(inArray(labExercisesTable.sourceMaterialId, readyMaterials.map((material) => material.id)));
+    if (existing.length > 0) {
+      res.json({ created: 0, existing: existing.length, materialCount: readyMaterials.length });
+      return;
+    }
+
+    const sourceText = readyMaterials
+      .map((material) => `MATERIALE: ${material.title}\n${material.extractedText!.slice(0, 30000)}`)
+      .join("\n\n---\n\n")
+      .slice(0, 120000);
+    let exercises: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> = [];
+    for (let attempt = 0; attempt < 2 && exercises.length < 15; attempt++) {
+      const response = await openai.chat.completions.create({
+        model: "gpt-5-mini",
+        max_completion_tokens: 12000,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: "Sei un docente italiano. Crea esattamente 15 laboratori pratici originali usando esclusivamente i materiali forniti. Non creare teoria o scelta multipla. Ogni esercizio deve richiedere calcoli, dati, procedimenti, pseudocodice o applicazione concreta. Indica nel topic il materiale o l'argomento di riferimento. Rispondi solo JSON con {\"exercises\":[{\"topic\":\"...\",\"title\":\"...\",\"prompt\":\"...\",\"solution\":\"...\",\"difficulty\":\"base|medio|avanzato\",\"points\":number}]}." },
+          { role: "user", content: sourceText },
+        ],
+      });
+      const raw = (response.choices[0]?.message?.content ?? "{}")
+        .replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      try {
+        const parsed = JSON.parse(raw) as { exercises?: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> };
+        exercises = (parsed.exercises ?? []).filter((item) => item.topic && item.title && item.prompt && item.solution).slice(0, 15);
+      } catch {
+        req.log.warn({ attempt }, "Risposta IA laboratori aggregati non valida");
+      }
+    }
+    if (exercises.length < 15) {
+      res.status(502).json({ error: "L'IA non ha prodotto 15 esercizi validi. Riprova." });
+      return;
+    }
+
+    const rows = exercises.map((item, index) => {
+      const material = readyMaterials[index % readyMaterials.length]!;
+      return {
+        id: randomUUID(),
+        sourceMaterialId: material.id,
+        subject: material.title,
+        topic: item.topic!,
+        title: item.title!,
+        prompt: item.prompt!,
+        exerciseType: "free_text" as const,
+        options: null,
+        correctIndex: null,
+        correctAnswer: item.solution!,
+        difficultyLevel: (["base", "medio", "avanzato"].includes(item.difficulty ?? "") ? item.difficulty : "medio") as "base" | "medio" | "avanzato",
+        points: Math.max(5, Math.min(25, Math.round(item.points ?? 10))),
+      };
+    });
+    await db.insert(labExercisesTable).values(rows);
+    res.status(201).json({ created: rows.length, existing: 0, materialCount: readyMaterials.length });
+  } catch (err) {
+    req.log.error({ err, userId }, "Generazione laboratori aggregati fallita");
+    res.status(500).json({ error: "Impossibile creare i laboratori. Riprova più tardi." });
+  }
+});
 
 router.post("/materials/:materialId/labs", requireAuth, async (req: Request, res: Response) => {
   const userId = (req as AuthedRequest).clerkUserId;
@@ -169,7 +252,14 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
     const subjects = subjectsForPath(profile.level);
 
     let exercises;
-    if (subjects && subjects.length > 0) {
+    const ownedMaterialIds = await db
+      .select({ id: materialsTable.id })
+      .from(materialsTable)
+      .where(and(eq(materialsTable.ownerId, userId), eq(materialsTable.extractionStatus, "ready")));
+    const sourceIds = ownedMaterialIds.map((material) => material.id);
+    if (!sourceIds.length) {
+      exercises = [];
+    } else if (subjects && subjects.length > 0) {
       exercises = await db
         .select({
           id: labExercisesTable.id,
@@ -186,10 +276,7 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
         .from(labExercisesTable)
         .where(and(
           inArray(labExercisesTable.subject, subjects),
-          or(
-            isNull(labExercisesTable.sourceMaterialId),
-            exists(db.select({ id: materialsTable.id }).from(materialsTable).where(eq(materialsTable.id, labExercisesTable.sourceMaterialId))),
-          ),
+            inArray(labExercisesTable.sourceMaterialId, sourceIds),
         ))
         .orderBy(labExercisesTable.subject, labExercisesTable.topic);
     } else {
@@ -208,10 +295,7 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
         })
         .from(labExercisesTable)
         .where(and(
-          or(
-            isNull(labExercisesTable.sourceMaterialId),
-            exists(db.select({ id: materialsTable.id }).from(materialsTable).where(eq(materialsTable.id, labExercisesTable.sourceMaterialId))),
-          ),
+          inArray(labExercisesTable.sourceMaterialId, sourceIds),
         ))
         .orderBy(labExercisesTable.subject, labExercisesTable.topic)
         .limit(30);
