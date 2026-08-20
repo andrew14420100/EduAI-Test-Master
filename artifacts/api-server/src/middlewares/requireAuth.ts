@@ -21,6 +21,10 @@ export const requireAuth = (
   const auth = getAuth(req);
   const userId = auth?.userId;
   if (!userId) {
+    req.log.warn(
+      { hasAuthorizationHeader: Boolean(req.headers.authorization) },
+      "Richiesta autenticata senza sessione Clerk valida",
+    );
     res.status(401).json({ error: "Non autorizzato" });
     return;
   }
