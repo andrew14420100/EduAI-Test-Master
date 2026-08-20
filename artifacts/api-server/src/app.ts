@@ -78,6 +78,7 @@ app.use(
     // publishable key. Do not infer a different key from the proxied host:
     // the preview host is not a Clerk frontend API domain.
     publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+    secretKey: process.env.CLERK_SECRET_KEY,
   }),
 );
 
