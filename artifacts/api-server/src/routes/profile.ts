@@ -68,14 +68,10 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
       .where(eq(profilesTable.userId, userId));
 
     if (existing) {
-      // Bootstrap is idempotent: keep the saved study path untouched while
-      // allowing Clerk username/email synchronization to complete.
-      const [updated] = await db
-        .update(profilesTable)
-        .set({ username: username.trim(), updatedAt: new Date() })
-        .where(eq(profilesTable.userId, userId))
-        .returning();
-      res.json(toPublicProfile(updated));
+      // Bootstrap is idempotent. Never overwrite the persisted username or
+      // study path with Clerk data: usernames are unique and the study path is
+      // immutable after onboarding.
+      res.json(toPublicProfile(existing));
     } else {
       // First-time creation — use request-provided username and email.
       // level starts as null (not yet onboarded).
