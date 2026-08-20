@@ -68,6 +68,12 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
       .where(eq(profilesTable.userId, userId));
 
     if (existing) {
+      if (existing.level) {
+        res.status(409).json({
+          error: "Il percorso di studio è già stato scelto e non può essere modificato.",
+        });
+        return;
+      }
       // Update existing profile — only username can change here
       const [updated] = await db
         .update(profilesTable)

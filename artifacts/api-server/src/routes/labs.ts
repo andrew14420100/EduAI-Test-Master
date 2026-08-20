@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
-import { eq, and, inArray, sql, exists, or, isNull, desc } from "drizzle-orm";
+import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import {
   db,
   labExercisesTable,
@@ -10,7 +10,7 @@ import {
 } from "@workspace/db";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { hasLabsByDefault, subjectsForPath } from "../lib/labPath";
+import { hasLabsByDefault } from "../lib/labPath";
 
 const router: IRouter = Router();
 
@@ -249,8 +249,6 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
       return;
     }
 
-    const subjects = subjectsForPath(profile.level);
-
     let exercises;
     const ownedMaterialIds = await db
       .select({ id: materialsTable.id })
@@ -259,7 +257,7 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
     const sourceIds = ownedMaterialIds.map((material) => material.id);
     if (!sourceIds.length) {
       exercises = [];
-    } else if (subjects && subjects.length > 0) {
+    } else {
       exercises = await db
         .select({
           id: labExercisesTable.id,
@@ -274,31 +272,8 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
           // Never expose correctIndex or correctAnswer
         })
         .from(labExercisesTable)
-        .where(and(
-          inArray(labExercisesTable.subject, subjects),
-            inArray(labExercisesTable.sourceMaterialId, sourceIds),
-        ))
+        .where(inArray(labExercisesTable.sourceMaterialId, sourceIds))
         .orderBy(labExercisesTable.subject, labExercisesTable.topic);
-    } else {
-      // Unknown path or no subjects — return a varied sample
-      exercises = await db
-        .select({
-          id: labExercisesTable.id,
-          subject: labExercisesTable.subject,
-          topic: labExercisesTable.topic,
-          title: labExercisesTable.title,
-          prompt: labExercisesTable.prompt,
-          exerciseType: labExercisesTable.exerciseType,
-          options: labExercisesTable.options,
-          difficultyLevel: labExercisesTable.difficultyLevel,
-          points: labExercisesTable.points,
-        })
-        .from(labExercisesTable)
-        .where(and(
-          inArray(labExercisesTable.sourceMaterialId, sourceIds),
-        ))
-        .orderBy(labExercisesTable.subject, labExercisesTable.topic)
-        .limit(30);
     }
 
     res.json({
