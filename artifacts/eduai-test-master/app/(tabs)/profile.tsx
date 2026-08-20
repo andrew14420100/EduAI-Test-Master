@@ -31,8 +31,6 @@ export default function ProfileScreen() {
     { label: 'Impostazioni account', icon: 'book', action: () => router.push('/account-settings') },
     { label: 'Esci dall’account', icon: 'logout', action: () => setModal('uscita') },
   ];
-  preferences.splice(2, 0, { label: 'Console assistenza', icon: 'shield', action: () => router.push('/admin') });
-
   const submitTicket = async () => {
     if (submitting) return;
     if (subject.trim().length < 3 || description.trim().length < 10) {

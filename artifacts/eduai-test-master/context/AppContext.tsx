@@ -410,7 +410,6 @@ export function AppProvider({
         // The error is surfaced for a user-triggered retry via retryProfileSync().
         const message = messageFromError(error);
         setProfileSyncError(message);
-        console.error('Sincronizzazione profilo non riuscita', message);
       } finally {
         setProfileSyncing(false);
       }
