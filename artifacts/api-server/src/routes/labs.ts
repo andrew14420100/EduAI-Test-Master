@@ -249,7 +249,17 @@ router.get("/labs/exercises", requireAuth, async (req: Request, res: Response) =
       return;
     }
 
-    let exercises;
+    let exercises: Array<{
+      id: string;
+      subject: string;
+      topic: string;
+      title: string;
+      prompt: string;
+      exerciseType: string;
+      options: unknown;
+      difficultyLevel: string;
+      points: number;
+    }>;
     const ownedMaterialIds = await db
       .select({ id: materialsTable.id })
       .from(materialsTable)
