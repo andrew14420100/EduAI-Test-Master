@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
 import { desc, eq, inArray } from "drizzle-orm";
 import { db, profilesTable, ticketMessagesTable, ticketsTable } from "@workspace/db";
-import { requireAdminSession, requireAuth, type AdminSessionRequest } from "../middlewares/requireAuth";
+import { requireAdminSession, requireAuth, type AdminSessionRequest, type AuthedRequest } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
