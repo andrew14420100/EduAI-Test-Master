@@ -5,6 +5,23 @@ module.exports = () => ({
   expo: {
     ...appJson.expo,
     owner: 'andrea144201',
+    ios: {
+      ...(appJson.expo.ios || {}),
+      bundleIdentifier: appJson.expo.ios?.bundleIdentifier || 'com.eduai.testmaster',
+    },
+    plugins: [
+      ...(appJson.expo.plugins || []),
+      [
+        'expo-build-properties',
+        {
+          android: {
+            packagingOptions: {
+              excludes: ['META-INF/versions/9/OSGI-INF/MANIFEST.MF'],
+            },
+          },
+        },
+      ],
+    ],
     extra: {
       ...(appJson.expo.extra || {}),
       apiDomain: process.env.EXPO_PUBLIC_DOMAIN || process.env.REPLIT_INTERNAL_APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN || '',
