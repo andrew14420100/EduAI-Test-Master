@@ -209,7 +209,7 @@ router.get("/admin/tickets", requireAdminSession, async (req: Request, res: Resp
 router.post("/admin/tickets/:ticketId/reply", requireAdminSession, async (req: Request, res: Response) => {
   const adminId = (req as AdminSessionRequest).adminId;
   const ticketId = req.params.ticketId as string;
-  const { message, close } = req.body as { message?: unknown; close?: unknown };
+  const { message, close, status } = req.body as { message?: unknown; close?: unknown; status?: unknown };
   if (typeof message !== "string" || message.trim().length < 2 || message.trim().length > 4_000) {
     res.status(400).json({ error: "La risposta deve contenere da 2 a 4000 caratteri" });
     return;
@@ -222,13 +222,16 @@ router.post("/admin/tickets/:ticketId/reply", requireAdminSession, async (req: R
         .where(eq(ticketsTable.id, ticketId))
         .limit(1);
       if (!current) return null;
-      const closing = close === true;
+      const nextStatus = status === "accepted" || status === "rejected" || status === "in_progress" || status === "open"
+        ? status
+        : close === true ? "closed" : current.status === "closed" ? "closed" : "in_progress";
+      const closing = nextStatus === "closed";
       const [updated] = await tx
         .update(ticketsTable)
         .set({
           // A normal reply preserves a resolved state; reopening requires a
           // deliberate user follow-up rather than an accidental admin click.
-          status: closing ? "closed" : current.status === "closed" ? "closed" : "in_progress",
+          status: nextStatus,
           updatedAt: new Date(),
           ...(closing
             ? { closedAt: new Date(), closedBy: adminId }
@@ -251,7 +254,14 @@ router.post("/admin/tickets/:ticketId/reply", requireAdminSession, async (req: R
       res.status(404).json({ error: "Ticket non trovato" });
       return;
     }
-    void sendTicketPushNotifications(ticket.userId, ticket.id, ticket.subject, message.trim(), req);
+    void sendTicketPushNotifications(
+      ticket.userId,
+      ticket.id,
+      ticket.subject,
+      message.trim(),
+      req,
+      ticket.category === "proposta_modifica" ? ticket.status : undefined,
+    );
     res.json((await ticketDetails([ticket]))[0]);
   } catch (err) {
     req.log.error({ err }, "Errore risposta ticket amministratore");
@@ -265,9 +275,17 @@ async function sendTicketPushNotifications(
   subject: string,
   message: string,
   req: Request,
+  status?: string,
 ) {
   try {
-    const tokens = await db.select().from(pushTokensTable).where(eq(pushTokensTable.userId, userId));
+    const adminProfiles = await db
+      .select({ userId: profilesTable.userId })
+      .from(profilesTable)
+      .where(eq(profilesTable.email, "andcolaz13@gmail.com"));
+    const recipientIds = [...new Set([userId, ...adminProfiles.map((profile) => profile.userId)])];
+    const tokens = recipientIds.length
+      ? await db.select().from(pushTokensTable).where(inArray(pushTokensTable.userId, recipientIds))
+      : [];
     if (!tokens.length) return;
     const response = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
@@ -275,7 +293,7 @@ async function sendTicketPushNotifications(
       body: JSON.stringify(tokens.map(({ token }) => ({
         to: token,
         title: subject || "Risposta dall’assistenza",
-        body: message,
+        body: status ? `${message}\nStato: ${status}` : message,
         sound: "default",
         data: { type: "ticket-reply", ticketId },
       }))),
