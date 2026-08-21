@@ -425,6 +425,7 @@ export function AppProvider({
         setProfileSeed(synced);
         setProfileSyncError(null);
         queryClient.setQueryData(getGetProfileQueryKey(), synced);
+        triggerReward('accesso', 'Accesso effettuato', 'Bentornato nel tuo spazio di studio.');
       } catch (error) {
         // Do NOT clear the attempt ref — keeps us out of a blank retry loop.
         // The error is surfaced for a user-triggered retry via retryProfileSync().
@@ -587,6 +588,8 @@ export function AppProvider({
     studyGroups,
     shop,
     completionAnimation,
+    rewardEvent,
+    dismissRewardEvent: () => setRewardEvent(null),
     tickets: ticketsQuery.data ?? [],
     leaderboard: leaderboardQuery.data ?? [],
     friends: inviteQuery.data?.friends ?? [],
@@ -608,6 +611,7 @@ export function AppProvider({
         const updated = await updateLevelMutation.mutateAsync({ data: { level: nextLevel } });
         setProfileSeed(updated);
         queryClient.setQueryData(getGetProfileQueryKey(), updated);
+        triggerReward('livello', 'Percorso salvato', 'Il tuo percorso è pronto: puoi iniziare a studiare.');
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
@@ -638,6 +642,7 @@ export function AppProvider({
           data: { answers, idempotencyKey },
         });
         await Promise.all([quizzesQuery.refetch(), recoveryQuery.refetch(), profileQuery.refetch(), leaderboardQuery.refetch()]);
+        triggerReward('verifica', 'Verifica completata', 'Hai ricevuto punti e aggiornato i tuoi progressi.');
         return { ok: true, attempt };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
@@ -799,6 +804,7 @@ export function AppProvider({
           data: { itemId: item.id },
         });
         await Promise.all([inventoryQuery.refetch(), profileQuery.refetch()]);
+        triggerReward('negozio', 'Premio sbloccato', 'Il nuovo oggetto è nella tua collezione.');
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
@@ -816,6 +822,7 @@ export function AppProvider({
           if (Platform.OS === 'web') globalThis.localStorage?.setItem('eduai:last-theme', nextTheme);
         }
         await inventoryQuery.refetch();
+        triggerReward('negozio', 'Oggetto equipaggiato', 'Il tuo nuovo effetto è attivo in tutta l’app.');
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
@@ -837,6 +844,7 @@ export function AppProvider({
       try {
         await createTicketMutation.mutateAsync({ data: { subject, category, message } });
         await ticketsQuery.refetch();
+        triggerReward('assistenza', 'Ticket inviato', 'La richiesta è stata salvata e potrai seguirne lo stato.');
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
@@ -846,6 +854,7 @@ export function AppProvider({
       try {
         await useInviteMutation.mutateAsync({ data: { code: code.trim().toUpperCase() } });
         await Promise.all([inviteQuery.refetch(), leaderboardQuery.refetch()]);
+        triggerReward('amico', 'Amico aggiunto', 'L’invito è stato accettato e la classifica è aggiornata.');
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
@@ -863,6 +872,7 @@ export function AppProvider({
         const attempt = await submitLabAttemptMutation.mutateAsync({ data: { exerciseId, userAnswer } });
         // Wallet and history change server-side in the same transaction.
         await Promise.all([profileQuery.refetch(), labAttemptsQuery.refetch(), leaderboardQuery.refetch()]);
+        triggerReward('laboratorio', 'Laboratorio completato', 'Hai guadagnato punti con la tua soluzione pratica.');
         return {
           ok: true,
           result: {
