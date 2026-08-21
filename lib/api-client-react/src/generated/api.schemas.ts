@@ -162,6 +162,11 @@ export interface StartQuizSessionRequest {
      */
   materialIds: string[];
   totalQuestions: StartQuizSessionRequestTotalQuestions;
+  /**
+     * Optional client-generated nonce used to request a fresh question variant.
+     * @maxLength 120
+     */
+  variant?: string;
 }
 
 export interface QuizSessionResponse {
@@ -194,6 +199,11 @@ export interface FlashcardsRequest {
      * @maxItems 20
      */
   materialIds: string[];
+  /**
+     * Optional client-generated nonce used to request a fresh flashcard variant.
+     * @maxLength 120
+     */
+  variant?: string;
 }
 
 export interface Flashcard {

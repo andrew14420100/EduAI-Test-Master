@@ -13,4 +13,9 @@ export interface FlashcardsRequest {
      * @maxItems 20
      */
   materialIds: string[];
+  /**
+     * Optional client-generated nonce used to request a fresh flashcard variant.
+     * @maxLength 120
+     */
+  variant?: string;
 }

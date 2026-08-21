@@ -15,4 +15,9 @@ export interface StartQuizSessionRequest {
      */
   materialIds: string[];
   totalQuestions: StartQuizSessionRequestTotalQuestions;
+  /**
+     * Optional client-generated nonce used to request a fresh question variant.
+     * @maxLength 120
+     */
+  variant?: string;
 }

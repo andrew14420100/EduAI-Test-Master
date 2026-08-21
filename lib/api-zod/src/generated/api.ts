@@ -316,11 +316,14 @@ export const JoinGroupResponse = zod.object({
  */
 export const startQuizSessionBodyMaterialIdsMax = 20;
 
+export const startQuizSessionBodyVariantMax = 120;
+
 
 
 export const StartQuizSessionBody = zod.object({
   "materialIds": zod.array(zod.string()).min(1).max(startQuizSessionBodyMaterialIdsMax).describe('Owned material ids to combine into one unified quiz.'),
-  "totalQuestions": zod.union([zod.literal(10),zod.literal(20),zod.literal(30)])
+  "totalQuestions": zod.union([zod.literal(10),zod.literal(20),zod.literal(30)]),
+  "variant": zod.string().max(startQuizSessionBodyVariantMax).optional().describe('Optional client-generated nonce used to request a fresh question variant.')
 })
 
 export const startQuizSessionResponseQuestionsItemOptionsMin = 2;
@@ -346,10 +349,13 @@ export const StartQuizSessionResponse = zod.object({
  */
 export const generateFlashcardsBodyMaterialIdsMax = 20;
 
+export const generateFlashcardsBodyVariantMax = 120;
+
 
 
 export const GenerateFlashcardsBody = zod.object({
-  "materialIds": zod.array(zod.string()).min(1).max(generateFlashcardsBodyMaterialIdsMax).describe('Owned, study-ready material ids.')
+  "materialIds": zod.array(zod.string()).min(1).max(generateFlashcardsBodyMaterialIdsMax).describe('Owned, study-ready material ids.'),
+  "variant": zod.string().max(generateFlashcardsBodyVariantMax).optional().describe('Optional client-generated nonce used to request a fresh flashcard variant.')
 })
 
 export const GenerateFlashcardsResponse = zod.object({

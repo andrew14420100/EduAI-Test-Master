@@ -1460,6 +1460,10 @@ components:
         totalQuestions:
           type: integer
           enum: [10, 20, 30]
+        variant:
+          type: string
+          maxLength: 120
+          description: Optional client-generated nonce used to request a fresh question variant.
 
     QuizSessionResponse:
       type: object
@@ -1520,6 +1524,10 @@ components:
           minItems: 1
           maxItems: 20
           description: Owned, study-ready material ids.
+        variant:
+          type: string
+          maxLength: 120
+          description: Optional client-generated nonce used to request a fresh flashcard variant.
 
     Flashcard:
       type: object
