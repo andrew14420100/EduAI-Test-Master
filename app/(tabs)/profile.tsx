@@ -8,7 +8,7 @@ import { Pill, SectionTitle } from '@/components/Ui';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
-type ProfileModal = 'avvisi' | 'privacy' | 'uscita' | 'ticket' | 'esito' | null;
+type ProfileModal = 'avvisi' | 'privacy' | 'uscita' | 'elimina-account' | 'ticket' | 'esito' | null;
 const ticketCategories = ['Problema tecnico', 'Account', 'Materiali', 'Verifiche', 'Altro'];
 
 function ticketStatusLabel(status: string) {
@@ -30,6 +30,7 @@ export default function ProfileScreen() {
     unreadSupportCount,
     markTicketRead,
     logout,
+    deleteAccount,
     createTicket,
     labsEnabled,
     hasLabsByDefault,
@@ -43,6 +44,7 @@ export default function ProfileScreen() {
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState({ title: '', message: '', success: false });
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const openSupport = () => {
     setModal('ticket');
@@ -58,6 +60,7 @@ export default function ProfileScreen() {
     { label: 'Privacy e dati', icon: 'shield', action: () => setModal('privacy') },
     { label: 'Impostazioni account', icon: 'book', action: () => router.push('/account-settings') },
     { label: 'Esci dall’account', icon: 'logout', action: () => setModal('uscita') },
+    { label: 'Elimina definitivamente l’account', icon: 'trash', action: () => setModal('elimina-account') },
   ];
   if (isAdmin) {
     preferences.splice(1, 0, { label: 'Console assistenza', icon: 'support', action: () => router.push('/admin') });
@@ -112,6 +115,12 @@ export default function ProfileScreen() {
         }
         : modal === 'esito'
           ? { title: feedback.title, message: feedback.message, icon: feedback.success ? 'circle-check' as const : 'warning' as const }
+          : modal === 'elimina-account'
+            ? {
+              title: 'Eliminare definitivamente l’account?',
+              message: 'Questa azione cancella profilo, materiali, progressi, acquisti e ticket. Non può essere annullata.',
+              icon: 'trash' as const,
+            }
           : {
             title: 'Vuoi uscire?',
             message: 'Dovrai inserire nuovamente email e password. I dati online non verranno eliminati.',
@@ -234,6 +243,26 @@ export default function ProfileScreen() {
             { label: 'Esci', variant: 'pericolo', onPress: () => { setModal(null); void logout().then(() => router.replace('/accesso')); } },
             { label: 'Resta nell’app', onPress: () => setModal(null) },
           ]
+          : modal === 'elimina-account'
+            ? [
+              {
+                label: deletingAccount ? 'Eliminazione…' : 'Elimina definitivamente',
+                variant: 'pericolo' as const,
+                onPress: () => {
+                  if (deletingAccount) return;
+                  setDeletingAccount(true);
+                  void deleteAccount().then((result) => {
+                    setDeletingAccount(false);
+                    if (result.ok) router.replace('/accesso');
+                    else {
+                      setFeedback({ title: 'Eliminazione non riuscita', message: result.message, success: false });
+                      setModal('esito');
+                    }
+                  });
+                },
+              },
+              { label: 'Annulla', onPress: () => setModal(null) },
+            ]
           : modal === 'ticket'
             ? [
               { label: submitting ? 'Invio…' : 'Invia ticket', variant: 'primaria', onPress: () => { void submitTicket(); } },

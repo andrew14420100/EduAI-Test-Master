@@ -8,6 +8,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -21,6 +23,14 @@ import { AppProvider, useApp } from '@/context/AppContext';
 import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 
 SplashScreen.preventAutoHideAsync();
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 const queryClient = new QueryClient();
 const buildExtra = (Constants.expoConfig?.extra ?? {}) as {
   apiDomain?: string;
@@ -59,6 +69,36 @@ function RootLayoutNav() {
     }
     if (currentRoute === 'accesso') router.replace('/(tabs)');
   }, [isLoaded, isSignedIn, level, ready, router, segments]);
+
+  useEffect(() => {
+    if (!isSignedIn || Platform.OS === 'web') return;
+    void (async () => {
+      const current = await Notifications.getPermissionsAsync();
+      if (!current.granted && current.canAskAgain) {
+        await Notifications.requestPermissionsAsync();
+      }
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('eduai', {
+          name: 'EduAI Test Master',
+          importance: Notifications.AndroidImportance.DEFAULT,
+          sound: 'default',
+        });
+      }
+    })();
+  }, [isSignedIn]);
+
+  useEffect(() => {
+    if (!rewardEvent || rewardEvent.kind !== 'assistenza' || Platform.OS === 'web') return;
+    void Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'EduAI Test Master',
+        body: rewardEvent.message || 'Ti è arrivata una risposta al ticket.',
+        sound: 'default',
+        ...(Platform.OS === 'android' ? { channelId: 'eduai' } : {}),
+      },
+      trigger: null,
+    });
+  }, [rewardEvent]);
 
   return (
     <View style={styles.root}>
