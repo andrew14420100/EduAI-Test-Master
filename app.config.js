@@ -16,7 +16,7 @@ module.exports = () => ({
         {
           android: {
             packagingOptions: {
-              excludes: ['META-INF/versions/9/OSGI-INF/MANIFEST.MF'],
+              exclude: ['META-INF/versions/9/OSGI-INF/MANIFEST.MF'],
             },
           },
         },
