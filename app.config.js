@@ -24,9 +24,18 @@ module.exports = () => ({
     ],
     extra: {
       ...(appJson.expo.extra || {}),
-      apiDomain: process.env.EXPO_PUBLIC_DOMAIN || process.env.REPLIT_INTERNAL_APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN || '',
-      clerkPublishableKey: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || process.env.CLERK_PUBLISHABLE_KEY || '',
-      clerkProxyUrl: process.env.EXPO_PUBLIC_CLERK_PROXY_URL || '',
+      apiDomain: process.env.EXPO_PUBLIC_DOMAIN
+        || process.env.REPLIT_INTERNAL_APP_DOMAIN
+        || process.env.REPLIT_DEV_DOMAIN
+        || appJson.expo.extra?.apiDomain
+        || '',
+      clerkPublishableKey: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
+        || process.env.CLERK_PUBLISHABLE_KEY
+        || appJson.expo.extra?.clerkPublishableKey
+        || '',
+      clerkProxyUrl: process.env.EXPO_PUBLIC_CLERK_PROXY_URL
+        || appJson.expo.extra?.clerkProxyUrl
+        || '',
     },
   },
 });

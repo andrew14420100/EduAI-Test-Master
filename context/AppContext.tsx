@@ -57,10 +57,15 @@ import {
 } from '@workspace/api-client-react';
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import React, { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { ThemeProvider, type AppTheme } from '@/context/ThemeContext';
+
+const configuredApiDomain = process.env.EXPO_PUBLIC_DOMAIN
+  || (Constants.expoConfig?.extra as { apiDomain?: string } | undefined)?.apiDomain
+  || '';
 
 export type Level = string;
 export type Account = { username: string; email: string };
@@ -734,7 +739,7 @@ export function AppProvider({
     generateLabsForMaterial: async (id) => {
       try {
         const token = await getToken();
-        const base = process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : '';
+        const base = configuredApiDomain ? `https://${configuredApiDomain}` : '';
         const response = await fetch(`${base}/api/materials/${id}/labs`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token ?? ''}` },
