@@ -21,7 +21,7 @@ import {
   type ExtractionResult,
 } from "../lib/contentStudy";
 import { generateMaterialTitle } from "../lib/studyAi";
-import { transcribeMediaObject } from "../lib/mediaTranscription";
+import { ocrMediaObject, transcribeMediaObject } from "../lib/mediaTranscription";
 import { MAX_MEDIA_UPLOAD_BYTES } from "../lib/mediaLimits";
 import type { File } from "@google-cloud/storage";
 
@@ -96,9 +96,21 @@ async function analyzeStoredMaterial(params: {
       .where(eq(materialsTable.id, materialId));
 
     const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
-    const extraction = contentType.startsWith("audio/") || contentType.startsWith("video/")
-      ? await transcribeMediaObject({ objectFile, contentType, size })
-      : await extractFromObject(objectFile, contentType, fileName);
+    let extraction: ExtractionResult;
+    if (contentType.startsWith("audio/") || contentType.startsWith("video/")) {
+      extraction = await transcribeMediaObject({ objectFile, contentType, size });
+    } else {
+      const textExtraction = await extractFromObject(objectFile, contentType, fileName);
+      const lowerType = contentType.split(";")[0]?.toLowerCase() ?? "";
+      const isImage = lowerType.startsWith("image/")
+        || /\.(jpe?g|png|heic|webp|gif|bmp|tiff?)$/i.test(fileName);
+      const isPdf = lowerType === "application/pdf" || fileName.toLowerCase().endsWith(".pdf");
+      // A PDF may contain no text layer at all. In that case, retry the same
+      // source through OCR instead of making it archive-only.
+      extraction = (isImage || (isPdf && textExtraction.status !== "ready"))
+        ? await ocrMediaObject({ objectFile, contentType, size, fileName })
+        : textExtraction;
+    }
 
     let title: string | undefined;
     if (extraction.status === "ready" && extraction.text) {

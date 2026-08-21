@@ -438,6 +438,8 @@ export default function LibraryScreen() {
                     ? 'Analisi non riuscita'
                     : item.kind === 'audio' || item.kind === 'video'
                     ? 'Trascrizione in corso'
+                    : item.kind === 'immagine'
+                      ? 'OCR in corso'
                     : 'Analisi in corso';
                   return (
                     <View style={styles.analysisInfo}>

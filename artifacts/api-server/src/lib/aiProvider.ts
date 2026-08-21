@@ -167,6 +167,41 @@ export async function aiTranscribe(
   throw new Error("AI_NO_FREE_TRANSCRIPTION_PROVIDER");
 }
 
+/** Read visible text from an image without filling in illegible content. */
+export async function aiOcr(
+  image: Buffer,
+  mimeType: string,
+): Promise<{ text: string; provider: "gemini" }> {
+  const geminiKey = configured("GEMINI_API_KEY");
+  if (!geminiKey) throw new Error("AI_NO_VISION_PROVIDER");
+  const response = await fetch(
+    `${GEMINI_URL}/${configured("GEMINI_MODEL") ?? DEFAULT_GEMINI_MODEL}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+    {
+      method: "POST",
+      signal: AbortSignal.timeout(90_000),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          role: "user",
+          parts: [
+            {
+              text: "Trascrivi solo il testo chiaramente visibile nell'immagine, mantenendo l'ordine di lettura. Non inventare, completare o interpretare parole illeggibili. Se non c'è testo leggibile, restituisci una stringa vuota. Restituisci solo il testo trascritto.",
+            },
+            { inlineData: { mimeType, data: image.toString("base64") } },
+          ],
+        }],
+        generationConfig: { maxOutputTokens: 8192 },
+      }),
+    },
+  );
+  if (!response.ok) throw new Error(`GEMINI_OCR_${response.status}`);
+  const body = await response.json() as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+  const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
+  return { text, provider: "gemini" };
+}
+
 export function parseAiJson<T>(content: string): T {
   const cleaned = content
     .replace(/^```(?:json)?\s*/i, "")

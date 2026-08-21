@@ -6,8 +6,9 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { pipeline } from "node:stream/promises";
 import type { File } from "@google-cloud/storage";
-import { aiTranscribe } from "./aiProvider.ts";
+import { aiOcr, aiTranscribe } from "./aiProvider.ts";
 import { isMeaningfulText, normalizeText } from "./contentStudy.ts";
+import type { ExtractionResult } from "./contentStudy.ts";
 import { MAX_MEDIA_UPLOAD_BYTES } from "./mediaLimits.ts";
 
 const execFileAsync = promisify(execFile);
@@ -17,11 +18,14 @@ const MAX_MEDIA_DURATION_SECONDS = 75 * 60;
 const TRANSCRIPTION_CHUNK_SECONDS = 8 * 60;
 const TRANSCRIPTION_ATTEMPTS = 3;
 const MAX_MEDIA_TRANSCRIPT_CHARS = 300_000;
+const MAX_OCR_BYTES = 30 * 1024 * 1024;
 
 export type MediaTranscriptionResult =
   | { status: "ready"; text: string; error: null }
   | { status: "unsupported"; text: null; error: string }
   | { status: "failed"; text: null; error: string };
+
+export type OcrResult = ExtractionResult;
 
 type ProbeResult = {
   duration: number | null;
@@ -131,6 +135,69 @@ async function transcribeWithRetry(filePath: string, chunkNumber: number) {
 
 async function cleanTemporaryDirectory(directory: string) {
   await rm(directory, { recursive: true, force: true }).catch(() => undefined);
+}
+
+async function renderPdfPages(sourcePath: string, directory: string): Promise<string[]> {
+  const outputPrefix = join(directory, "page");
+  try {
+    await execFileAsync("pdftoppm", ["-png", "-r", "150", "-f", "1", "-l", "20", sourcePath, outputPrefix], {
+      maxBuffer: 64 * 1024,
+      timeout: 5 * 60_000,
+      killSignal: "SIGKILL",
+    });
+  } catch {
+    return [];
+  }
+  return (await readdir(directory))
+    .filter((name) => /^page-\d+\.png$/.test(name))
+    .sort()
+    .map((name) => join(directory, name));
+}
+
+/**
+ * OCR an image or image-only PDF. The prompt is deliberately transcription-only:
+ * unreadable scans become failed materials rather than plausible invented sources.
+ */
+export async function ocrMediaObject(params: {
+  objectFile: File;
+  contentType: string;
+  size: number | null;
+  fileName?: string;
+}): Promise<OcrResult> {
+  const { objectFile, contentType, size, fileName = "" } = params;
+  if (size !== null && size > MAX_OCR_BYTES) {
+    return { status: "failed", text: null, error: "Il file è troppo grande per l'OCR. Riduci le dimensioni e riprova." };
+  }
+  const directory = await mkdtemp(join(tmpdir(), "eduai-ocr-"));
+  const sourcePath = join(directory, "source");
+  try {
+    await pipeline(objectFile.createReadStream(), createWriteStream(sourcePath));
+    const sourceInfo = await stat(sourcePath);
+    if (sourceInfo.size > MAX_OCR_BYTES) {
+      return { status: "failed", text: null, error: "Il file è troppo grande per l'OCR. Riduci le dimensioni e riprova." };
+    }
+    const normalizedType = contentType.split(";")[0]?.toLowerCase() ?? "";
+    const isPdf = normalizedType === "application/pdf" || fileName.toLowerCase().endsWith(".pdf");
+    const pagePaths = isPdf ? await renderPdfPages(sourcePath, directory) : [sourcePath];
+    if (pagePaths.length === 0) {
+      return { status: "failed", text: null, error: "Impossibile preparare le pagine scansionate per l'OCR." };
+    }
+    const chunks: string[] = [];
+    for (const pagePath of pagePaths) {
+      const image = await readFile(pagePath);
+      const result = await aiOcr(image, "image/png");
+      if (result.text.trim()) chunks.push(result.text.trim());
+    }
+    const text = normalizeText(chunks.join("\n"));
+    if (!isMeaningfulText(text)) {
+      return { status: "failed", text: null, error: "Non è stato riconosciuto abbastanza testo leggibile: il materiale non può alimentare verifiche o flashcard." };
+    }
+    return { status: "ready", text, error: null };
+  } catch {
+    return { status: "failed", text: null, error: "L'OCR non è riuscito a leggere il materiale. Puoi riprovare l'analisi." };
+  } finally {
+    await cleanTemporaryDirectory(directory);
+  }
 }
 
 /**
