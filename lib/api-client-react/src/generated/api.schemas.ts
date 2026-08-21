@@ -285,6 +285,8 @@ export interface Ticket {
   status: string;
   createdAt: string;
   updatedAt: string;
+  readAt?: string | null;
+  unread?: boolean;
   closedAt?: string | null;
   messages: TicketMessage[];
 }
