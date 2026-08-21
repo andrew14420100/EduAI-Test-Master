@@ -13,6 +13,6 @@ export function KeyboardAwareScrollViewCompat({
       {...props}
     >
       {children}
-    </KeyboardAwareScrollView>
+    </ScrollView>
   );
 }
