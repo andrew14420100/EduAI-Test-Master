@@ -175,6 +175,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Profile"
+    delete:
+      operationId: deleteAccount
+      tags: [profile]
+      summary: Permanently delete the current user's account data
+      responses:
+        "204":
+          description: Account data deleted
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "401":
           description: Unauthorized
           content:
