@@ -71,7 +71,9 @@ function rewardDescription(item: ShopItem): string {
 }
 
 function pointsForNextLevel(level: number): number {
-  return 100 + Math.floor((Math.max(1, level) - 1) / 10) * 50;
+  // The threshold increases when entering levels 11, 21, 31 and 41:
+  // level 10 → 11 costs 150, level 20 → 21 costs 200.
+  return 100 + Math.floor(Math.max(1, level) / 10) * 50;
 }
 
 function pointsToReachLevel(level: number): number {
