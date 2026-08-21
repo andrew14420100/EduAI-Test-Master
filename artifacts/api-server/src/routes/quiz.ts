@@ -97,9 +97,10 @@ router.post(
   requireAuth,
   async (req: Request, res: Response) => {
     const userId = (req as AuthedRequest).clerkUserId;
-    const { materialIds, totalQuestions } = req.body as {
+    const { materialIds, totalQuestions, variant } = req.body as {
       materialIds?: unknown;
       totalQuestions?: number;
+      variant?: unknown;
     };
 
     if (
@@ -160,6 +161,7 @@ router.post(
          generated = await generateExamQuestions(
            ready.sources,
            totalQuestions,
+            typeof variant === "string" ? variant.slice(0, 120) : `${Date.now()}-${randomUUID()}`,
          );
        } catch (error) {
          req.log.error({ err: error }, "Generazione IA delle domande non riuscita");
@@ -812,10 +814,10 @@ router.post(
       }
 
        const seed = uniqueIds.join(",") + "|" + userId;
-       const flashcards = await generateFlashcardsWithAi(
+      const flashcards = await generateFlashcardsWithAi(
         ready.sources,
         FLASHCARDS_PER_MATERIAL,
-        seed,
+        `${seed}|${typeof (req.body as { variant?: unknown }).variant === "string" ? (req.body as { variant: string }).variant.slice(0, 120) : `${Date.now()}-${randomUUID()}`}`,
       );
 
       if (flashcards.length === 0) {

@@ -194,6 +194,7 @@ function asGeneratedQuestion(
 export async function generateExamQuestions(
   sources: SourceMaterial[],
   count: number,
+  seedInput = "",
 ): Promise<GeneratedQuestion[]> {
   const context = sourceContext(sources);
   if (!context.trim()) throw new Error("CONTENUTO_NON_DISPONIBILE");
@@ -205,7 +206,7 @@ export async function generateExamQuestions(
     const local = generateQuestionsWithKey(
       sources,
       count,
-      sources.map((source) => source.id).join("|"),
+      sources.map((source) => source.id).join("|") + "|" + seedInput,
     );
     if (local.length < count) throw new Error("CONTENUTO_INSUFFICIENTE");
     return local;
@@ -228,12 +229,13 @@ export async function generateExamQuestions(
            "Non inventare fatti assenti dai materiali. Per ogni domanda indica il titolo esatto della fonte, " +
            "un estratto letterale di almeno 24 caratteri che dimostri la risposta e la difficoltà: base, medio o avanzato. " +
            "La difficoltà deve dipendere dalla complessità del contenuto: base per definizioni, medio per relazioni/applicazioni, " +
-           "avanzato per analisi, confronto, calcolo o deduzioni. Rispondi esclusivamente con JSON valido.",
+           "avanzato per analisi, confronto, calcolo o deduzioni. Ogni richiesta è una variante indipendente: non riutilizzare la formulazione o l’ordine della variante precedente. Rispondi esclusivamente con JSON valido.",
       },
       {
         role: "user",
         content:
-          `Crea esattamente ${count} quesiti per un fac-simile impegnativo.\n` +
+           `Crea esattamente ${count} quesiti per un fac-simile impegnativo.\n` +
+           `Codice variante: ${seedInput || "prima-variante"}. Usalo per cambiare focus, formulazioni e ordine, senza citarlo nelle domande.\n` +
            `Inserisci almeno ${trueFalseCount} vero/falso con esattamente due opzioni ("Vero", "Falso") e almeno ${completionCount} completamenti con "______".\n` +
           `Almeno ${applicationCount} devono verificare collegamenti, confronto o applicazione fra concetti e avere quattro opzioni.\n` +
            "Per tutti gli altri quesiti usa quattro opzioni. Scegli casualmente l'ordine dei tre formati e alterna gli argomenti; " +
@@ -289,25 +291,30 @@ export async function generateFlashcardsWithAi(
           role: "system",
           content:
             "Sei un tutor italiano. Crea flashcard chiare e utili usando esclusivamente i materiali forniti. " +
-            "Non inventare informazioni. Rispondi solo JSON valido.",
+             "Non inventare informazioni. Ogni variante deve cambiare concetti, formulazioni o ordine rispetto alle precedenti. Il campo materialTitle deve essere esattamente uno dei titoli forniti. Rispondi solo JSON valido.",
         },
         {
           role: "user",
           content:
-            `Crea esattamente ${sources.length * perMaterial} flashcard, distribuite tra i materiali.\n` +
+             `Crea esattamente ${sources.length * perMaterial} flashcard, distribuite tra i materiali.\n` +
+             `Codice variante: ${seedInput}. Cambia il focus della selezione senza citare il codice.\n` +
             'Formato: {"flashcards":[{"front":"domanda o concetto","back":"spiegazione","materialTitle":"titolo"}]}.\n' +
             context,
         },
       ],
     });
     const parsed = parseAiJson<{ flashcards?: unknown }>(response.content);
-    const cards = Array.isArray(parsed.flashcards)
+     const sourceTitles = new Set(sources.map((source) => source.title.toLocaleLowerCase("it-IT")));
+     const cards = Array.isArray(parsed.flashcards)
       ? parsed.flashcards.filter((card): card is Flashcard => {
         if (!card || typeof card !== "object") return false;
         const value = card as Record<string, unknown>;
         return typeof value.front === "string" && value.front.trim().length >= 8
           && typeof value.back === "string" && value.back.trim().length >= 12
-          && typeof value.materialTitle === "string" && value.materialTitle.trim().length > 0;
+           && typeof value.materialTitle === "string"
+           && sourceTitles.has(value.materialTitle.trim().toLocaleLowerCase("it-IT"))
+           && value.front.trim().length >= 18
+           && value.back.trim().length >= 30;
       }).slice(0, sources.length * perMaterial)
       : [];
     if (cards.length >= Math.min(2, sources.length * perMaterial)) return cards;
