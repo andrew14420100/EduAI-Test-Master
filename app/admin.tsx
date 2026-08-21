@@ -19,6 +19,12 @@ import { useColors } from '@/hooks/useColors';
 
 const ADMIN_SESSION_KEY = 'eduai:admin-session';
 
+function ticketStatusLabel(status: string) {
+  if (status === 'closed') return 'Chiuso';
+  if (status === 'in_progress') return 'In lavorazione';
+  return 'Aperto';
+}
+
 export default function AdminScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -117,7 +123,7 @@ export default function AdminScreen() {
           <Pressable key={ticket.id} onPress={() => setSelected(ticket)} style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
             <Text style={[styles.cardTitle, { color: c.primary }]}>#{ticket.id.slice(0, 8).toUpperCase()}</Text>
             <Text style={[styles.cardTitle, { color: c.foreground }]}>{ticket.subject}</Text>
-            <Text style={[styles.body, { color: c.mutedForeground }]}>{ticket.user?.username ?? ticket.userId} · {ticket.status}</Text>
+            <Text style={[styles.body, { color: c.mutedForeground }]}>{ticket.user?.username ?? ticket.userId} · {ticketStatusLabel(ticket.status)}</Text>
             <Text style={[styles.body, { color: c.mutedForeground }]} numberOfLines={2}>{ticket.messages.at(-1)?.message}</Text>
           </Pressable>
         ))}

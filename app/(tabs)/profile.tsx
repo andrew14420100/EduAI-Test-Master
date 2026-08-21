@@ -11,6 +11,12 @@ import { useColors } from '@/hooks/useColors';
 type ProfileModal = 'avvisi' | 'privacy' | 'uscita' | 'ticket' | 'esito' | null;
 const ticketCategories = ['Problema tecnico', 'Account', 'Materiali', 'Verifiche', 'Altro'];
 
+function ticketStatusLabel(status: string) {
+  if (status === 'closed') return 'Chiuso';
+  if (status === 'in_progress') return 'In lavorazione';
+  return 'Aperto';
+}
+
 export default function ProfileScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -128,7 +134,7 @@ export default function ProfileScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.ticketTitle, { color: c.foreground }]} numberOfLines={1}>{ticket.subject}</Text>
               <Text style={[styles.small, { color: c.mutedForeground }]}>
-                #{ticket.id.slice(0, 8).toUpperCase()} · {ticket.category} · {ticket.status}
+                #{ticket.id.slice(0, 8).toUpperCase()} · {ticket.category} · {ticketStatusLabel(ticket.status)}
               </Text>
               {ticket.messages?.filter((entry) => entry.authorRole === 'admin').slice(-1).map((entry) => (
                 <Text key={entry.id} style={[styles.small, { color: c.primary, marginTop: 4 }]} numberOfLines={2}>Assistenza: {entry.message}</Text>

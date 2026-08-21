@@ -353,7 +353,13 @@ export function AppProvider({
     query: { queryKey: getGetInventoryQueryKey(), enabled: dataEnabled },
   });
   const ticketsQuery = useListTickets({
-    query: { queryKey: getListTicketsQueryKey(), enabled: dataEnabled },
+    // A support reply is written by a separate admin session. Poll while the
+    // user is signed in so the profile cannot remain on a stale open thread.
+    query: {
+      queryKey: getListTicketsQueryKey(),
+      enabled: dataEnabled,
+      refetchInterval: dataEnabled ? 15_000 : false,
+    },
   });
   const leaderboardQuery = useGetLeaderboard({
     query: { queryKey: getGetLeaderboardQueryKey(), enabled: dataEnabled },
