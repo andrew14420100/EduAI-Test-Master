@@ -81,6 +81,7 @@ export default function ShopScreen() {
 
   const nextReward = shop.find((item) => !item.owned);
   const rewardProgress = nextReward ? Math.min(100, Math.round((wallet / nextReward.cost) * 100)) : 100;
+  const currentLevel = Math.min(50, Math.floor(wallet / 100) + 1);
 
   const purchase = async (id: string, title: string, cost: number, owned: boolean) => {
     if (busyId) return;
@@ -188,6 +189,38 @@ export default function ShopScreen() {
                 ? 'Hai abbastanza punti: puoi sbloccarlo ora.'
                 : `Ti mancano ${nextReward.cost - wallet} punti.`
               : 'Hai sbloccato tutti gli oggetti disponibili.'}
+          </Text>
+        </View>
+
+        <View style={[styles.levelPanel, { backgroundColor: c.card, borderColor: c.border }]}>
+          <View style={styles.rewardRow}>
+            <View>
+              <Text style={[styles.rewardLabel, { color: c.primary }]}>PROGRESSIONE</Text>
+              <Text style={[styles.rewardTitle, { color: c.foreground }]}>Livello {currentLevel} di 50</Text>
+            </View>
+            <Text style={[styles.rewardAmount, { color: c.primary }]}>{Math.round((currentLevel / 50) * 100)}%</Text>
+          </View>
+          <View style={styles.levelGrid}>
+            {Array.from({ length: 50 }, (_, index) => index + 1).map((levelNumber) => (
+              <View
+                key={levelNumber}
+                accessibilityLabel={`Livello ${levelNumber}${levelNumber === currentLevel ? ', attuale' : ''}`}
+                style={[
+                  styles.levelDot,
+                  {
+                    backgroundColor: levelNumber <= currentLevel ? c.primary : c.secondary,
+                    borderColor: levelNumber === currentLevel ? c.primary : c.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.levelDotText, { color: levelNumber <= currentLevel ? c.primaryForeground : c.mutedForeground }]}>
+                  {levelNumber}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <Text style={[styles.small, { color: c.mutedForeground }]}>
+            Ogni 100 punti raggiungi un nuovo livello. Il prossimo traguardo è il livello {Math.min(50, currentLevel + 1)}.
           </Text>
         </View>
 
@@ -360,6 +393,10 @@ const styles = StyleSheet.create({
   balanceValue: { fontFamily: 'Inter_700Bold', fontSize: 37, marginTop: 4 },
   pts: { fontFamily: 'Inter_500Medium', fontSize: 14 },
   rewardProgress: { borderRadius: 18, borderWidth: 1, padding: 16, gap: 10 },
+  levelPanel: { borderRadius: 18, borderWidth: 1, padding: 16, gap: 12 },
+  levelGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  levelDot: { width: 27, height: 27, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  levelDotText: { fontFamily: 'Inter_700Bold', fontSize: 9 },
   rewardRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
   rewardLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.3, marginBottom: 4 },
   rewardTitle: { fontFamily: 'Inter_700Bold', fontSize: 15 },
