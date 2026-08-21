@@ -71,27 +71,53 @@ export async function generateQuickExplanation(question: string, options: string
   return "Individua il concetto principale della domanda, rileggi la parte del materiale che lo definisce e confronta con attenzione le opzioni.";
 }
 
-const MAX_QUIZ_CONTEXT_CHARS = 240_000;
+const MAX_QUIZ_CONTEXT_CHARS = 480_000;
 
 type AiQuestionPayload = {
   question?: unknown;
   options?: unknown;
   correctIndex?: unknown;
+  sourceTitle?: unknown;
+  evidence?: unknown;
+  difficulty?: unknown;
 };
 
 function sourceContext(sources: SourceMaterial[]) {
-  let remaining = MAX_QUIZ_CONTEXT_CHARS;
+  const perSourceBudget = Math.max(
+    4_000,
+    Math.floor(MAX_QUIZ_CONTEXT_CHARS / Math.max(sources.length, 1)),
+  );
   const blocks: string[] = [];
   for (const source of sources) {
-    if (remaining < 600) break;
-    const text = source.text.slice(0, remaining);
-    blocks.push(`MATERIALE: ${source.title}\n${text}`);
-    remaining -= text.length;
+    const text = source.text.trim();
+    const selected = text.length <= perSourceBudget
+      ? text
+      : [
+        text.slice(0, Math.floor(perSourceBudget * 0.45)),
+        text.slice(
+          Math.floor(text.length / 2) - Math.floor(perSourceBudget * 0.1),
+          Math.floor(text.length / 2) + Math.floor(perSourceBudget * 0.1),
+        ),
+        text.slice(-Math.floor(perSourceBudget * 0.25)),
+      ].join("\n[...sezione centrale omessa per limite contesto...]\n");
+    if (!selected.trim()) continue;
+    blocks.push(`MATERIALE: ${source.title}\n${selected}`);
   }
   return blocks.join("\n\n---\n\n");
 }
 
-function asGeneratedQuestion(value: AiQuestionPayload): GeneratedQuestion | null {
+function normalizedForMatch(value: string): string {
+  return value
+    .toLocaleLowerCase("it-IT")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function asGeneratedQuestion(
+  value: AiQuestionPayload,
+  sources: SourceMaterial[],
+): GeneratedQuestion | null {
   const question = typeof value.question === "string"
     ? value.question.replace(/\s+/g, " ").trim()
     : "";
@@ -102,6 +128,23 @@ function asGeneratedQuestion(value: AiQuestionPayload): GeneratedQuestion | null
       .filter(Boolean)
     : [];
   const correctIndex = value.correctIndex;
+  const sourceTitle = typeof value.sourceTitle === "string"
+    ? value.sourceTitle.replace(/\s+/g, " ").trim()
+    : "";
+  const evidence = typeof value.evidence === "string"
+    ? value.evidence.replace(/\s+/g, " ").trim()
+    : "";
+  const difficulty = value.difficulty === "base"
+    || value.difficulty === "medio"
+    || value.difficulty === "avanzato"
+    ? value.difficulty
+    : null;
+  const source = sources.find(
+    (candidate) => candidate.title.toLocaleLowerCase("it-IT") === sourceTitle.toLocaleLowerCase("it-IT"),
+  );
+  const evidenceMatchesSource = source
+    ? normalizedForMatch(source.text).includes(normalizedForMatch(evidence))
+    : false;
   const uniqueOptions = new Set(options.map((option) => option.toLocaleLowerCase("it-IT")));
   if (
     question.length < 24 ||
@@ -113,11 +156,23 @@ function asGeneratedQuestion(value: AiQuestionPayload): GeneratedQuestion | null
     options.some((option) => option.length < 1 || option.length > 220 || /_{2,}/.test(option)) ||
     !Number.isInteger(correctIndex) ||
     (correctIndex as number) < 0 ||
-    (correctIndex as number) >= options.length
+    (correctIndex as number) >= options.length ||
+    !source ||
+    evidence.length < 24 ||
+    evidence.length > 520 ||
+    !evidenceMatchesSource ||
+    !difficulty
   ) {
     return null;
   }
-  return { question, options, correctIndex: correctIndex as number };
+  return {
+    question,
+    options,
+    correctIndex: correctIndex as number,
+    sourceTitle,
+    evidence,
+    difficulty,
+  };
 }
 
 /**
@@ -134,6 +189,15 @@ export async function generateExamQuestions(
 
   const trueFalseCount = Math.max(1, Math.floor(count / 5));
   const applicationCount = Math.max(2, Math.floor(count / 4));
+  const fallback = () => {
+    const local = generateQuestionsWithKey(
+      sources,
+      count,
+      sources.map((source) => source.id).join("|"),
+    );
+    if (local.length < count) throw new Error("CONTENUTO_INSUFFICIENTE");
+    return local;
+  };
   let response;
   try {
     response = await aiChat({
@@ -147,8 +211,11 @@ export async function generateExamQuestions(
           "Devi generare domande nuove, rigorose e risolvibili SOLO usando il contenuto fornito. " +
           "Non usare mai spazi vuoti, trattini bassi, frasi da completare o domande che copiano/incollano il testo. " +
           "Parafrasa, confronta concetti, richiedi deduzioni, nessi causali, applicazioni e riconoscimento di errori. " +
-          "I distrattori devono essere plausibili, specifici e pertinenti, ma una sola risposta deve essere corretta. " +
-          "Non inventare fatti assenti dai materiali. Rispondi esclusivamente con JSON valido.",
+           "I distrattori devono essere plausibili, specifici e pertinenti, ma una sola risposta deve essere corretta. " +
+           "Non inventare fatti assenti dai materiali. Per ogni domanda indica il titolo esatto della fonte, " +
+           "un estratto letterale di almeno 24 caratteri che dimostri la risposta e la difficoltà: base, medio o avanzato. " +
+           "La difficoltà deve dipendere dalla complessità del contenuto: base per definizioni, medio per relazioni/applicazioni, " +
+           "avanzato per analisi, confronto, calcolo o deduzioni. Rispondi esclusivamente con JSON valido.",
       },
       {
         role: "user",
@@ -157,13 +224,13 @@ export async function generateExamQuestions(
           `Almeno ${trueFalseCount} devono essere vero/falso con esattamente due opzioni ("Vero", "Falso").\n` +
           `Almeno ${applicationCount} devono verificare collegamenti, confronto o applicazione fra concetti e avere quattro opzioni.\n` +
           "Per tutti gli altri quesiti usa quattro opzioni. Alterna gli argomenti, evita duplicati e non rivelare mai la risposta nella formulazione.\n" +
-          'Restituisci soltanto {"questions":[{"question":"...","options":["..."],"correctIndex":0}]}.\n\n' +
+           'Restituisci soltanto {"questions":[{"question":"...","options":["..."],"correctIndex":0,"sourceTitle":"...","evidence":"...","difficulty":"base|medio|avanzato"}]}.\n\n' +
           `CONTENUTO DA STUDIARE:\n${context}`,
       },
     ],
     });
   } catch {
-    return generateQuestionsWithKey(sources, count, sources.map((source) => source.id).join("|"));
+    return fallback();
   }
 
   const raw = response.content;
@@ -172,12 +239,12 @@ export async function generateExamQuestions(
   try {
     parsed = parseAiJson<{ questions?: unknown }>(raw);
   } catch {
-    throw new Error("RISPOSTA_IA_NON_VALIDA");
+    return fallback();
   }
-  if (!Array.isArray(parsed.questions)) throw new Error("RISPOSTA_IA_NON_VALIDA");
+  if (!Array.isArray(parsed.questions)) return fallback();
 
   const questions = parsed.questions
-    .map((item) => asGeneratedQuestion(item as AiQuestionPayload))
+    .map((item) => asGeneratedQuestion(item as AiQuestionPayload, sources))
     .filter((question): question is GeneratedQuestion => question !== null);
   const uniqueQuestions = new Map<string, GeneratedQuestion>();
   for (const question of questions) {
@@ -186,7 +253,7 @@ export async function generateExamQuestions(
   const result = [...uniqueQuestions.values()];
   const trueFalse = result.filter((question) => question.options.length === 2).length;
   if (result.length !== count || trueFalse < trueFalseCount) {
-    throw new Error("RISPOSTA_IA_INCOMPLETA");
+    return fallback();
   }
   return result;
 }
