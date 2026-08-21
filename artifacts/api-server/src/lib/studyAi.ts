@@ -21,42 +21,54 @@ export async function generateMaterialTitle(params: {
 }): Promise<string | null> {
   if (!params.extractedText.trim()) return null;
 
-  const response = await aiChat({
-    max_completion_tokens: 80,
-    messages: [
-      {
-        role: "system",
-        content:
-          "Sei un assistente per studenti italiani. Genera esclusivamente un titolo breve, specifico e descrittivo in italiano (massimo 70 caratteri), senza virgolette, punti finali o spiegazioni.",
-      },
-      {
-        role: "user",
-        content: `Crea il titolo per questo materiale di studio:\n\n${params.extractedText.slice(0, 6000)}`,
-      },
-    ],
-  });
-  const title = cleanShortText(response.content, 70);
-  return title.length >= 4 ? title : null;
+  try {
+    const response = await aiChat({
+      max_completion_tokens: 80,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Sei un assistente per studenti italiani. Genera esclusivamente un titolo breve, specifico e descrittivo in italiano (massimo 70 caratteri), senza virgolette, punti finali o spiegazioni.",
+        },
+        {
+          role: "user",
+          content: `Crea il titolo per questo materiale di studio:\n\n${params.extractedText.slice(0, 6000)}`,
+        },
+      ],
+    });
+    const title = cleanShortText(response.content, 70);
+    return title.length >= 4 ? title : null;
+  } catch {
+    const fallback = params.extractedText
+      .split(/\n+/)
+      .map((line) => cleanShortText(line, 70))
+      .find((line) => line.length >= 4);
+    return fallback || "Materiale di studio";
+  }
 }
 
 export async function generateQuickExplanation(question: string, options: string[]): Promise<string> {
-  const response = await aiChat({
-    max_completion_tokens: 220,
-    messages: [
-      {
-        role: "system",
-        content:
-          "Sei un tutor italiano. Spiega il concetto richiesto in modo molto semplice, in massimo 3 frasi. Non indicare quale risposta del quiz sia corretta e non copiare le opzioni.",
-      },
-      {
-        role: "user",
-        content: `Domanda: ${question}\nOpzioni presenti nel quiz: ${options.join(" | ")}`,
-      },
-    ],
-  });
-  const text = cleanShortText(response.content, 700);
-  if (text.length < 12) throw new Error("Spiegazione IA non disponibile");
-  return text;
+  try {
+    const response = await aiChat({
+      max_completion_tokens: 220,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Sei un tutor italiano. Spiega il concetto richiesto in modo molto semplice, in massimo 3 frasi. Non indicare quale risposta del quiz sia corretta e non copiare le opzioni.",
+        },
+        {
+          role: "user",
+          content: `Domanda: ${question}\nOpzioni presenti nel quiz: ${options.join(" | ")}`,
+        },
+      ],
+    });
+    const text = cleanShortText(response.content, 700);
+    if (text.length >= 12) return text;
+  } catch {
+    // Use the offline explanation below.
+  }
+  return "Individua il concetto principale della domanda, rileggi la parte del materiale che lo definisce e confronta con attenzione le opzioni.";
 }
 
 const MAX_QUIZ_CONTEXT_CHARS = 240_000;
