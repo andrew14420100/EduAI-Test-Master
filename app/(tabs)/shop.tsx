@@ -70,6 +70,22 @@ function rewardDescription(item: ShopItem): string {
   return 'Resta nella tua collezione come ricordo del traguardo raggiunto.';
 }
 
+function pointsForNextLevel(level: number): number {
+  return 100 + Math.floor((Math.max(1, level) - 1) / 10) * 50;
+}
+
+function pointsToReachLevel(level: number): number {
+  let total = 0;
+  for (let current = 1; current < level; current++) total += pointsForNextLevel(current);
+  return total;
+}
+
+function levelFromWallet(wallet: number): number {
+  let level = 1;
+  while (level < 50 && wallet >= pointsToReachLevel(level + 1)) level++;
+  return level;
+}
+
 export default function ShopScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -81,7 +97,14 @@ export default function ShopScreen() {
 
   const nextReward = shop.find((item) => !item.owned);
   const rewardProgress = nextReward ? Math.min(100, Math.round((wallet / nextReward.cost) * 100)) : 100;
-  const currentLevel = Math.min(50, Math.floor(wallet / 100) + 1);
+  const currentLevel = levelFromWallet(wallet);
+  const nextLevel = Math.min(50, currentLevel + 1);
+  const levelTarget = pointsForNextLevel(currentLevel);
+  const levelStart = pointsToReachLevel(currentLevel);
+  const levelProgress = currentLevel >= 50
+    ? 100
+    : Math.min(100, Math.round(((wallet - levelStart) / levelTarget) * 100));
+  const levelMissing = currentLevel >= 50 ? 0 : Math.max(0, pointsToReachLevel(nextLevel) - wallet);
 
   const purchase = async (id: string, title: string, cost: number, owned: boolean) => {
     if (busyId) return;
@@ -198,29 +221,15 @@ export default function ShopScreen() {
               <Text style={[styles.rewardLabel, { color: c.primary }]}>PROGRESSIONE</Text>
               <Text style={[styles.rewardTitle, { color: c.foreground }]}>Livello {currentLevel} di 50</Text>
             </View>
-            <Text style={[styles.rewardAmount, { color: c.primary }]}>{Math.round((currentLevel / 50) * 100)}%</Text>
+            <Text style={[styles.rewardAmount, { color: c.primary }]}>{levelProgress}%</Text>
           </View>
-          <View style={styles.levelGrid}>
-            {Array.from({ length: 50 }, (_, index) => index + 1).map((levelNumber) => (
-              <View
-                key={levelNumber}
-                accessibilityLabel={`Livello ${levelNumber}${levelNumber === currentLevel ? ', attuale' : ''}`}
-                style={[
-                  styles.levelDot,
-                  {
-                    backgroundColor: levelNumber <= currentLevel ? c.primary : c.secondary,
-                    borderColor: levelNumber === currentLevel ? c.primary : c.border,
-                  },
-                ]}
-              >
-                <Text style={[styles.levelDotText, { color: levelNumber <= currentLevel ? c.primaryForeground : c.mutedForeground }]}>
-                  {levelNumber}
-                </Text>
-              </View>
-            ))}
+          <View style={[styles.track, { backgroundColor: c.secondary }]}>
+            <View style={[styles.fill, { backgroundColor: c.primary, width: `${levelProgress}%` }]} />
           </View>
           <Text style={[styles.small, { color: c.mutedForeground }]}>
-            Ogni 100 punti raggiungi un nuovo livello. Il prossimo traguardo è il livello {Math.min(50, currentLevel + 1)}.
+            {currentLevel >= 50
+              ? 'Hai raggiunto il livello massimo: ogni punto oltre questa soglia è una ricompensa extra.'
+              : `Prossimo livello: mancano ${levelMissing} punti per arrivare al livello ${nextLevel}. La soglia di questo passaggio è ${levelTarget} punti.`}
           </Text>
         </View>
 
