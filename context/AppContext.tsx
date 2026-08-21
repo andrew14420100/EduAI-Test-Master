@@ -132,6 +132,12 @@ export type StudyFlashcard = Flashcard;
 
 type ActionResult = { ok: true } | { ok: false; message: string };
 type UploadProgress = (clientId: string, progress: number) => void;
+export type RewardEvent = {
+  id: number;
+  kind: 'accesso' | 'livello' | 'amico' | 'verifica' | 'laboratorio' | 'negozio' | 'assistenza';
+  title: string;
+  message: string;
+};
 
 const MAX_MEDIA_UPLOAD_BYTES = 250 * 1024 * 1024;
 const MAX_PARALLEL_UPLOADS = 2;
@@ -153,6 +159,8 @@ type AppState = {
   studyGroups: StudyGroup[];
   shop: ShopItem[];
   completionAnimation: string | null;
+  rewardEvent: RewardEvent | null;
+  dismissRewardEvent: () => void;
   tickets: Ticket[];
   leaderboard: LeaderboardEntry[];
   friends: FriendEntry[];
@@ -315,6 +323,12 @@ export function AppProvider({
   // Bumping this manually re-arms a single retry attempt for the current user.
   const [profileSyncNonce, setProfileSyncNonce] = useState(0);
   const [storedTheme, setStoredTheme] = useState<AppTheme | null>(initialStoredTheme);
+  const [rewardEvent, setRewardEvent] = useState<RewardEvent | null>(null);
+  const rewardEventIdRef = useRef(0);
+  const triggerReward = (kind: RewardEvent['kind'], title: string, message: string) => {
+    rewardEventIdRef.current += 1;
+    setRewardEvent({ id: rewardEventIdRef.current, kind, title, message });
+  };
 
   const upsertProfile = useUpsertProfile();
   const profileQuery = useGetProfile({
