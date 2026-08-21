@@ -652,7 +652,7 @@ function buildQuestionFromSentence(
       ? answer
       : `Non è corretto affermare che ${answer.charAt(0).toLocaleLowerCase("it-IT")}${answer.slice(1)}`;
     return {
-      question: `Secondo il materiale "${materialTitle}", la seguente affermazione è corretta?\n\n${statement}`,
+      question: `Leggi l'affermazione e scegli la risposta corretta:\n\n${statement}`,
       options: ["Vero", "Falso"],
       correctIndex: isTrue ? 0 : 1,
       sourceTitle: materialTitle,
@@ -680,7 +680,7 @@ function buildQuestionFromSentence(
     if (blanked.includes("______") && termDistractors.length === 3) {
       const options = deterministicShuffle([answerTerm, ...termDistractors], rng);
       return {
-        question: `Completa la frase tratta dal materiale "${materialTitle}":\n\n${blanked}`,
+        question: `Completa la frase:\n\n${blanked}`,
         options,
         correctIndex: options.indexOf(answerTerm),
         sourceTitle: materialTitle,
@@ -729,10 +729,10 @@ function buildQuestionFromSentence(
   return {
     question:
       difficulty === "avanzato"
-        ? `Quale interpretazione è coerente con quanto spiegato nel materiale "${materialTitle}" riguardo a ${focus}?`
+          ? `Quale interpretazione è coerente riguardo a ${focus}?`
         : difficulty === "medio"
-          ? `Quale affermazione collega correttamente i concetti ${focus} secondo il materiale "${materialTitle}"?`
-          : `Quale affermazione descrive correttamente ${focus} secondo il materiale "${materialTitle}"?`,
+            ? `Quale affermazione collega correttamente ${focus}?`
+            : `Quale affermazione descrive correttamente ${focus}?`,
     options,
     correctIndex,
     sourceTitle: materialTitle,
