@@ -83,7 +83,7 @@ export default function LibraryScreen() {
     uploadMaterials,
     removeMaterial,
     retryMaterialAnalysis,
-    generateLabsForMaterial,
+    generateLabsForMaterials,
   } = useApp();
   const mounted = useRef(true);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
@@ -257,20 +257,18 @@ export default function LibraryScreen() {
     }
     setGeneratingLabs(true);
     setModal(null);
-    let created = 0;
-    let failed = 0;
-    for (const material of readySelectedMaterials) {
-      const result = await generateLabsForMaterial(material.id);
-      if (result.ok) created += 1;
-      else failed += 1;
-    }
+    const result = await generateLabsForMaterials();
     setGeneratingLabs(false);
+    const created = result.ok ? (result.created ?? 0) : 0;
+    const failed = result.ok ? 0 : readySelectedMaterials.length;
     setModal({
       kind: 'messaggio',
       title: failed ? 'Laboratori creati parzialmente' : 'Laboratori pronti',
       message: failed
-        ? `${created} materiali elaborati, ${failed} non riusciti. Controlla la scheda Laboratori.`
-        : `Laboratori generati usando ${created} ${created === 1 ? 'materiale pronto' : 'materiali pronti'}.`,
+        ? `${failed} materiali non sono stati elaborati: ${result.message}.`
+        : created
+          ? `${created} esercizi pratici generati usando ${result.materialCount ?? readySelectedMaterials.length} materiali.`
+          : 'I laboratori per questi materiali sono già disponibili.',
       icon: failed ? 'warning' : 'circle-check',
     });
   };

@@ -1850,6 +1850,9 @@ components:
           description: 0.0 = wrong, 0.5 = partial, 1.0 = correct
         feedback:
           type: string
+        solution:
+          type: string
+          description: Soluzione completa mostrata dopo una risposta parziale o errata
         earnedPoints:
           type: integer
         totalPoints:
