@@ -261,11 +261,12 @@ export default function LibraryScreen() {
     setGeneratingLabs(false);
     const created = result.ok ? (result.created ?? 0) : 0;
     const failed = result.ok ? 0 : readySelectedMaterials.length;
+    const failureMessage = 'message' in result ? result.message : 'riprova più tardi';
     setModal({
       kind: 'messaggio',
       title: failed ? 'Laboratori creati parzialmente' : 'Laboratori pronti',
       message: failed
-        ? `${failed} materiali non sono stati elaborati: ${result.message}.`
+        ? `${failed} materiali non sono stati elaborati: ${failureMessage}.`
         : created
           ? `${created} esercizi pratici generati usando ${result.materialCount ?? readySelectedMaterials.length} materiali.`
           : 'I laboratori per questi materiali sono già disponibili.',
