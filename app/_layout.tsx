@@ -124,8 +124,12 @@ export default function RootLayout() {
   const handleThemeReady = useCallback(() => setThemeReady(true), []);
 
   useEffect(() => {
-    if ((fontsLoaded || fontError) && themeReady) SplashScreen.hideAsync();
-  }, [fontsLoaded, fontError, themeReady]);
+    if (!fontsLoaded && !fontError) return;
+    const timer = setTimeout(() => {
+      void SplashScreen.hideAsync();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;
   if (!publishableKey || !domain) {
