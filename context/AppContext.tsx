@@ -168,16 +168,16 @@ type AppState = {
   refreshing: boolean;
   logout: () => Promise<void>;
   completeOnboarding: (level: Level) => Promise<ActionResult>;
-  startQuizSession: (materialIds: string[], totalQuestions: 10 | 20 | 30) => Promise<{ ok: true; session: StartQuizResult } | { ok: false; message: string }>;
+  startQuizSession: (materialIds: string[], totalQuestions: 10 | 20 | 30, variant?: string) => Promise<{ ok: true; session: StartQuizResult } | { ok: false; message: string }>;
   startRecoverySession: () => Promise<{ ok: true; session: StartQuizResult } | { ok: false; message: string }>;
   completeQuizSession: (sessionId: string, answers: (number | null)[], idempotencyKey: string) => Promise<{ ok: true; attempt: CompleteQuizResult } | { ok: false; message: string }>;
   recoveryCount: number;
   getQuickExplanation: (sessionId: string, questionIndex: number) => Promise<{ ok: true; explanation: string; chargedPoints: number } | { ok: false; message: string }>;
-  generateFlashcards: (materialIds: string[]) => Promise<{ ok: true; flashcards: StudyFlashcard[] } | { ok: false; message: string }>;
+  generateFlashcards: (materialIds: string[], variant?: string) => Promise<{ ok: true; flashcards: StudyFlashcard[] } | { ok: false; message: string }>;
   uploadMaterials: (files: UploadMaterialInput[], groupTitle: string, onProgress: UploadProgress) => Promise<ActionResult>;
   retryMaterialAnalysis: (id: string) => Promise<ActionResult>;
   generateLabsForMaterial: (id: string) => Promise<ActionResult>;
-  generateLabsForMaterials: () => Promise<ActionResult & { created?: number; existing?: number; materialCount?: number }>;
+  generateLabsForMaterials: (regenerate?: boolean) => Promise<ActionResult & { created?: number; existing?: number; materialCount?: number }>;
   removeMaterial: (id: string) => Promise<ActionResult>;
   buyItem: (id: string) => Promise<ActionResult>;
   equipItem: (id: string) => Promise<ActionResult>;
@@ -617,10 +617,10 @@ export function AppProvider({
         return { ok: false, message: messageFromError(error) };
       }
     },
-    startQuizSession: async (materialIds, totalQuestions) => {
+    startQuizSession: async (materialIds, totalQuestions, variant) => {
       try {
         const session = await startQuizSessionMutation.mutateAsync({
-          data: { materialIds, totalQuestions },
+          data: { materialIds, totalQuestions, variant: variant ?? `${Date.now()}-${Math.random().toString(36).slice(2)}` },
         });
         return { ok: true, session };
       } catch (error) {
@@ -658,10 +658,10 @@ export function AppProvider({
         return { ok: false, message: messageFromError(error) };
       }
     },
-    generateFlashcards: async (materialIds) => {
+    generateFlashcards: async (materialIds, variant) => {
       try {
         const response = await generateFlashcardsMutation.mutateAsync({
-          data: { materialIds },
+          data: { materialIds, variant: variant ?? `${Date.now()}-${Math.random().toString(36).slice(2)}` },
         });
         return { ok: true, flashcards: response.flashcards };
       } catch (error) {
@@ -774,10 +774,11 @@ export function AppProvider({
         return { ok: false, message: 'Impossibile creare i laboratori. Controlla la connessione.' };
       }
     },
-    generateLabsForMaterials: async () => {
+    generateLabsForMaterials: async (regenerate = false) => {
       try {
         const response = await customFetch<{ created: number; existing: number; materialCount: number }>('/api/labs/generate', {
           method: 'POST',
+          body: JSON.stringify({ regenerate, variant: `${Date.now()}-${Math.random().toString(36).slice(2)}` }),
           responseType: 'json',
         });
         await labExercisesQuery.refetch();

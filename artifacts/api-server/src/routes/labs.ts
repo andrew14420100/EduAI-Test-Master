@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
-import { eq, and, inArray, sql, desc } from "drizzle-orm";
+import { eq, and, inArray, sql, desc, notExists } from "drizzle-orm";
 import {
   db,
   labExercisesTable,
@@ -46,6 +46,11 @@ function fallbackExercises(
  */
 router.post("/labs/generate", requireAuth, async (req: Request, res: Response) => {
   const userId = (req as AuthedRequest).clerkUserId;
+  const body = req.body as { regenerate?: unknown; variant?: unknown };
+  const regenerate = body.regenerate === true;
+  const variant = typeof body.variant === "string" && body.variant.trim()
+    ? body.variant.slice(0, 120)
+    : `${Date.now()}-${randomUUID()}`;
   try {
     const materials = await db
       .select()
@@ -63,9 +68,21 @@ router.post("/labs/generate", requireAuth, async (req: Request, res: Response) =
       .select({ id: labExercisesTable.id })
       .from(labExercisesTable)
       .where(inArray(labExercisesTable.sourceMaterialId, readyMaterials.map((material) => material.id)));
-    if (existing.length > 0) {
+    if (existing.length > 0 && !regenerate) {
       res.json({ created: 0, existing: existing.length, materialCount: readyMaterials.length });
       return;
+    }
+    if (regenerate) {
+      // Keep exercises that already have attempts so the history remains valid.
+      // Replace only untouched generated exercises with the new variant.
+      await db.delete(labExercisesTable).where(and(
+        inArray(labExercisesTable.sourceMaterialId, readyMaterials.map((material) => material.id)),
+        notExists(
+          db.select({ id: labAttemptsTable.id })
+            .from(labAttemptsTable)
+            .where(eq(labAttemptsTable.exerciseId, labExercisesTable.id)),
+        ),
+      ));
     }
 
     const sourceText = readyMaterials
@@ -80,7 +97,7 @@ router.post("/labs/generate", requireAuth, async (req: Request, res: Response) =
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: "Sei un docente italiano. Crea esattamente 15 laboratori pratici originali usando esclusivamente i materiali forniti. Non creare teoria o scelta multipla. Ogni esercizio deve richiedere calcoli, dati, procedimenti, pseudocodice o applicazione concreta. Indica nel topic il materiale o l'argomento di riferimento. Rispondi solo JSON con {\"exercises\":[{\"topic\":\"...\",\"title\":\"...\",\"prompt\":\"...\",\"solution\":\"...\",\"difficulty\":\"base|medio|avanzato\",\"points\":number}]}." },
-          { role: "user", content: sourceText },
+           { role: "user", content: `VARIANTE DI GENERAZIONE: ${variant}\n\n${sourceText}` },
         ],
       });
         try {
@@ -141,7 +158,7 @@ router.post("/materials/:materialId/labs", requireAuth, async (req: Request, res
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: "Sei un docente italiano. Crea esattamente 15 laboratori pratici originali basati solo sul materiale fornito. Non creare domande teoriche o a scelta multipla. Ogni esercizio deve richiedere calcoli, dati, procedimenti, pseudocodice o applicazione concreta. Rispondi solo JSON con {\"exercises\":[{\"topic\":\"...\",\"title\":\"...\",\"prompt\":\"...\",\"solution\":\"...\",\"difficulty\":\"base|medio|avanzato\",\"points\":number}]}." },
-          { role: "user", content: `Materiale: ${material.title}\n\nCONTENUTO:\n${material.extractedText.slice(0, 120000)}` },
+           { role: "user", content: `VARIANTE DI GENERAZIONE: ${variant}\n\nMateriale: ${material.title}\n\nCONTENUTO:\n${material.extractedText.slice(0, 120000)}` },
         ],
       });
         try {
