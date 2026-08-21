@@ -52,6 +52,8 @@ export default function ProfileScreen() {
     if (ticket?.unread) void markTicketRead(ticket.id);
   }, [markTicketRead, ticketId, tickets]);
 
+  const notificationTicket = ticketId ? tickets.find((item) => item.id === ticketId) : undefined;
+
   const openSupport = () => {
     setModal('ticket');
     for (const ticket of tickets) {
@@ -162,6 +164,22 @@ export default function ProfileScreen() {
         </View>
 
         <SectionTitle eyebrow="Assistenza" title="Le tue richieste" />
+        {notificationTicket ? (
+          <View
+            testID="ticket-aggiornato"
+            style={[styles.supportNotice, { backgroundColor: c.accent, borderColor: c.primary }]}
+          >
+            <AppIcon name="bell" size={17} color={c.accentForeground} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.ticketTitle, { color: c.accentForeground }]}>
+                Richiesta aggiornata
+              </Text>
+              <Text style={[styles.small, { color: c.accentForeground }]} numberOfLines={2}>
+                {notificationTicket.subject}
+              </Text>
+            </View>
+          </View>
+        ) : null}
         {unreadSupportCount > 0 ? (
           <Pressable
             testID="avviso-risposta-assistenza"

@@ -41,6 +41,12 @@ async function ticketDetails(tickets: (typeof ticketsTable.$inferSelect)[]) {
   }));
 }
 
+export function isInvalidPushTokenError(error: unknown) {
+  return error === "DeviceNotRegistered"
+    || error === "InvalidCredentials"
+    || error === "PushTokenNotRegistered";
+}
+
 /**
  * GET /tickets — list tickets for current user
  */
@@ -282,8 +288,7 @@ async function sendTicketPushNotifications(
       data?: Array<{ status?: string; details?: { error?: string } }>;
     };
     const invalidTokens = tokens.filter((_, index) =>
-      result.data?.[index]?.details?.error === "DeviceNotRegistered"
-      || result.data?.[index]?.details?.error === "InvalidCredentials",
+      isInvalidPushTokenError(result.data?.[index]?.details?.error),
     );
     if (invalidTokens.length) {
       await db.delete(pushTokensTable).where(inArray(pushTokensTable.token, invalidTokens.map(({ token }) => token)));
