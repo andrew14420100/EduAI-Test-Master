@@ -56,7 +56,7 @@ export default function ProfileScreen() {
       setCategory(ticketCategories[0]);
       setFeedback({
         title: 'Ticket inviato',
-        message: 'La richiesta è stata salvata. Puoi seguirne lo stato nella sezione assistenza.',
+         message: 'La richiesta è stata salvata. Puoi seguirne lo stato nella sezione assistenza. Le notifiche dei ticket sono disponibili nell’app: l’invio email automatico richiede un servizio email dedicato non collegato.',
         success: true,
       });
     } else {

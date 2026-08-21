@@ -25,8 +25,8 @@ const CATEGORIES: {
   {
     itemType: 'animazione',
     eyebrow: 'ANIMAZIONI',
-    title: 'Effetti completamento',
-    description: 'Appaiono ogni volta che superi una verifica. Equipaggiarne uno alla volta.',
+    title: 'Effetti globali',
+    description: 'Celebrano gli eventi importanti in tutta l’app. Equipaggiarne uno alla volta.',
     icon: 'sparkles',
   },
   {
@@ -63,7 +63,7 @@ const EQUIPPABLE_TYPES: ShopItem['itemType'][] = ['tema', 'animazione', 'stile_c
 
 function rewardDescription(item: ShopItem): string {
   if (item.itemType === 'tema') return 'Cambia immediatamente i colori e l’atmosfera dell’intera app.';
-  if (item.itemType === 'animazione') return 'Viene mostrata al completamento di una verifica superata.';
+  if (item.itemType === 'animazione') return 'Viene mostrata al login, ai passaggi di livello, agli inviti accettati, ai quiz, ai laboratori, agli acquisti e agli altri traguardi.';
   if (item.itemType === 'stile_carta') return 'Modifica il modo in cui vengono visualizzate le card di materiali, quiz e laboratori.';
   if (item.itemType === 'titolo') return 'Compare sotto il tuo nome nel profilo quando lo equipaggi.';
   if (item.itemType === 'icona_futura') return 'È una ricompensa preparata per cambiare l’icona di avvio in un futuro aggiornamento.';
