@@ -43,6 +43,13 @@
       "when": 1787179080332,
       "tag": "0005_curious_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787346805722,
+      "tag": "0006_aromatic_nextwave",
+      "breakpoints": true
     }
   ]
 }
