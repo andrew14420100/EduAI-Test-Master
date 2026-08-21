@@ -90,6 +90,7 @@ export default function QuizScreen() {
     materials,
     level,
     wallet,
+    completionAnimation,
     startQuizSession,
     startRecoverySession,
     completeQuizSession,
@@ -1003,6 +1004,20 @@ export default function QuizScreen() {
             color={passed ? '#4ADE80' : c.destructive}
           />
         </View>
+        {passed ? (
+          <View style={[styles.noticeBanner, { backgroundColor: c.accent }]}>
+            <AppIcon name={completionAnimation === 'anim_fire' ? 'flame' : completionAnimation === 'anim_stars' ? 'star' : 'sparkles'} size={18} color={c.accentForeground} />
+            <Text style={[styles.noticeText, { color: c.accentForeground }]}>
+              {completionAnimation === 'anim_fire'
+                ? 'Fiamme del successo attivate!'
+                : completionAnimation === 'anim_stars'
+                  ? 'Pioggia di stelle completata!'
+                  : completionAnimation === 'anim_crown'
+                    ? 'Incoronazione completata!'
+                    : 'Effetto completamento attivato!'}
+            </Text>
+          </View>
+        ) : null}
 
         <Text style={[styles.kicker, { color: passed ? '#4ADE80' : c.destructive }]}>
           {passed ? 'SUPERATO' : 'NON SUPERATO'}

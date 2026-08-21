@@ -152,6 +152,7 @@ type AppState = {
   materials: Material[];
   studyGroups: StudyGroup[];
   shop: ShopItem[];
+  completionAnimation: string | null;
   tickets: Ticket[];
   leaderboard: LeaderboardEntry[];
   friends: FriendEntry[];
@@ -467,6 +468,7 @@ export function AppProvider({
       ownedItemId: owned?.id,
     };
   }), [inventoryQuery.data]);
+  const completionAnimation = shop.find((item) => item.itemType === 'animazione' && item.equipped)?.id ?? null;
   const serverTheme: AppTheme = shop.some((item) => item.id === 'dark' && item.equipped)
     ? 'dark'
     : 'light';
@@ -570,6 +572,7 @@ export function AppProvider({
     materials,
     studyGroups,
     shop,
+    completionAnimation,
     tickets: ticketsQuery.data ?? [],
     leaderboard: leaderboardQuery.data ?? [],
     friends: inviteQuery.data?.friends ?? [],
@@ -901,6 +904,7 @@ export function AppProvider({
     requestUploadMutation,
     setLabsEnabledMutation,
     shop,
+    completionAnimation,
     signOut,
     startRecoverySessionMutation,
     startQuizSessionMutation,
