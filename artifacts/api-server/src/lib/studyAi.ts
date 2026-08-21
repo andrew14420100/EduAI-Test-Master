@@ -1,5 +1,5 @@
-import { openai } from "@workspace/integrations-openai-ai-server";
 import type { GeneratedQuestion, SourceMaterial } from "./contentStudy";
+import { aiChat, parseAiJson } from "./aiProvider";
 
 function cleanShortText(value: string, maxLength: number): string {
   return value
@@ -15,8 +15,7 @@ export async function generateMaterialTitle(params: {
 }): Promise<string | null> {
   if (!params.extractedText.trim()) return null;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5-mini",
+  const response = await aiChat({
     max_completion_tokens: 80,
     messages: [
       {
@@ -30,13 +29,12 @@ export async function generateMaterialTitle(params: {
       },
     ],
   });
-  const title = cleanShortText(response.choices[0]?.message?.content ?? "", 70);
+  const title = cleanShortText(response.content, 70);
   return title.length >= 4 ? title : null;
 }
 
 export async function generateQuickExplanation(question: string, options: string[]): Promise<string> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-5-mini",
+  const response = await aiChat({
     max_completion_tokens: 220,
     messages: [
       {
@@ -50,7 +48,7 @@ export async function generateQuickExplanation(question: string, options: string
       },
     ],
   });
-  const text = cleanShortText(response.choices[0]?.message?.content ?? "", 700);
+  const text = cleanShortText(response.content, 700);
   if (text.length < 12) throw new Error("Spiegazione IA non disponibile");
   return text;
 }
@@ -118,8 +116,7 @@ export async function generateExamQuestions(
 
   const trueFalseCount = Math.max(1, Math.floor(count / 5));
   const applicationCount = Math.max(2, Math.floor(count / 4));
-  const response = await openai.chat.completions.create({
-    model: "gpt-5.6-terra",
+  const response = await aiChat({
     max_completion_tokens: 8192,
     response_format: { type: "json_object" },
     messages: [
@@ -146,11 +143,11 @@ export async function generateExamQuestions(
     ],
   });
 
-  const raw = response.choices[0]?.message?.content;
+  const raw = response.content;
   if (!raw) throw new Error("RISPOSTA_IA_VUOTA");
   let parsed: { questions?: unknown };
   try {
-    parsed = JSON.parse(raw) as { questions?: unknown };
+    parsed = parseAiJson<{ questions?: unknown }>(raw);
   } catch {
     throw new Error("RISPOSTA_IA_NON_VALIDA");
   }
