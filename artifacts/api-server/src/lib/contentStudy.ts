@@ -537,11 +537,12 @@ export type SourceMaterial = {
 
 export type GeneratedQuestion = {
   question: string;
-  options: string[]; // exactly 4
+  options: string[]; // 2 for vero/falso, 4 for other formats
   correctIndex: number;
   sourceTitle?: string;
   evidence?: string;
   difficulty?: "base" | "medio" | "avanzato";
+  questionType?: "scelta_multipla" | "completamento" | "vero_falso";
 };
 
 export type PublicQuestion = {
@@ -636,12 +637,60 @@ function buildQuestionFromSentence(
   sentence: string,
   materialTitle: string,
   sentencePool: string[],
+  requestedType: "scelta_multipla" | "completamento" | "vero_falso",
   rng: () => number,
 ): GeneratedQuestion | null {
   const terms = keyTermsOf(sentence);
   if (terms.length === 0) return null;
 
   const answer = sentence.replace(/\s+/g, " ").trim();
+  const difficulty = sentenceDifficulty(sentence, terms);
+
+  if (requestedType === "vero_falso") {
+    const isTrue = rng() >= 0.5;
+    const statement = isTrue
+      ? answer
+      : `Non è corretto affermare che ${answer.charAt(0).toLocaleLowerCase("it-IT")}${answer.slice(1)}`;
+    return {
+      question: `Secondo il materiale "${materialTitle}", la seguente affermazione è corretta?\n\n${statement}`,
+      options: ["Vero", "Falso"],
+      correctIndex: isTrue ? 0 : 1,
+      sourceTitle: materialTitle,
+      evidence: answer,
+      difficulty,
+      questionType: "vero_falso",
+    };
+  }
+
+  if (requestedType === "completamento") {
+    const answerTerm = [...terms].sort((a, b) => b.length - a.length)[0]!;
+    const escaped = answerTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const blanked = answer.replace(new RegExp(escaped, "i"), "______");
+    const termPool = sentencePool.flatMap((item) => keyTermsOf(item))
+      .filter((term) => term.toLocaleLowerCase("it-IT") !== answerTerm.toLocaleLowerCase("it-IT"));
+    const termDistractors: string[] = [];
+    const seenTerms = new Set<string>([answerTerm.toLocaleLowerCase("it-IT")]);
+    for (const term of deterministicShuffle(termPool, rng)) {
+      const normalized = term.toLocaleLowerCase("it-IT");
+      if (seenTerms.has(normalized)) continue;
+      seenTerms.add(normalized);
+      termDistractors.push(term);
+      if (termDistractors.length === 3) break;
+    }
+    if (blanked.includes("______") && termDistractors.length === 3) {
+      const options = deterministicShuffle([answerTerm, ...termDistractors], rng);
+      return {
+        question: `Completa la frase tratta dal materiale "${materialTitle}":\n\n${blanked}`,
+        options,
+        correctIndex: options.indexOf(answerTerm),
+        sourceTitle: materialTitle,
+        evidence: answer,
+        difficulty,
+        questionType: "completamento",
+      };
+    }
+  }
+
   const candidates = sentencePool.filter((candidate) => {
     const normalized = candidate.toLocaleLowerCase("it-IT");
     return normalized !== answer.toLocaleLowerCase("it-IT")
@@ -675,7 +724,6 @@ function buildQuestionFromSentence(
   const options = deterministicShuffle([answer, ...distractors], rng);
   const correctIndex = options.indexOf(answer);
   const focus = terms.slice(0, 3).join(", ");
-  const difficulty = sentenceDifficulty(sentence, terms);
   if (correctIndex < 0) return null;
 
   return {
@@ -690,6 +738,7 @@ function buildQuestionFromSentence(
     sourceTitle: materialTitle,
     evidence: sentence,
     difficulty,
+    questionType: "scelta_multipla",
   };
 }
 
@@ -728,7 +777,18 @@ export function generateQuestionsWithKey(
         const sentence = mat.sentences[cursors[mi]!]!;
         cursors[mi]!++;
         progressed = true;
-        const q = buildQuestionFromSentence(sentence, mat.title, sentencePool, rng);
+        const requestedType = rng() < 0.28
+          ? "vero_falso"
+          : rng() < 0.5
+            ? "completamento"
+            : "scelta_multipla";
+        const q = buildQuestionFromSentence(
+          sentence,
+          mat.title,
+          sentencePool,
+          requestedType,
+          rng,
+        );
         if (q && !usedPrompts.has(q.question)) {
           usedPrompts.add(q.question);
           questions.push(q);

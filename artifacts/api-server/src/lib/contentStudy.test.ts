@@ -60,7 +60,7 @@ test("public questions strip correctIndex", () => {
   // Internal questions carry a numeric answer key.
   for (const q of questions) {
     assert.equal(typeof q.correctIndex, "number");
-    assert.equal(q.options.length, 4);
+    assert.ok([2, 4].includes(q.options.length));
   }
   const publicQuestions = toPublicQuestions(questions);
   for (const q of publicQuestions) {

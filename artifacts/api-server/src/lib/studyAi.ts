@@ -80,6 +80,7 @@ type AiQuestionPayload = {
   sourceTitle?: unknown;
   evidence?: unknown;
   difficulty?: unknown;
+  questionType?: unknown;
 };
 
 function sourceContext(sources: SourceMaterial[]) {
@@ -139,6 +140,11 @@ function asGeneratedQuestion(
     || value.difficulty === "avanzato"
     ? value.difficulty
     : null;
+  const questionType = value.questionType === "scelta_multipla"
+    || value.questionType === "completamento"
+    || value.questionType === "vero_falso"
+    ? value.questionType
+    : null;
   const source = sources.find(
     (candidate) => candidate.title.toLocaleLowerCase("it-IT") === sourceTitle.toLocaleLowerCase("it-IT"),
   );
@@ -149,7 +155,7 @@ function asGeneratedQuestion(
   if (
     question.length < 24 ||
     question.length > 520 ||
-    /_{2,}/.test(question) ||
+    (questionType !== "completamento" && /_{2,}/.test(question)) ||
     options.length < 2 ||
     options.length > 4 ||
     uniqueOptions.size !== options.length ||
@@ -161,7 +167,11 @@ function asGeneratedQuestion(
     evidence.length < 24 ||
     evidence.length > 520 ||
     !evidenceMatchesSource ||
-    !difficulty
+    !difficulty ||
+    !questionType ||
+    (questionType === "vero_falso" && (options.length !== 2 || options.some((option) => !["Vero", "Falso"].includes(option)))) ||
+    (questionType === "completamento" && !/_{2,}/.test(question)) ||
+    (questionType === "scelta_multipla" && options.length !== 4)
   ) {
     return null;
   }
@@ -172,6 +182,7 @@ function asGeneratedQuestion(
     sourceTitle,
     evidence,
     difficulty,
+    questionType,
   };
 }
 
@@ -189,6 +200,7 @@ export async function generateExamQuestions(
 
   const trueFalseCount = Math.max(1, Math.floor(count / 5));
   const applicationCount = Math.max(2, Math.floor(count / 4));
+  const completionCount = Math.max(1, Math.floor(count / 5));
   const fallback = () => {
     const local = generateQuestionsWithKey(
       sources,
@@ -209,7 +221,8 @@ export async function generateExamQuestions(
         content:
           "Sei un docente italiano molto selettivo che prepara fac-simile per esami reali. " +
           "Devi generare domande nuove, rigorose e risolvibili SOLO usando il contenuto fornito. " +
-          "Non usare mai spazi vuoti, trattini bassi, frasi da completare o domande che copiano/incollano il testo. " +
+           "Non copiare/incollare intere domande dal testo. Puoi alternare tre formati: scelta multipla, completamento di una frase " +
+           "con uno spazio vuoto realmente ricavato dal testo, oppure vero/falso. " +
           "Parafrasa, confronta concetti, richiedi deduzioni, nessi causali, applicazioni e riconoscimento di errori. " +
            "I distrattori devono essere plausibili, specifici e pertinenti, ma una sola risposta deve essere corretta. " +
            "Non inventare fatti assenti dai materiali. Per ogni domanda indica il titolo esatto della fonte, " +
@@ -221,10 +234,10 @@ export async function generateExamQuestions(
         role: "user",
         content:
           `Crea esattamente ${count} quesiti per un fac-simile impegnativo.\n` +
-          `Almeno ${trueFalseCount} devono essere vero/falso con esattamente due opzioni ("Vero", "Falso").\n` +
+           `Inserisci almeno ${trueFalseCount} vero/falso con esattamente due opzioni ("Vero", "Falso") e almeno ${completionCount} completamenti con "______".\n` +
           `Almeno ${applicationCount} devono verificare collegamenti, confronto o applicazione fra concetti e avere quattro opzioni.\n` +
           "Per tutti gli altri quesiti usa quattro opzioni. Alterna gli argomenti, evita duplicati e non rivelare mai la risposta nella formulazione.\n" +
-           'Restituisci soltanto {"questions":[{"question":"...","options":["..."],"correctIndex":0,"sourceTitle":"...","evidence":"...","difficulty":"base|medio|avanzato"}]}.\n\n' +
+           'Per ogni elemento indica questionType ("scelta_multipla"|"completamento"|"vero_falso"). Restituisci soltanto {"questions":[{"question":"...","options":["..."],"correctIndex":0,"sourceTitle":"...","evidence":"...","difficulty":"base|medio|avanzato","questionType":"..."}]}.\n\n' +
           `CONTENUTO DA STUDIARE:\n${context}`,
       },
     ],
@@ -251,8 +264,9 @@ export async function generateExamQuestions(
     uniqueQuestions.set(question.question.toLocaleLowerCase("it-IT"), question);
   }
   const result = [...uniqueQuestions.values()];
-  const trueFalse = result.filter((question) => question.options.length === 2).length;
-  if (result.length !== count || trueFalse < trueFalseCount) {
+  const trueFalse = result.filter((question) => question.questionType === "vero_falso").length;
+  const completions = result.filter((question) => question.questionType === "completamento").length;
+  if (result.length !== count || trueFalse < trueFalseCount || completions < completionCount) {
     return fallback();
   }
   return result;
