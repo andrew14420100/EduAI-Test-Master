@@ -5,7 +5,6 @@ import { tokenCache } from '@clerk/expo/token-cache';
 import Constants from 'expo-constants';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -150,13 +149,11 @@ export default function RootLayout() {
           <ErrorBoundary>
             <QueryClientProvider client={queryClient}>
               <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardProvider>
-                  <AuthTokenBridge>
-                    <AppProvider onThemeReady={handleThemeReady}>
-                      <RootLayoutNav />
-                    </AppProvider>
-                  </AuthTokenBridge>
-                </KeyboardProvider>
+                <AuthTokenBridge>
+                  <AppProvider onThemeReady={handleThemeReady}>
+                    <RootLayoutNav />
+                  </AppProvider>
+                </AuthTokenBridge>
               </GestureHandlerRootView>
             </QueryClientProvider>
           </ErrorBoundary>
