@@ -26,6 +26,7 @@ import {
   useListMaterials,
   useListQuizAttempts,
   useListTickets,
+  useMarkTicketRead,
   useListLabExercises,
   useListLabAttempts,
   useSubmitLabAttempt,
@@ -162,6 +163,8 @@ type AppState = {
   rewardEvent: RewardEvent | null;
   dismissRewardEvent: () => void;
   tickets: Ticket[];
+  unreadSupportCount: number;
+  markTicketRead: (ticketId: string) => Promise<ActionResult>;
   leaderboard: LeaderboardEntry[];
   friends: FriendEntry[];
   inviteCode: string;
@@ -393,9 +396,27 @@ export function AppProvider({
   const equipItemMutation = useEquipShopItem();
   const useLightThemeMutation = useUseLightTheme();
   const createTicketMutation = useCreateTicketMutation();
+  const markTicketReadMutation = useMarkTicketRead();
   const useInviteMutation = useUseInviteCode();
   const submitLabAttemptMutation = useSubmitLabAttempt();
   const setLabsEnabledMutation = useSetLabsEnabled();
+  const seenUnreadTicketIdsRef = useRef<Set<string> | null>(null);
+
+  useEffect(() => {
+    const unreadIds = new Set((ticketsQuery.data ?? []).filter((ticket) => ticket.unread).map((ticket) => ticket.id));
+    if (seenUnreadTicketIdsRef.current === null) {
+      seenUnreadTicketIdsRef.current = unreadIds;
+      if (unreadIds.size > 0) {
+        triggerReward('assistenza', 'Nuova risposta dall’assistenza', 'Apri il profilo per leggere la risposta al tuo ticket.');
+      }
+      return;
+    }
+    const hasNewReply = [...unreadIds].some((id) => !seenUnreadTicketIdsRef.current?.has(id));
+    seenUnreadTicketIdsRef.current = unreadIds;
+    if (hasNewReply) {
+      triggerReward('assistenza', 'Nuova risposta dall’assistenza', 'Apri il profilo per leggere la risposta al tuo ticket.');
+    }
+  }, [ticketsQuery.data]);
 
   useEffect(() => {
     if (!isSignedIn || !user) {
@@ -597,6 +618,7 @@ export function AppProvider({
     rewardEvent,
     dismissRewardEvent: () => setRewardEvent(null),
     tickets: ticketsQuery.data ?? [],
+    unreadSupportCount: (ticketsQuery.data ?? []).filter((ticket) => ticket.unread).length,
     leaderboard: leaderboardQuery.data ?? [],
     friends: inviteQuery.data?.friends ?? [],
     inviteCode: inviteQuery.data?.inviteCode ?? profile?.inviteCode ?? '',
@@ -866,6 +888,15 @@ export function AppProvider({
         return { ok: false, message: messageFromError(error) };
       }
     },
+    markTicketRead: async (ticketId) => {
+      try {
+        await markTicketReadMutation.mutateAsync({ ticketId });
+        await ticketsQuery.refetch();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
+      }
+    },
     useInvite: async (code) => {
       try {
         await useInviteMutation.mutateAsync({ data: { code: code.trim().toUpperCase() } });
@@ -917,6 +948,7 @@ export function AppProvider({
     completeQuizSessionMutation,
     createGroupMutation,
     createTicketMutation,
+    markTicketReadMutation,
     dataEnabled,
     deleteMaterialMutation,
     equipItemMutation,
