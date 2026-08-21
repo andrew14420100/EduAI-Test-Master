@@ -209,7 +209,7 @@ test("a PDF rendered without a text layer uses the OCR fallback", async () => {
   const recognize: OcrRecognizer = async (image) => {
     pagesSeen++;
     assert.ok(image.length > 0);
-    return { text: "Il teorema di Pitagora collega ipotenusa e cateti." };
+    return { text: "Il teorema di Pitagora collega ipotenusa e cateti nella geometria." };
   };
 
   try {
@@ -221,7 +221,7 @@ test("a PDF rendered without a text layer uses the OCR fallback", async () => {
       recognize,
     });
     assert.equal(result.status, "ready");
-    assert.equal(result.text, "Il teorema di Pitagora collega ipotenusa e cateti.");
+    assert.equal(result.text, "Il teorema di Pitagora collega ipotenusa e cateti nella geometria.");
     assert.ok(pagesSeen >= 1, "the PDF must be rendered and sent to OCR");
   } finally {
     await rm(directory, { recursive: true, force: true });
