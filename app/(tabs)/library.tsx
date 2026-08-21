@@ -77,11 +77,19 @@ function automaticTitle(materials: Array<{ name: string }>) {
 export default function LibraryScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { materials, studyGroups, uploadMaterials, removeMaterial, retryMaterialAnalysis } = useApp();
+  const {
+    materials,
+    studyGroups,
+    uploadMaterials,
+    removeMaterial,
+    retryMaterialAnalysis,
+    generateLabsForMaterial,
+  } = useApp();
   const mounted = useRef(true);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [modal, setModal] = useState<LibraryModal | null>(null);
+  const [generatingLabs, setGeneratingLabs] = useState(false);
 
   useEffect(() => () => {
     mounted.current = false;
@@ -90,6 +98,10 @@ export default function LibraryScreen() {
   const selectedMaterials = useMemo(
     () => materials.filter((material) => selectedIds.includes(material.id)),
     [materials, selectedIds],
+  );
+  const readySelectedMaterials = useMemo(
+    () => selectedMaterials.filter((material) => material.isStudyReady),
+    [selectedMaterials],
   );
   const groupTitle = useMemo(() => automaticTitle(selectedMaterials), [selectedMaterials]);
   const availableGroups = useMemo(
@@ -233,6 +245,36 @@ export default function LibraryScreen() {
     setModal({ kind: 'generazione' });
   };
 
+  const generateSelectedLabs = async () => {
+    if (!readySelectedMaterials.length) {
+      setModal({
+        kind: 'messaggio',
+        title: 'Materiali non pronti',
+        message: 'Attendi che almeno un materiale termini l’analisi o la trascrizione.',
+        icon: 'warning',
+      });
+      return;
+    }
+    setGeneratingLabs(true);
+    setModal(null);
+    let created = 0;
+    let failed = 0;
+    for (const material of readySelectedMaterials) {
+      const result = await generateLabsForMaterial(material.id);
+      if (result.ok) created += 1;
+      else failed += 1;
+    }
+    setGeneratingLabs(false);
+    setModal({
+      kind: 'messaggio',
+      title: failed ? 'Laboratori creati parzialmente' : 'Laboratori pronti',
+      message: failed
+        ? `${created} materiali elaborati, ${failed} non riusciti. Controlla la scheda Laboratori.`
+        : `Laboratori generati usando ${created} ${created === 1 ? 'materiale pronto' : 'materiali pronti'}.`,
+      icon: failed ? 'warning' : 'circle-check',
+    });
+  };
+
   const prepareContent = (mode: 'verifica' | 'flashcard') => {
     setModal(null);
     router.push({
@@ -292,6 +334,7 @@ export default function LibraryScreen() {
         actions: [
           { label: 'Prepara una verifica', variant: 'primaria' as const, onPress: () => prepareContent('verifica') },
           { label: 'Prepara le flashcard', onPress: () => prepareContent('flashcard') },
+            { label: 'Genera laboratori', onPress: () => { void generateSelectedLabs(); } },
           { label: 'Annulla', onPress: () => setModal(null) },
         ],
       };
@@ -484,8 +527,12 @@ export default function LibraryScreen() {
             <Text style={[styles.small, { color: c.mutedForeground }]}>I file sono protetti dal tuo account e disponibili anche sugli altri dispositivi.</Text>
           </View>
         </View>
-        <PrimaryButton onPress={askToGenerate} disabled={!selectedMaterials.length} icon="generate">
-          {selectedMaterials.length ? `Analizza ${selectedMaterials.length} ${selectedMaterials.length === 1 ? 'materiale' : 'materiali'}` : 'Seleziona i materiali'}
+         <PrimaryButton onPress={askToGenerate} disabled={!selectedMaterials.length || generatingLabs} icon="generate">
+           {generatingLabs
+             ? 'Generazione laboratori…'
+             : selectedMaterials.length
+               ? `Prepara ${readySelectedMaterials.length} ${readySelectedMaterials.length === 1 ? 'materiale pronto' : 'materiali pronti'}`
+               : 'Seleziona i materiali'}
         </PrimaryButton>
       </ScrollView>
 
