@@ -115,7 +115,7 @@ export async function aiTranscribe(
   if (groqKey) {
     try {
       const form = new FormData();
-      form.append("file", new Blob([audio]), filename);
+      form.append("file", new Blob([new Uint8Array(audio)]), filename);
       form.append("model", configured("GROQ_TRANSCRIPTION_MODEL") ?? "whisper-large-v3-turbo");
       form.append("language", "it");
       const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
