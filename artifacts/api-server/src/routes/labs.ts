@@ -505,12 +505,14 @@ router.post("/labs/attempts", requireAuth, async (req: Request, res: Response) =
       }
     });
 
-    // Return result (no correctIndex/correctAnswer exposed)
+    // Reveal the complete solution only after this attempt, and only when the
+    // answer was not fully correct. The exercise list never exposes it.
     res.status(201).json({
       id: attemptId,
       exerciseId,
       score,
       feedback,
+      ...(score < 1 ? { solution: expectedSolution } : {}),
       earnedPoints,
       totalPoints: exercise.points,
       createdAt: new Date().toISOString(),
