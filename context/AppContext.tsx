@@ -421,6 +421,7 @@ export function AppProvider({
   useEffect(() => {
     if (!isSignedIn || !user) {
       syncAttemptedForRef.current = null;
+      seenUnreadTicketIdsRef.current = null;
       setProfileSeed(null);
       setProfileSyncing(false);
       setProfileSyncError(null);
@@ -637,6 +638,7 @@ export function AppProvider({
       setProfileSeed(null);
       setProfileSyncError(null);
       syncAttemptedForRef.current = null;
+      seenUnreadTicketIdsRef.current = null;
     },
     completeOnboarding: async (nextLevel) => {
       try {
