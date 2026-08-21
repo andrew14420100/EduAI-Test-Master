@@ -97,17 +97,6 @@ export default function ShopScreen() {
   const [selectedCategory, setSelectedCategory] = useState<ShopItem['itemType']>('tema');
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
 
-  const nextReward = shop.find((item) => !item.owned);
-  const rewardProgress = nextReward ? Math.min(100, Math.round((wallet / nextReward.cost) * 100)) : 100;
-  const currentLevel = levelFromWallet(wallet);
-  const nextLevel = Math.min(50, currentLevel + 1);
-  const levelTarget = pointsForNextLevel(currentLevel);
-  const levelStart = pointsToReachLevel(currentLevel);
-  const levelProgress = currentLevel >= 50
-    ? 100
-    : Math.min(100, Math.round(((wallet - levelStart) / levelTarget) * 100));
-  const levelMissing = currentLevel >= 50 ? 0 : Math.max(0, pointsToReachLevel(nextLevel) - wallet);
-
   const purchase = async (id: string, title: string, cost: number, owned: boolean) => {
     if (busyId) return;
     const selected = shop.find((item) => item.id === id);
