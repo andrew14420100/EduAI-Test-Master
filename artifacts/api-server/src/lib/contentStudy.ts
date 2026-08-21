@@ -539,6 +539,9 @@ export type GeneratedQuestion = {
   question: string;
   options: string[]; // exactly 4
   correctIndex: number;
+  sourceTitle?: string;
+  evidence?: string;
+  difficulty?: "base" | "medio" | "avanzato";
 };
 
 export type PublicQuestion = {
@@ -617,70 +620,63 @@ export function keyTermsOf(sentence: string): string[] {
   return terms;
 }
 
+function sentenceDifficulty(sentence: string, terms: string[]): "base" | "medio" | "avanzato" {
+  const hasRelation = /\b(perché|quindi|tuttavia|invece|se|quando|causa|conseguenza|rispetto|mentre)\b/i.test(sentence);
+  if (terms.length >= 10 || sentence.length >= 180 || hasRelation) return "avanzato";
+  if (terms.length >= 7 || sentence.length >= 100) return "medio";
+  return "base";
+}
+
 /**
- * Build a fill-in-the-blank MCQ from a sentence by blanking a salient key term.
- * Distractors are drawn from the pool of other terms across all materials.
- * Returns null if the sentence yields no usable key term.
+ * Build a content-grounded MCQ from a complete source sentence. The fallback
+ * must never invent distractors or turn a sentence into a blank template:
+ * every option comes from extracted study content.
  */
 function buildQuestionFromSentence(
   sentence: string,
   materialTitle: string,
-  termPool: string[],
+  sentencePool: string[],
   rng: () => number,
 ): GeneratedQuestion | null {
   const terms = keyTermsOf(sentence);
   if (terms.length === 0) return null;
 
-  // Pick the longest term as the answer (most salient / specific).
-  const answer = [...terms].sort((a, b) => b.length - a.length)[0]!;
-
-  // Build the blanked prompt (case-insensitive, first occurrence).
-  const re = new RegExp(
-    answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-    "i",
-  );
-  const blanked = sentence.replace(re, "______");
-  if (!blanked.includes("______")) return null;
-
-  // Gather distractors from the pool that differ from the answer.
-  const answerLower = answer.toLowerCase();
-  const candidates = termPool.filter(
-    (t) => t.toLowerCase() !== answerLower && t.length >= 4,
-  );
-  const uniqueCandidates: string[] = [];
-  const seen = new Set<string>([answerLower]);
-  for (const t of deterministicShuffle(candidates, rng)) {
-    const lower = t.toLowerCase();
-    if (seen.has(lower)) continue;
-    seen.add(lower);
-    uniqueCandidates.push(t);
-    if (uniqueCandidates.length >= 3) break;
+  const answer = sentence.replace(/\s+/g, " ").trim();
+  const candidates = sentencePool.filter((candidate) => {
+    const normalized = candidate.toLocaleLowerCase("it-IT");
+    return normalized !== answer.toLocaleLowerCase("it-IT")
+      && candidate.length >= 30
+      && candidate.split(/\s+/).length >= 6;
+  });
+  const distractors: string[] = [];
+  const seen = new Set<string>([answer.toLocaleLowerCase("it-IT")]);
+  for (const candidate of deterministicShuffle(candidates, rng)) {
+    const normalized = candidate.toLocaleLowerCase("it-IT");
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    distractors.push(candidate);
+    if (distractors.length === 3) break;
   }
+  if (distractors.length < 3) return null;
 
-  // Pad with deterministic generic distractors if the pool is too small.
-  const fallback = [
-    "Nessuna delle precedenti",
-    "Un concetto non correlato",
-    "Un termine assente nel testo",
-  ];
-  let fi = 0;
-  while (uniqueCandidates.length < 3 && fi < fallback.length) {
-    const f = fallback[fi++]!;
-    if (!seen.has(f.toLowerCase())) {
-      uniqueCandidates.push(f);
-      seen.add(f.toLowerCase());
-    }
-  }
-  if (uniqueCandidates.length < 3) return null;
-
-  const options = deterministicShuffle([answer, ...uniqueCandidates.slice(0, 3)], rng);
+  const options = deterministicShuffle([answer, ...distractors], rng);
   const correctIndex = options.indexOf(answer);
+  const focus = terms.slice(0, 3).join(", ");
+  const difficulty = sentenceDifficulty(sentence, terms);
   if (correctIndex < 0) return null;
 
   return {
-    question: `In "${materialTitle}", completa: ${blanked}`,
+    question:
+      difficulty === "avanzato"
+        ? `Quale interpretazione è coerente con quanto spiegato nel materiale "${materialTitle}" riguardo a ${focus}?`
+        : difficulty === "medio"
+          ? `Quale affermazione collega correttamente i concetti ${focus} secondo il materiale "${materialTitle}"?`
+          : `Quale affermazione descrive correttamente ${focus} secondo il materiale "${materialTitle}"?`,
     options,
     correctIndex,
+    sourceTitle: materialTitle,
+    evidence: sentence,
+    difficulty,
   };
 }
 
@@ -697,18 +693,13 @@ export function generateQuestionsWithKey(
   const seed = strHash(seedInput);
   const rng = seededRandom(seed);
 
-  // Precompute per-material sentences (deterministically ordered) and a global
-  // term pool for distractors.
+  // Precompute per-material sentences (deterministically ordered). Distractors
+  // are complete extracted sentences, never generic text.
   const perMaterial = sources.map((m) => ({
     title: m.title,
     sentences: splitSentences(m.text),
   }));
-  const termPool: string[] = [];
-  for (const m of sources) {
-    for (const s of splitSentences(m.text)) {
-      for (const t of keyTermsOf(s)) termPool.push(t);
-    }
-  }
+  const sentencePool = perMaterial.flatMap((material) => material.sentences);
 
   const questions: GeneratedQuestion[] = [];
   const usedPrompts = new Set<string>();
@@ -724,7 +715,7 @@ export function generateQuestionsWithKey(
         const sentence = mat.sentences[cursors[mi]!]!;
         cursors[mi]!++;
         progressed = true;
-        const q = buildQuestionFromSentence(sentence, mat.title, termPool, rng);
+        const q = buildQuestionFromSentence(sentence, mat.title, sentencePool, rng);
         if (q && !usedPrompts.has(q.question)) {
           usedPrompts.add(q.question);
           questions.push(q);
