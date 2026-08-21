@@ -1035,29 +1035,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
-  /tickets/{ticketId}/read:
-    patch:
-      operationId: markTicketRead
-      tags: [tickets]
-      summary: Mark a support ticket response as read
-      parameters:
-        - name: ticketId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "200":
-          description: Updated ticket
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Ticket"
-        "404":
-          description: Ticket not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
     post:
       operationId: createTicket
       tags: [tickets]
@@ -1083,6 +1060,30 @@ paths:
                 $ref: "#/components/schemas/ErrorEnvelope"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /tickets/{ticketId}/read:
+    patch:
+      operationId: markTicketRead
+      tags: [tickets]
+      summary: Mark a support ticket response as read
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Updated ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "404":
+          description: Ticket not found
           content:
             application/json:
               schema:
