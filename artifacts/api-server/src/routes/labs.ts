@@ -10,7 +10,7 @@ import {
 } from "@workspace/db";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 import { aiChat, parseAiJson } from "../lib/aiProvider";
-import { splitSentences } from "../lib/contentStudy";
+import { keyTermsOf, splitSentences } from "../lib/contentStudy";
 import { hasLabsByDefault } from "../lib/labPath";
 
 const router: IRouter = Router();
@@ -27,11 +27,18 @@ function fallbackExercises(
   );
   for (let index = 0; index < 15 && sentences.length > 0; index++) {
     const item = sentences[index % sentences.length]!;
+    const focus = keyTermsOf(item.sentence).slice(0, 4).join(", ") || "il concetto studiato";
+    const taskTemplates = [
+      `Imposta un caso concreto in cui applicheresti ${focus}. Descrivi dati iniziali, procedimento passo per passo e risultato atteso.`,
+      `Trasforma ${focus} in una procedura operativa: indica input, passaggi, controlli e output finale usando un esempio numerico o concreto.`,
+      `Confronta due situazioni legate a ${focus}. Spiega quale procedimento useresti in ciascun caso e giustifica la scelta.`,
+      `Progetta un piccolo esercizio su ${focus}, risolvilo mostrando tutti i passaggi e verifica che il risultato sia coerente.`,
+    ];
     exercises.push({
       topic: item.material.title,
-      title: `Applicazione guidata ${index + 1}`,
-      prompt: `Spiega come applicheresti il concetto seguente in un caso concreto e indica i passaggi principali:\n\n${item.sentence}`,
-      solution: `La risposta deve collegare il caso concreto al concetto descritto: ${item.sentence}`,
+      title: `Laboratorio pratico · ${focus}`,
+      prompt: taskTemplates[index % taskTemplates.length]!,
+      solution: `La soluzione deve usare il contenuto del materiale, in particolare: ${item.sentence}`,
       difficulty: index % 3 === 0 ? "base" : index % 3 === 1 ? "medio" : "avanzato",
       points: 10 + (index % 3) * 5,
     });

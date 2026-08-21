@@ -621,6 +621,17 @@ export function keyTermsOf(sentence: string): string[] {
   return terms;
 }
 
+function readableStudySentence(sentence: string, materialTitle: string): string {
+  let text = sentence.replace(/\s+/g, " ").trim();
+  const title = materialTitle.replace(/\.[^/.]+$/, "").replace(/\s+/g, " ").trim();
+  if (title.length >= 8 && text.toLocaleLowerCase("it-IT").startsWith(title.toLocaleLowerCase("it-IT"))) {
+    text = text.slice(title.length).replace(/^[\s:–—-]+/, "").trim();
+  }
+  if (text.length <= 190) return text;
+  const words = text.split(/\s+/);
+  return `${words.slice(0, 30).join(" ").replace(/[,:;]$/, "")}…`;
+}
+
 function sentenceDifficulty(sentence: string, terms: string[]): "base" | "medio" | "avanzato" {
   const hasRelation = /\b(perché|quindi|tuttavia|invece|se|quando|causa|conseguenza|rispetto|mentre)\b/i.test(sentence);
   if (terms.length >= 10 || sentence.length >= 180 || hasRelation) return "avanzato";
@@ -644,13 +655,14 @@ function buildQuestionFromSentence(
   if (terms.length === 0) return null;
 
   const answer = sentence.replace(/\s+/g, " ").trim();
+  const readable = readableStudySentence(answer, materialTitle);
   const difficulty = sentenceDifficulty(sentence, terms);
 
   if (requestedType === "vero_falso") {
     const isTrue = rng() >= 0.5;
     const statement = isTrue
-      ? answer
-      : `Non è corretto affermare che ${answer.charAt(0).toLocaleLowerCase("it-IT")}${answer.slice(1)}`;
+      ? `Nel materiale, il concetto di ${terms.slice(0, 3).join(", ")} viene descritto così: ${readable}`
+      : `Non è corretto affermare che ${readable.charAt(0).toLocaleLowerCase("it-IT")}${readable.slice(1)}`;
     return {
       question: `Leggi l'affermazione e scegli la risposta corretta:\n\n${statement}`,
       options: ["Vero", "Falso"],
@@ -721,8 +733,9 @@ function buildQuestionFromSentence(
   }
   if (distractors.length < 3) return null;
 
-  const options = deterministicShuffle([answer, ...distractors], rng);
-  const correctIndex = options.indexOf(answer);
+  const readableDistractors = distractors.map((item) => readableStudySentence(item, materialTitle));
+  const options = deterministicShuffle([readable, ...readableDistractors], rng);
+  const correctIndex = options.indexOf(readable);
   const focus = terms.slice(0, 3).join(", ");
   if (correctIndex < 0) return null;
 
@@ -735,7 +748,7 @@ function buildQuestionFromSentence(
             : `Quale affermazione descrive correttamente ${focus}?`,
     options,
     correctIndex,
-    sourceTitle: materialTitle,
+     sourceTitle: materialTitle,
     evidence: sentence,
     difficulty,
     questionType: "scelta_multipla",
