@@ -195,7 +195,7 @@ type AppState = {
   labsEnabled: boolean;
   hasLabsByDefault: boolean;
   labsLoading: boolean;
-  submitLabAttempt: (exerciseId: string, userAnswer: string) => Promise<{ ok: true; result: { score: number; feedback: string; earnedPoints: number; totalPoints: number } } | { ok: false; message: string }>;
+  submitLabAttempt: (exerciseId: string, userAnswer: string) => Promise<{ ok: true; result: { score: number; feedback: string; solution?: string; earnedPoints: number; totalPoints: number } } | { ok: false; message: string }>;
   enableLabs: (enabled: boolean) => Promise<ActionResult>;
 };
 
@@ -943,6 +943,7 @@ export function AppProvider({
           result: {
             score: attempt.score,
             feedback: attempt.feedback,
+            solution: attempt.solution,
             earnedPoints: attempt.earnedPoints,
             totalPoints: attempt.totalPoints,
           },
