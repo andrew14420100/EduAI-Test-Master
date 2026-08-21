@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "EduAI Test Master",
+    "slug": "eduai-test-master",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.miaapp.webview",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "29a57756-a3be-490c-ba3e-410d2ea15f7c"
+      }
+    }
+  }
+}
