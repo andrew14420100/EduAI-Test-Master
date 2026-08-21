@@ -134,7 +134,7 @@ type ActionResult = { ok: true } | { ok: false; message: string };
 type UploadProgress = (clientId: string, progress: number) => void;
 export type RewardEvent = {
   id: number;
-  kind: 'accesso' | 'livello' | 'amico' | 'verifica' | 'laboratorio' | 'negozio' | 'assistenza';
+  kind: 'accesso' | 'livello' | 'livello_successivo' | 'amico' | 'verifica' | 'flashcard' | 'laboratorio' | 'negozio' | 'ricompensa' | 'assistenza';
   title: string;
   message: string;
 };
@@ -622,6 +622,7 @@ export function AppProvider({
         const session = await startQuizSessionMutation.mutateAsync({
           data: { materialIds, totalQuestions, variant: variant ?? `${Date.now()}-${Math.random().toString(36).slice(2)}` },
         });
+        triggerReward('verifica', 'Verifica pronta', 'Le domande sono state costruite dai materiali selezionati.');
         return { ok: true, session };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
@@ -663,6 +664,7 @@ export function AppProvider({
         const response = await generateFlashcardsMutation.mutateAsync({
           data: { materialIds, variant: variant ?? `${Date.now()}-${Math.random().toString(36).slice(2)}` },
         });
+        triggerReward('flashcard', 'Flashcard pronte', 'Un nuovo set di ripasso è stato generato dal contenuto.');
         return { ok: true, flashcards: response.flashcards };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
@@ -782,6 +784,7 @@ export function AppProvider({
           responseType: 'json',
         });
         await labExercisesQuery.refetch();
+        triggerReward('laboratorio', 'Laboratorio rigenerato', 'Sono disponibili nuovi esercizi pratici.');
         return { ok: true, ...response };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
