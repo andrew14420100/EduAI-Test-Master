@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
+import Constants from 'expo-constants';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -21,9 +22,14 @@ import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 
 SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
-const domain = process.env.EXPO_PUBLIC_DOMAIN;
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
+const buildExtra = (Constants.expoConfig?.extra ?? {}) as {
+  apiDomain?: string;
+  clerkPublishableKey?: string;
+  clerkProxyUrl?: string;
+};
+const domain = process.env.EXPO_PUBLIC_DOMAIN || buildExtra.apiDomain;
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || buildExtra.clerkPublishableKey;
+const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || buildExtra.clerkProxyUrl || undefined;
 
 if (domain) setBaseUrl(`https://${domain}`);
 
@@ -92,6 +98,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   loadingText: { color: '#153A35', fontSize: 12, fontWeight: '600' },
+  configurationError: { flex: 1, justifyContent: 'center', padding: 28, backgroundColor: '#F4FAF7' },
+  configurationTitle: { color: '#153A35', fontSize: 24, fontWeight: '700', marginBottom: 12 },
+  configurationBody: { color: '#55716B', fontSize: 16, lineHeight: 24 },
 });
 
 function AuthTokenBridge({ children }: { children: React.ReactNode }) {
@@ -120,8 +129,18 @@ export default function RootLayout() {
   }, [fontsLoaded, fontError, themeReady]);
 
   if (!fontsLoaded && !fontError) return null;
-  if (!publishableKey) {
-    throw new Error('Configurazione di autenticazione non disponibile.');
+  if (!publishableKey || !domain) {
+    return (
+      <SafeAreaProvider>
+        <View style={styles.configurationError}>
+          <Text style={styles.configurationTitle}>Configurazione incompleta</Text>
+          <Text style={styles.configurationBody}>
+            Questa versione dell’app non contiene la configurazione necessaria per collegarsi al servizio.
+            Installa una build di produzione aggiornata.
+          </Text>
+        </View>
+      </SafeAreaProvider>
+    );
   }
 
   return (
