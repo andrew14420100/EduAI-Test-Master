@@ -60,7 +60,7 @@ export default function LabsScreen() {
   const [selected, setSelected] = useState<LabExercise | null>(null);
   const [ftAnswer, setFtAnswer] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ score: number; feedback: string; earnedPoints: number; totalPoints: number } | null>(null);
+  const [result, setResult] = useState<{ score: number; feedback: string; solution?: string; earnedPoints: number; totalPoints: number } | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [enablingLabs, setEnablingLabs] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -243,6 +243,12 @@ export default function LabsScreen() {
           <Text style={[styles.feedbackTitle, { color: c.primary }]}>SPIEGAZIONE</Text>
           <Text style={[styles.feedbackText, { color: c.foreground }]}>{result.feedback}</Text>
         </View>
+        {result.score < 1 && result.solution ? (
+          <View style={[styles.feedbackCard, { backgroundColor: c.accent, borderColor: c.primary }]}>
+            <Text style={[styles.feedbackTitle, { color: c.accentForeground }]}>SOLUZIONE CORRETTA</Text>
+            <Text style={[styles.feedbackText, { color: c.accentForeground }]}>{result.solution}</Text>
+          </View>
+        ) : null}
 
          <PrimaryButton onPress={() => { setView('list'); setSelected(null); setResult(null); setFtAnswer(''); }} icon="flask">
           Torna agli esercizi
@@ -371,6 +377,22 @@ export default function LabsScreen() {
           </View>
         ))
       )}
+      {labAttempts.some((attempt) => attempt.score < 1) ? (
+        <View>
+          <SectionTitle eyebrow="DA RIPASSARE" title="Laboratori non passati" />
+          {labAttempts.filter((attempt) => attempt.score < 1).slice(0, 10).map((attempt) => (
+            <View key={`failed-${attempt.id}`} style={[styles.historyItem, { backgroundColor: c.card, borderColor: c.destructive }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.historyTitle, { color: c.foreground }]} numberOfLines={1}>{attempt.exerciseTitle}</Text>
+                <Text style={[styles.historyMeta, { color: c.mutedForeground }]}>
+                  {attempt.exerciseTopic} · {scoreLabel(attempt.score)}
+                </Text>
+              </View>
+              <Text style={[styles.historyScore, { color: c.destructive }]}>+{attempt.earnedPoints} pt</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
