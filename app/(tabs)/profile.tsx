@@ -8,7 +8,7 @@ import { Pill, SectionTitle } from '@/components/Ui';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
-type ProfileModal = 'avvisi' | 'privacy' | 'uscita' | 'elimina-account' | 'ticket' | 'esito' | null;
+type ProfileModal = 'avvisi' | 'privacy' | 'uscita' | 'elimina-account' | 'ticket' | 'suggestion' | 'esito' | null;
 const ticketCategories = ['Problema tecnico', 'Account', 'Materiali', 'Verifiche', 'Altro'];
 
 function ticketStatusLabel(status: string) {
@@ -43,6 +43,9 @@ export default function ProfileScreen() {
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState(ticketCategories[0]);
   const [description, setDescription] = useState('');
+  const [motivation, setMotivation] = useState('');
+  const [steps, setSteps] = useState('');
+  const [attachment, setAttachment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState({ title: '', message: '', success: false });
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -97,6 +100,35 @@ export default function ProfileScreen() {
          message: 'La richiesta è stata salvata. Puoi seguirne lo stato nella sezione assistenza. Le notifiche dei ticket sono disponibili nell’app: l’invio email automatico richiede un servizio email dedicato non collegato.',
         success: true,
       });
+    } else {
+      setFeedback({ title: 'Invio non riuscito', message: result.message, success: false });
+    }
+    setModal('esito');
+  };
+
+  const submitSuggestion = async () => {
+    if (submitting) return;
+    if (subject.trim().length < 3 || description.trim().length < 20) {
+      setFeedback({ title: 'Completa la proposta', message: 'Inserisci un titolo di almeno 3 caratteri e una descrizione dettagliata di almeno 20 caratteri.', success: false });
+      setModal('esito');
+      return;
+    }
+    setSubmitting(true);
+    const details = [
+      `DESCRIZIONE:\n${description.trim()}`,
+      motivation.trim() ? `PERCHÉ SAREBBE UTILE:\n${motivation.trim()}` : null,
+      steps.trim() ? `COME DOVREBBE FUNZIONARE:\n${steps.trim()}` : null,
+      attachment.trim() ? `ALLEGATO/LINK:\n${attachment.trim()}` : null,
+    ].filter(Boolean).join('\n\n');
+    const result = await createTicket(subject.trim(), `proposta_modifica · ${category}`, details);
+    setSubmitting(false);
+    if (result.ok) {
+      setSubject('');
+      setDescription('');
+      setMotivation('');
+      setSteps('');
+      setAttachment('');
+      setFeedback({ title: 'Proposta inviata', message: 'La proposta è stata registrata con nome, email e orario. Potrai seguire qui la risposta dell’admin.', success: true });
     } else {
       setFeedback({ title: 'Invio non riuscito', message: result.message, success: false });
     }
