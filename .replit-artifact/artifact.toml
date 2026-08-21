@@ -13,11 +13,11 @@ paths = [ "/" ]
 localPort = 25427
 
 [services.development]
-run = "pnpm --filter @workspace/eduai-test-master run dev"
+run = "pnpm run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/eduai-test-master", "run", "build" ]
-run = [ "pnpm", "--filter", "@workspace/eduai-test-master", "run", "serve" ]
+build = [ "pnpm", "run", "build" ]
+run = [ "pnpm", "run", "serve" ]
 
 [services.env]
 PORT = "25427"
