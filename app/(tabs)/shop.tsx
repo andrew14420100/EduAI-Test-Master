@@ -183,47 +183,6 @@ export default function ShopScreen() {
           </Text>
         </View>
 
-        {/* Progress toward next reward */}
-        <View style={[styles.rewardProgress, { backgroundColor: c.card, borderColor: c.border }]}>
-          <View style={styles.rewardRow}>
-            <View>
-              <Text style={[styles.rewardLabel, { color: c.primary }]}>PROSSIMO PREMIO</Text>
-              <Text style={[styles.rewardTitle, { color: c.foreground }]}>{nextReward?.title ?? 'Collezione completata'}</Text>
-            </View>
-            <Text style={[styles.rewardAmount, { color: c.mutedForeground }]}>
-              {nextReward ? `${wallet}/${nextReward.cost}` : '100%'}
-            </Text>
-          </View>
-          <View style={[styles.track, { backgroundColor: c.secondary }]}>
-            <View style={[styles.fill, { backgroundColor: c.primary, width: `${rewardProgress}%` }]} />
-          </View>
-          <Text style={[styles.small, { color: c.mutedForeground }]}>
-            {nextReward
-              ? wallet >= nextReward.cost
-                ? 'Hai abbastanza punti: puoi sbloccarlo ora.'
-                : `Ti mancano ${nextReward.cost - wallet} punti.`
-              : 'Hai sbloccato tutti gli oggetti disponibili.'}
-          </Text>
-        </View>
-
-        <View style={[styles.levelPanel, { backgroundColor: c.card, borderColor: c.border }]}>
-          <View style={styles.rewardRow}>
-            <View>
-              <Text style={[styles.rewardLabel, { color: c.primary }]}>PROGRESSIONE</Text>
-              <Text style={[styles.rewardTitle, { color: c.foreground }]}>Livello {currentLevel} di 50</Text>
-            </View>
-            <Text style={[styles.rewardAmount, { color: c.primary }]}>{levelProgress}%</Text>
-          </View>
-          <View style={[styles.track, { backgroundColor: c.secondary }]}>
-            <View style={[styles.fill, { backgroundColor: c.primary, width: `${levelProgress}%` }]} />
-          </View>
-          <Text style={[styles.small, { color: c.mutedForeground }]}>
-            {currentLevel >= 50
-              ? 'Hai raggiunto il livello massimo: ogni punto oltre questa soglia è una ricompensa extra.'
-              : `Prossimo livello: mancano ${levelMissing} punti per arrivare al livello ${nextLevel}. La soglia di questo passaggio è ${levelTarget} punti.`}
-          </Text>
-        </View>
-
         {/* Active theme quick-toggle */}
         <View style={[styles.themeCard, { backgroundColor: c.card, borderColor: c.border }]}>
           <View style={[styles.themeIcon, { backgroundColor: theme === 'dark' ? c.primary : c.accent }]}>
