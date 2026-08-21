@@ -4,6 +4,7 @@ module.exports = () => ({
   ...appJson,
   expo: {
     ...appJson.expo,
+    owner: 'andrea144201',
     extra: {
       ...(appJson.expo.extra || {}),
       apiDomain: process.env.EXPO_PUBLIC_DOMAIN || process.env.REPLIT_INTERNAL_APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN || '',
