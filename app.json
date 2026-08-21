@@ -4,16 +4,43 @@
     "slug": "eduai-test-master",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/icon.png",
+    "scheme": "eduai-test-master",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#08111F"
+    },
+    "ios": {
+      "supportsTablet": false
+    },
     "android": {
-      "package": "com.miaapp.webview",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#ffffff"
-      }
+      "package": "com.eduai.testmaster"
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
     },
     "extra": {
+      "apiDomain": "d3f911c4-65c0-4974-a87e-4b529a43f26d-00-5762ic8pkwbr.archer.replit.dev",
+      "clerkPublishableKey": "pk_test_dHJ1c3RlZC1xdWV0emFsLTk4NjMuY2xlcmsuYWNjb3VudHMuZGV2JA",
+      "clerkProxyUrl": "",
       "eas": {
         "projectId": "29a57756-a3be-490c-ba3e-410d2ea15f7c"
       }
