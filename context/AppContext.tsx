@@ -165,6 +165,7 @@ type AppState = {
   tickets: Ticket[];
   unreadSupportCount: number;
   markTicketRead: (ticketId: string) => Promise<ActionResult>;
+  deleteAccount: () => Promise<ActionResult>;
   leaderboard: LeaderboardEntry[];
   friends: FriendEntry[];
   inviteCode: string;
@@ -894,6 +895,21 @@ export function AppProvider({
       try {
         await markTicketReadMutation.mutateAsync({ ticketId });
         await ticketsQuery.refetch();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
+      }
+    },
+    deleteAccount: async () => {
+      try {
+        await customFetch<void>('/api/profile', { method: 'DELETE', responseType: 'json' });
+        try {
+          await user?.delete();
+        } catch {
+          // Server data is already removed; sign out still blocks this session.
+        }
+        await signOut();
+        queryClient.clear();
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
