@@ -127,8 +127,18 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
     if (existing) {
       // Bootstrap is idempotent. Never overwrite the persisted username or
       // study path with Clerk data: usernames are unique and the study path is
-      // immutable after onboarding.
-      res.json(toPublicProfile(existing));
+      // immutable after onboarding. Keep the verified Clerk email current so
+      // account-based features (including admin access) use the active address.
+      if (email && email !== existing.email) {
+        const [updated] = await db
+          .update(profilesTable)
+          .set({ email, updatedAt: new Date() })
+          .where(eq(profilesTable.userId, userId))
+          .returning();
+        res.json(toPublicProfile(updated ?? existing));
+      } else {
+        res.json(toPublicProfile(existing));
+      }
     } else {
       // First-time creation — use request-provided username and email.
       // level starts as null (not yet onboarded).

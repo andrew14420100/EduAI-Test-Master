@@ -242,7 +242,7 @@ export default function LabsScreen() {
         </View>
 
         <View style={[styles.feedbackCard, { backgroundColor: c.card, borderColor: c.border }]}>
-          <Text style={[styles.feedbackTitle, { color: c.primary }]}>SPIEGAZIONE</Text>
+           <Text style={[styles.feedbackTitle, { color: c.primary }]}>FEEDBACK DELLA CORREZIONE</Text>
           <Text style={[styles.feedbackText, { color: c.foreground }]}>{result.feedback}</Text>
         </View>
         {result.score < 1 && result.solution ? (
