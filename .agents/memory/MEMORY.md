@@ -3,3 +3,4 @@
 - [PostgreSQL list filters](postgres-list-filters.md) — with Drizzle, prefer inArray for scalar lists; interpolated arrays may expand into an invalid ANY expression.
 - [Development database migration history](development-db-migration-history.md) — dev may have tables without Drizzle’s ledger; inspect schema before applying generated migrations.
 - [Metro workspace watcher](metro-workspace-watcher.md) — exclude ephemeral tool directories when Expo watches the monorepo root, or Metro can fail on deleted paths.
+- [Native TypeScript test runner](native-typescript-test-runner.md) — Node’s native type stripping needs explicit `.ts` extensions for local ESM imports; bundling may hide this.

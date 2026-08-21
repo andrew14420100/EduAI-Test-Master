@@ -6,9 +6,9 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { pipeline } from "node:stream/promises";
 import type { File } from "@google-cloud/storage";
-import { aiTranscribe } from "./aiProvider";
-import { isMeaningfulText, normalizeText } from "./contentStudy";
-import { MAX_MEDIA_UPLOAD_BYTES } from "./mediaLimits";
+import { aiTranscribe } from "./aiProvider.ts";
+import { isMeaningfulText, normalizeText } from "./contentStudy.ts";
+import { MAX_MEDIA_UPLOAD_BYTES } from "./mediaLimits.ts";
 
 const execFileAsync = promisify(execFile);
 
