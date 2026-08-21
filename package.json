@@ -62,13 +62,14 @@
     "@fortawesome/react-native-fontawesome": "^1.0.0",
     "@solana/web3.js": "^1.98.4",
     "bs58": "^6.0.0",
+    "expo": "~54.0.37",
     "expo-auth-session": "~7.0.11",
     "expo-build-properties": "~1.0.10",
     "expo-crypto": "~15.0.9",
     "expo-document-picker": "~14.0.8",
     "expo-file-system": "~19.0.24",
+    "expo-notifications": "~0.32.17",
     "expo-secure-store": "~15.0.8",
-    "expo": "~54.0.37",
     "react": "19.1.0",
     "react-native": "0.81.5"
   }
