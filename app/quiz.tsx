@@ -593,6 +593,16 @@ export default function QuizScreen() {
             Torna alla libreria
           </Text>
         </Pressable>
+        <Pressable
+          testID="flashcard-regenerate"
+          onPress={() => { void loadFlashcards(); }}
+          style={({ pressed }) => [
+            styles.secondaryBtn,
+            { backgroundColor: c.accent, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Text style={[styles.secondaryBtnText, { color: c.accentForeground }]}>Rigenera flashcard</Text>
+        </Pressable>
       </ScrollView>
     );
   }
@@ -1061,7 +1071,7 @@ export default function QuizScreen() {
 
         <View testID="retry-quiz">
           <PrimaryButton onPress={retry} icon="arrow-up-right">
-            Riprova
+            Rigenera domande
           </PrimaryButton>
         </View>
 

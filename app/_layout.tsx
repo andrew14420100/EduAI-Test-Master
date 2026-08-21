@@ -101,21 +101,25 @@ function RewardToast({
     return () => clearTimeout(timer);
   }, [event.id, onDismiss]);
 
-  const icon = animation === 'anim_fire'
-    ? 'flame'
-    : animation === 'anim_stars'
-      ? 'star'
-      : animation === 'anim_crown'
-        ? 'award'
-        : event.kind === 'amico'
-          ? 'users'
-          : event.kind === 'laboratorio'
-            ? 'flask'
+  const icon = event.kind === 'flashcard'
+    ? 'flashcards'
+    : event.kind === 'laboratorio'
+      ? 'flask'
+      : event.kind === 'amico'
+        ? 'users'
+        : event.kind === 'livello' || event.kind === 'livello_successivo'
+          ? 'award'
+          : event.kind === 'negozio' || event.kind === 'ricompensa'
+            ? 'sparkles'
             : event.kind === 'accesso'
               ? 'lock'
-              : event.kind === 'negozio'
-                ? 'sparkles'
-                : 'circle-check';
+              : animation === 'anim_fire'
+                ? 'flame'
+                : animation === 'anim_stars'
+                  ? 'star'
+                  : animation === 'anim_crown'
+                    ? 'award'
+                    : 'circle-check';
 
   return (
     <View pointerEvents="none" style={styles.rewardToast}>

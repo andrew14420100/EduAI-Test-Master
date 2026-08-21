@@ -598,7 +598,11 @@ export function AppProvider({
       || materialsQuery.isFetching
       || groupsQuery.isFetching
       || quizzesQuery.isFetching
-      || inventoryQuery.isFetching,
+      || inventoryQuery.isFetching
+      || ticketsQuery.isFetching
+      || leaderboardQuery.isFetching
+      || inviteQuery.isFetching
+      || labExercisesQuery.isFetching,
     logout: async () => {
       await signOut();
       queryClient.clear();

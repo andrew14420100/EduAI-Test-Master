@@ -307,6 +307,22 @@ export default function LabsScreen() {
           <AppIcon name="clock" size={14} color={c.mutedForeground} />
           <Text style={[styles.historyButtonText, { color: c.mutedForeground }]}>Storico</Text>
         </Pressable>
+        <Pressable
+          testID="rigenera-laboratori"
+          disabled={generating}
+          onPress={() => {
+            setGenerating(true);
+            void generateLabsForMaterials(true).then((next) => {
+              setGenerating(false);
+              if (!next.ok) setErrorModal(next.message);
+              else setGenerationMessage(`${next.created ?? 0} nuovi esercizi pratici generati.`);
+            });
+          }}
+          style={[styles.historyButton, { backgroundColor: c.accent, borderColor: c.border, opacity: generating ? 0.55 : 1 }]}
+        >
+          <AppIcon name="sparkles" size={14} color={c.accentForeground} />
+          <Text style={[styles.historyButtonText, { color: c.accentForeground }]}>{generating ? 'Generazione…' : 'Rigenera'}</Text>
+        </Pressable>
       </View>
 
       <Text style={[styles.intro, { color: c.mutedForeground }]}>
