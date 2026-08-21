@@ -938,6 +938,12 @@ paths:
       operationId: deleteLabExercise
       tags: [labs]
       summary: Delete one owned laboratory exercise and its attempts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "204":
           description: Exercise deleted
