@@ -150,6 +150,10 @@ router.post("/labs/generate", requireAuth, async (req: Request, res: Response) =
 router.post("/materials/:materialId/labs", requireAuth, async (req: Request, res: Response) => {
   const userId = (req as AuthedRequest).clerkUserId;
   const materialId = req.params.materialId as string;
+  const body = req.body as { variant?: unknown };
+  const variant = typeof body.variant === "string" && body.variant.trim()
+    ? body.variant.slice(0, 120)
+    : `${Date.now()}-${randomUUID()}`;
   try {
     const [material] = await db.select().from(materialsTable)
       .where(and(eq(materialsTable.id, materialId), eq(materialsTable.ownerId, userId)));
