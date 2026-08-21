@@ -22,7 +22,6 @@ export default function AccountSettingsScreen() {
     setBusy(true);
     setStatus('');
     try {
-      if (username.trim() && username.trim() !== user.username) await user.update({ username: username.trim() });
       if (newPassword.trim()) {
         await (user as unknown as { updatePassword: (args: { currentPassword: string; newPassword: string }) => Promise<unknown> })
           .updatePassword({ currentPassword, newPassword });
@@ -53,8 +52,8 @@ export default function AccountSettingsScreen() {
       <Text style={[styles.eyebrow, { color: c.primary }]}>ACCOUNT</Text>
       <Text style={[styles.title, { color: c.foreground }]}>Impostazioni</Text>
       <Text style={[styles.description, { color: c.mutedForeground }]}>Il percorso di studio resta bloccato perché determina i contenuti dell’app.</Text>
-      <Text style={[styles.label, { color: c.foreground }]}>Nome utente</Text>
-      <TextInput value={username} onChangeText={setUsername} autoCapitalize="none" style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
+       <Text style={[styles.label, { color: c.foreground }]}>Nome utente (non modificabile)</Text>
+       <TextInput value={username} editable={false} autoCapitalize="none" style={[styles.input, styles.disabledInput, { color: c.mutedForeground, backgroundColor: c.secondary, borderColor: c.border }]} />
       <Text style={[styles.label, { color: c.foreground }]}>Nuova email</Text>
       <TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
       <Text style={[styles.label, { color: c.foreground }]}>Password attuale</Text>
@@ -78,6 +77,7 @@ const styles = StyleSheet.create({
   description: { fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 20, marginBottom: 8 },
   label: { fontFamily: 'Inter_600SemiBold', fontSize: 13, marginTop: 5 },
   input: { borderWidth: 1, borderRadius: 14, padding: 13, fontFamily: 'Inter_500Medium', fontSize: 15 },
+  disabledInput: { opacity: 0.8 },
   button: { borderRadius: 16, padding: 15, alignItems: 'center', marginTop: 10 },
   buttonText: { fontFamily: 'Inter_700Bold', fontSize: 15 },
   status: { fontFamily: 'Inter_500Medium', fontSize: 13, lineHeight: 19, marginTop: 4 },

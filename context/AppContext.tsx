@@ -196,6 +196,7 @@ type AppState = {
   hasLabsByDefault: boolean;
   labsLoading: boolean;
   submitLabAttempt: (exerciseId: string, userAnswer: string) => Promise<{ ok: true; result: { score: number; feedback: string; solution?: string; earnedPoints: number; totalPoints: number } } | { ok: false; message: string }>;
+  deleteLabExercise: (exerciseId: string) => Promise<ActionResult>;
   enableLabs: (enabled: boolean) => Promise<ActionResult>;
 };
 
@@ -948,6 +949,24 @@ export function AppProvider({
             totalPoints: attempt.totalPoints,
           },
         };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
+      }
+    },
+    deleteLabExercise: async (exerciseId) => {
+      try {
+        const token = await getToken();
+        const base = configuredApiDomain ? `https://${configuredApiDomain}` : '';
+        const response = await fetch(`${base}/api/labs/exercises/${exerciseId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token ?? ''}` },
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({})) as { error?: string };
+          return { ok: false, message: body.error ?? 'Impossibile eliminare il laboratorio.' };
+        }
+        await Promise.all([labExercisesQuery.refetch(), labAttemptsQuery.refetch()]);
+        return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
       }

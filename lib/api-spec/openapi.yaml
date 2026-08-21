@@ -934,6 +934,15 @@ paths:
                 $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Exercise not found
+    delete:
+      operationId: deleteLabExercise
+      tags: [labs]
+      summary: Delete one owned laboratory exercise and its attempts
+      responses:
+        "204":
+          description: Exercise deleted
+        "404":
+          description: Exercise not found
           content:
             application/json:
               schema:

@@ -98,7 +98,6 @@ export default function HomeScreen() {
             <Text style={[styles.cardLabel, { color: c.mutedForeground }]}>IL TUO PERCORSO</Text>
             <Text style={[styles.level, { color: c.foreground }]}>{level ?? 'Scegli il tuo indirizzo'}</Text>
           </View>
-          <AppIcon name="chevron-right" size={15} color={c.mutedForeground} />
         </View>
 
         <View style={styles.stats}>

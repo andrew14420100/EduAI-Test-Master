@@ -37,7 +37,7 @@ export default function ProfileScreen() {
     hasLabsByDefault,
     enableLabs,
   } = useApp();
-  const isAdmin = account?.email?.toLowerCase() === 'andcolaz@gmail.com';
+  const isAdmin = account?.email?.toLowerCase() === 'andcolaz13@gmail.com';
   const [modal, setModal] = useState<ProfileModal>(null);
   const [togglingLabs, setTogglingLabs] = useState(false);
   const [subject, setSubject] = useState('');

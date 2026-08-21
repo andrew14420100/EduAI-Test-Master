@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -54,6 +55,7 @@ export default function LabsScreen() {
     enableLabs,
     labsLoading,
     generateLabsForMaterials,
+    deleteLabExercise,
   } = useApp();
 
   const [view, setView] = useState<ViewMode>('list');
@@ -371,7 +373,28 @@ export default function LabsScreen() {
                     </View>
                   </View>
                 </View>
-                <AppIcon name="chevron-right" size={14} color={c.mutedForeground} />
+                <Pressable
+                  accessibilityLabel={`Elimina ${ex.title}`}
+                  hitSlop={10}
+                  onPress={() => Alert.alert(
+                    'Eliminare il laboratorio?',
+                    'Il laboratorio e i suoi tentativi verranno eliminati definitivamente.',
+                    [
+                      { text: 'Annulla', style: 'cancel' },
+                      {
+                        text: 'Elimina',
+                        style: 'destructive',
+                        onPress: () => {
+                          void deleteLabExercise(ex.id).then((deleted) => {
+                            if (!deleted.ok) setErrorModal(deleted.message);
+                          });
+                        },
+                      },
+                    ],
+                  )}
+                >
+                  <AppIcon name="trash" size={15} color={c.destructive} />
+                </Pressable>
               </Pressable>
             ))}
           </View>

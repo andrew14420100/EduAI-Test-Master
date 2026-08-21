@@ -29,7 +29,7 @@ function fallbackExercises(
     const item = sentences[index % sentences.length]!;
     const focus = keyTermsOf(item.sentence).slice(0, 4).join(", ") || "il concetto studiato";
     const taskTemplates = [
-      `Imposta un caso concreto in cui applicheresti ${focus}. Descrivi dati iniziali, procedimento passo per passo e risultato atteso.`,
+       `Imposta un caso concreto in cui applicheresti ${focus}. Descrivi dati iniziali, procedimento passo per passo e risultato atteso.`,
       `Trasforma ${focus} in una procedura operativa: indica input, passaggi, controlli e output finale usando un esempio numerico o concreto.`,
       `Confronta due situazioni legate a ${focus}. Spiega quale procedimento useresti in ciascun caso e giustifica la scelta.`,
       `Progetta un piccolo esercizio su ${focus}, risolvilo mostrando tutti i passaggi e verifica che il risultato sia coerente.`,
@@ -38,7 +38,7 @@ function fallbackExercises(
       topic: item.material.title,
       title: `Laboratorio pratico · ${focus}`,
       prompt: taskTemplates[index % taskTemplates.length]!,
-      solution: `La soluzione deve usare il contenuto del materiale, in particolare: ${item.sentence}`,
+       solution: `Soluzione svolta: parti da ${item.sentence} come dato o principio di riferimento, applicalo al caso concreto, mostra i passaggi essenziali e verifica che il risultato finale sia coerente con il procedimento.`,
       difficulty: index % 3 === 0 ? "base" : index % 3 === 1 ? "medio" : "avanzato",
       points: 10 + (index % 3) * 5,
     });
@@ -103,7 +103,7 @@ router.post("/labs/generate", requireAuth, async (req: Request, res: Response) =
         max_completion_tokens: 12000,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: "Sei un docente italiano. Crea esattamente 15 laboratori pratici originali usando esclusivamente i materiali forniti. Non creare teoria o scelta multipla. Ogni esercizio deve richiedere calcoli, dati, procedimenti, pseudocodice o applicazione concreta. Indica nel topic il materiale o l'argomento di riferimento. Rispondi solo JSON con {\"exercises\":[{\"topic\":\"...\",\"title\":\"...\",\"prompt\":\"...\",\"solution\":\"...\",\"difficulty\":\"base|medio|avanzato\",\"points\":number}]}." },
+           { role: "system", content: "Sei un docente italiano. Crea esattamente 15 laboratori pratici originali usando esclusivamente i materiali forniti. Non creare teoria o scelta multipla. Ogni esercizio deve richiedere calcoli, dati, procedimenti, pseudocodice o applicazione concreta. Per solution scrivi la vera soluzione corretta e completa, svolta passo per passo, con il risultato finale e una verifica; non usare formule vaghe come 'la soluzione deve usare'. Indica nel topic il materiale o l'argomento di riferimento. Rispondi solo JSON con {\"exercises\":[{\"topic\":\"...\",\"title\":\"...\",\"prompt\":\"...\",\"solution\":\"...\",\"difficulty\":\"base|medio|avanzato\",\"points\":number}]}." },
            { role: "user", content: `VARIANTE DI GENERAZIONE: ${variant}\n\n${sourceText}` },
         ],
       });
@@ -168,7 +168,7 @@ router.post("/materials/:materialId/labs", requireAuth, async (req: Request, res
         max_completion_tokens: 12000,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: "Sei un docente italiano. Crea esattamente 15 laboratori pratici originali basati solo sul materiale fornito. Non creare domande teoriche o a scelta multipla. Ogni esercizio deve richiedere calcoli, dati, procedimenti, pseudocodice o applicazione concreta. Rispondi solo JSON con {\"exercises\":[{\"topic\":\"...\",\"title\":\"...\",\"prompt\":\"...\",\"solution\":\"...\",\"difficulty\":\"base|medio|avanzato\",\"points\":number}]}." },
+           { role: "system", content: "Sei un docente italiano. Crea esattamente 15 laboratori pratici originali basati solo sul materiale fornito. Non creare domande teoriche o a scelta multipla. Ogni esercizio deve richiedere calcoli, dati, procedimenti, pseudocodice o applicazione concreta. Per solution scrivi la vera soluzione corretta e completa, svolta passo per passo, con il risultato finale e una verifica; non usare formule vaghe. Rispondi solo JSON con {\"exercises\":[{\"topic\":\"...\",\"title\":\"...\",\"prompt\":\"...\",\"solution\":\"...\",\"difficulty\":\"base|medio|avanzato\",\"points\":number}]}." },
            { role: "user", content: `VARIANTE DI GENERAZIONE: ${variant}\n\nMateriale: ${material.title}\n\nCONTENUTO:\n${material.extractedText.slice(0, 120000)}` },
         ],
       });
@@ -223,9 +223,9 @@ async function gradeFreeTextOnce(
       {
         role: "system",
         content:
-          "Sei un docente italiano. Valuta la risposta dello studente in modo oggettivo e restituisci esclusivamente JSON valido. " +
+           "Sei un docente italiano. Valuta la risposta dello studente in modo oggettivo e restituisci esclusivamente JSON valido. " +
           "Il campo 'score' deve essere: 1.0 se la risposta è sostanzialmente corretta, 0.5 se parzialmente corretta, 0.0 se errata o irrilevante. " +
-          "Il campo 'feedback' deve essere una spiegazione didattica in italiano (2-4 frasi) che chiarisca la risposta corretta senza copiare verbatim la chiave fornita.",
+           "Accetta formulazioni, metodi e notazioni diverse dalla risposta attesa quando portano allo stesso risultato o dimostrano gli stessi concetti corretti. Non richiedere le stesse parole della chiave. Il campo 'feedback' deve essere una spiegazione didattica in italiano (2-4 frasi) che chiarisca il procedimento corretto senza copiare verbatim la chiave fornita.",
       },
       {
         role: "user",
@@ -410,6 +410,33 @@ router.get("/labs/exercises/:id", requireAuth, async (req: Request, res: Respons
   } catch (err) {
     req.log.error({ err }, "Errore lettura esercizio laboratorio");
     res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
+// ── DELETE /labs/exercises/:id ────────────────────────────────────────────────
+// Deleting an exercise also removes its attempts so the user cannot retain
+// history rows that point to a laboratory which no longer exists.
+router.delete("/labs/exercises/:id", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthedRequest).clerkUserId;
+  const exerciseId = req.params.id as string;
+  try {
+    const [exercise] = await db
+      .select({ id: labExercisesTable.id })
+      .from(labExercisesTable)
+      .innerJoin(materialsTable, eq(labExercisesTable.sourceMaterialId, materialsTable.id))
+      .where(and(eq(labExercisesTable.id, exerciseId), eq(materialsTable.ownerId, userId)));
+    if (!exercise) {
+      res.status(404).json({ error: "Esercizio non trovato" });
+      return;
+    }
+    await db.transaction(async (tx) => {
+      await tx.delete(labAttemptsTable).where(eq(labAttemptsTable.exerciseId, exerciseId));
+      await tx.delete(labExercisesTable).where(eq(labExercisesTable.id, exerciseId));
+    });
+    res.status(204).send();
+  } catch (err) {
+    req.log.error({ err, userId, exerciseId }, "Errore eliminazione esercizio laboratorio");
+    res.status(500).json({ error: "Impossibile eliminare il laboratorio." });
   }
 });
 
