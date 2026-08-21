@@ -1,12 +1,12 @@
-import { createReadStream, createWriteStream } from "node:fs";
-import { access, mkdtemp, readdir, rm, stat } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { access, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { pipeline } from "node:stream/promises";
 import type { File } from "@google-cloud/storage";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { aiTranscribe } from "./aiProvider";
 import { isMeaningfulText, normalizeText } from "./contentStudy";
 import { MAX_MEDIA_UPLOAD_BYTES } from "./mediaLimits";
 
@@ -107,16 +107,8 @@ async function extractAudioChunks(sourcePath: string, outputPattern: string) {
 }
 
 async function transcribeFile(filePath: string) {
-  const response = await openai.audio.transcriptions.create(
-    {
-      file: createReadStream(filePath),
-      model: "gpt-4o-mini-transcribe",
-      language: "it",
-      response_format: "json",
-    },
-    { timeout: 10 * 60_000 },
-  );
-  return response.text;
+  const audio = await readFile(filePath);
+  return (await aiTranscribe(audio, "audio.m4a")).text;
 }
 
 async function transcribeWithRetry(filePath: string, chunkNumber: number) {

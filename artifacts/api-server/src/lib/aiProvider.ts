@@ -107,6 +107,60 @@ export async function aiChat(options: AiChatOptions): Promise<{ content: string;
   throw lastError;
 }
 
+export async function aiTranscribe(
+  audio: Buffer,
+  filename = "audio.m4a",
+): Promise<{ text: string; provider: "groq" | "gemini" }> {
+  const groqKey = configured("GROQ_API_KEY");
+  if (groqKey) {
+    try {
+      const form = new FormData();
+      form.append("file", new Blob([audio]), filename);
+      form.append("model", configured("GROQ_TRANSCRIPTION_MODEL") ?? "whisper-large-v3-turbo");
+      form.append("language", "it");
+      const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+        method: "POST",
+        signal: AbortSignal.timeout(10 * 60_000),
+        headers: { Authorization: `Bearer ${groqKey}` },
+        body: form,
+      });
+      if (!response.ok) throw new Error(`GROQ_TRANSCRIPTION_${response.status}`);
+      const body = await response.json() as { text?: string };
+      if (body.text?.trim()) return { text: body.text.trim(), provider: "groq" };
+    } catch {
+      // Continue to Gemini when Groq is rate-limited or unavailable.
+    }
+  }
+
+  const geminiKey = configured("GEMINI_API_KEY");
+  if (geminiKey) {
+    const response = await fetch(
+      `${GEMINI_URL}/${configured("GEMINI_MODEL") ?? DEFAULT_GEMINI_MODEL}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+      {
+        method: "POST",
+        signal: AbortSignal.timeout(10 * 60_000),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            role: "user",
+            parts: [
+              { text: "Trascrivi integralmente questo audio in italiano. Restituisci solo il testo trascritto." },
+              { inlineData: { mimeType: "audio/m4a", data: audio.toString("base64") } },
+            ],
+          }],
+        }),
+      },
+    );
+    if (!response.ok) throw new Error(`GEMINI_TRANSCRIPTION_${response.status}`);
+    const body = await response.json() as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
+    if (text) return { text, provider: "gemini" };
+  }
+  throw new Error("AI_NO_FREE_TRANSCRIPTION_PROVIDER");
+}
+
 export function parseAiJson<T>(content: string): T {
   const cleaned = content
     .replace(/^```(?:json)?\s*/i, "")
