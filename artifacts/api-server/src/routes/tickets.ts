@@ -23,6 +23,10 @@ async function ticketDetails(tickets: (typeof ticketsTable.$inferSelect)[]) {
   }
   return tickets.map((ticket) => ({
     ...ticket,
+    unread: messagesByTicketId.get(ticket.id)?.some(
+      (message) => message.authorRole === "admin"
+        && (!ticket.readAt || message.createdAt > ticket.readAt),
+    ) ?? false,
     messages: [
       {
         id: `initial-${ticket.id}`,
@@ -51,6 +55,26 @@ router.get("/tickets", requireAuth, async (req: Request, res: Response) => {
     res.json(await ticketDetails(tickets));
   } catch (err) {
     req.log.error({ err }, "Errore lista ticket");
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
+router.patch("/tickets/:ticketId/read", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthedRequest).clerkUserId;
+  const ticketId = req.params.ticketId as string;
+  try {
+    const [ticket] = await db
+      .update(ticketsTable)
+      .set({ readAt: new Date() })
+      .where(and(eq(ticketsTable.id, ticketId), eq(ticketsTable.userId, userId)))
+      .returning();
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket non trovato" });
+      return;
+    }
+    res.json((await ticketDetails([ticket]))[0]);
+  } catch (err) {
+    req.log.error({ err }, "Errore aggiornamento lettura ticket");
     res.status(500).json({ error: "Errore interno del server" });
   }
 });

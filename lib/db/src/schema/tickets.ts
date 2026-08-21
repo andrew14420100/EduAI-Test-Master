@@ -9,6 +9,7 @@ export const ticketsTable = pgTable("tickets", {
   status: text("status").notNull().default("open"), // open | closed | in_progress
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  readAt: timestamp("read_at"),
   closedAt: timestamp("closed_at"),
   closedBy: text("closed_by"),
 });
