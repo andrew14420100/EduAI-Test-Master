@@ -26,6 +26,7 @@ export type MediaTranscriptionResult =
   | { status: "failed"; text: null; error: string };
 
 export type OcrResult = ExtractionResult;
+export type OcrRecognizer = (image: Buffer, mimeType: string) => Promise<{ text: string }>;
 
 type ProbeResult = {
   duration: number | null;
@@ -137,6 +138,27 @@ async function cleanTemporaryDirectory(directory: string) {
   await rm(directory, { recursive: true, force: true }).catch(() => undefined);
 }
 
+export async function extractOcrTextFromImages(
+  imagePaths: string[],
+  recognize: OcrRecognizer = aiOcr,
+): Promise<OcrResult> {
+  const chunks: string[] = [];
+  for (const imagePath of imagePaths) {
+    const image = await readFile(imagePath);
+    const result = await recognize(image, "image/png");
+    if (result.text.trim()) chunks.push(result.text.trim());
+  }
+  const text = normalizeText(chunks.join("\n"));
+  if (!isMeaningfulText(text)) {
+    return {
+      status: "failed",
+      text: null,
+      error: "Non è stato riconosciuto abbastanza testo leggibile: il materiale non può alimentare verifiche o flashcard.",
+    };
+  }
+  return { status: "ready", text, error: null };
+}
+
 async function renderPdfPages(sourcePath: string, directory: string): Promise<string[]> {
   const outputPrefix = join(directory, "page");
   try {
@@ -163,8 +185,9 @@ export async function ocrMediaObject(params: {
   contentType: string;
   size: number | null;
   fileName?: string;
+  recognize?: OcrRecognizer;
 }): Promise<OcrResult> {
-  const { objectFile, contentType, size, fileName = "" } = params;
+  const { objectFile, contentType, size, fileName = "", recognize = aiOcr } = params;
   if (size !== null && size > MAX_OCR_BYTES) {
     return { status: "failed", text: null, error: "Il file è troppo grande per l'OCR. Riduci le dimensioni e riprova." };
   }
@@ -182,17 +205,7 @@ export async function ocrMediaObject(params: {
     if (pagePaths.length === 0) {
       return { status: "failed", text: null, error: "Impossibile preparare le pagine scansionate per l'OCR." };
     }
-    const chunks: string[] = [];
-    for (const pagePath of pagePaths) {
-      const image = await readFile(pagePath);
-      const result = await aiOcr(image, "image/png");
-      if (result.text.trim()) chunks.push(result.text.trim());
-    }
-    const text = normalizeText(chunks.join("\n"));
-    if (!isMeaningfulText(text)) {
-      return { status: "failed", text: null, error: "Non è stato riconosciuto abbastanza testo leggibile: il materiale non può alimentare verifiche o flashcard." };
-    }
-    return { status: "ready", text, error: null };
+    return await extractOcrTextFromImages(pagePaths, recognize);
   } catch {
     return { status: "failed", text: null, error: "L'OCR non è riuscito a leggere il materiale. Puoi riprovare l'analisi." };
   } finally {

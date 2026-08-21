@@ -9,6 +9,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import zlib from "node:zlib";
+import { Readable } from "node:stream";
+import { execFile as nodeExecFile } from "node:child_process";
+import { promisify } from "node:util";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import type { File } from "@google-cloud/storage";
 
 import {
   extractStudyText,
@@ -19,6 +25,19 @@ import {
   MAX_DECOMPRESSED_BYTES,
   type SourceMaterial,
 } from "./contentStudy.ts";
+import { ocrMediaObject, type OcrRecognizer } from "./mediaTranscription.ts";
+
+const execFile = promisify(nodeExecFile);
+const SAMPLE_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
+
+function objectFileFrom(buffer: Buffer): File {
+  return {
+    createReadStream: () => Readable.from([buffer]),
+  } as unknown as File;
+}
 
 // Two clearly different textual contents.
 const CONTENT_A = `La fotosintesi clorofilliana è il processo con cui le piante convertono
@@ -134,4 +153,77 @@ test("compressed PDF output is bounded against decompression bombs", () => {
   assert.equal(result.status, "failed");
   assert.equal(result.text, null);
   assert.match(result.error ?? "", /limite sicuro/i);
+});
+
+test("a readable sample image becomes ready OCR content", async () => {
+  const directory = await mkdtemp(`${tmpdir()}/eduai-ocr-test-`);
+  const imagePath = `${directory}/sample.png`;
+  await writeFile(imagePath, SAMPLE_PNG);
+  const recognize: OcrRecognizer = async (image) => {
+    assert.ok(image.length > 0, "OCR must receive the image bytes");
+    return { text: "La fotosintesi usa la luce per produrre glucosio." };
+  };
+
+  try {
+    const result = await ocrMediaObject({
+      objectFile: objectFileFrom(SAMPLE_PNG),
+      contentType: "image/png",
+      size: SAMPLE_PNG.length,
+      fileName: "appunto.png",
+      recognize,
+    });
+    assert.equal(result.status, "ready");
+    assert.equal(result.text, "La fotosintesi usa la luce per produrre glucosio.");
+    assert.ok(result.text && isMeaningfulText(result.text));
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("an unreadable image stays failed and cannot become study content", async () => {
+  const recognize: OcrRecognizer = async () => ({ text: "" });
+  const result = await ocrMediaObject({
+    objectFile: objectFileFrom(SAMPLE_PNG),
+    contentType: "image/png",
+    size: SAMPLE_PNG.length,
+    fileName: "sfocata.png",
+    recognize,
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.text, null);
+  assert.match(result.error ?? "", /testo leggibile/i);
+  assert.equal(isMeaningfulText(result.text ?? ""), false);
+  assert.equal(generateQuestionsWithKey([], 3, "unreadable").length, 0);
+  assert.equal(generateFlashcards([], 3, "unreadable").length, 0);
+});
+
+test("a PDF rendered without a text layer uses the OCR fallback", async () => {
+  const directory = await mkdtemp(`${tmpdir()}/eduai-pdf-ocr-test-`);
+  const imagePath = `${directory}/scan.png`;
+  const pdfPath = `${directory}/scan.pdf`;
+  await writeFile(imagePath, SAMPLE_PNG);
+  await execFile("magick", [imagePath, "-compress", "Zip", pdfPath]);
+  const pdf = await import("node:fs/promises").then(({ readFile }) => readFile(pdfPath));
+  let pagesSeen = 0;
+  const recognize: OcrRecognizer = async (image) => {
+    pagesSeen++;
+    assert.ok(image.length > 0);
+    return { text: "Il teorema di Pitagora collega ipotenusa e cateti." };
+  };
+
+  try {
+    const result = await ocrMediaObject({
+      objectFile: objectFileFrom(pdf),
+      contentType: "application/pdf",
+      size: pdf.length,
+      fileName: "scansione.pdf",
+      recognize,
+    });
+    assert.equal(result.status, "ready");
+    assert.equal(result.text, "Il teorema di Pitagora collega ipotenusa e cateti.");
+    assert.ok(pagesSeen >= 1, "the PDF must be rendered and sent to OCR");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
