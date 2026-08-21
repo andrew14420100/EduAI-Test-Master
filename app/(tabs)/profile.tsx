@@ -20,7 +20,21 @@ function ticketStatusLabel(status: string) {
 export default function ProfileScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { account, level, wallet, quizzes, streak, tickets, logout, createTicket, labsEnabled, hasLabsByDefault, enableLabs } = useApp();
+  const {
+    account,
+    level,
+    wallet,
+    quizzes,
+    streak,
+    tickets,
+    unreadSupportCount,
+    markTicketRead,
+    logout,
+    createTicket,
+    labsEnabled,
+    hasLabsByDefault,
+    enableLabs,
+  } = useApp();
   const isAdmin = account?.email?.toLowerCase() === 'andcolaz@gmail.com';
   const [modal, setModal] = useState<ProfileModal>(null);
   const [togglingLabs, setTogglingLabs] = useState(false);
@@ -30,9 +44,16 @@ export default function ProfileScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState({ title: '', message: '', success: false });
 
+  const openSupport = () => {
+    setModal('ticket');
+    for (const ticket of tickets) {
+      if (ticket.unread) void markTicketRead(ticket.id);
+    }
+  };
+
   const preferences: { label: string; icon: AppIconName; action: () => void }[] = [
     { label: 'Percorso di studio', icon: 'book', action: () => router.push('/onboarding') },
-    { label: 'Assistenza', icon: 'support', action: () => setModal('ticket') },
+    { label: 'Assistenza', icon: 'support', action: openSupport },
     { label: 'Avvisi', icon: 'bell', action: () => setModal('avvisi') },
     { label: 'Privacy e dati', icon: 'shield', action: () => setModal('privacy') },
     { label: 'Impostazioni account', icon: 'book', action: () => router.push('/account-settings') },
@@ -126,13 +147,32 @@ export default function ProfileScreen() {
         </View>
 
         <SectionTitle eyebrow="Assistenza" title="Le tue richieste" />
+        {unreadSupportCount > 0 ? (
+          <Pressable
+            testID="avviso-risposta-assistenza"
+            onPress={openSupport}
+            style={[styles.supportNotice, { backgroundColor: c.accent, borderColor: c.primary }]}
+          >
+            <AppIcon name="bell" size={17} color={c.accentForeground} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.ticketTitle, { color: c.accentForeground }]}>
+                {unreadSupportCount === 1 ? 'Hai una nuova risposta' : `Hai ${unreadSupportCount} nuove risposte`}
+              </Text>
+              <Text style={[styles.small, { color: c.accentForeground }]}>Apri l’assistenza per leggerle.</Text>
+            </View>
+            <AppIcon name="chevron-right" size={14} color={c.accentForeground} />
+          </Pressable>
+        ) : null}
         {tickets.length ? tickets.slice(0, 3).map((ticket) => (
-          <View key={ticket.id} style={[styles.ticket, { backgroundColor: c.card, borderColor: c.border }]}>
+          <Pressable key={ticket.id} onPress={() => { if (ticket.unread) void markTicketRead(ticket.id); }} style={[styles.ticket, { backgroundColor: c.card, borderColor: ticket.unread ? c.primary : c.border }]}>
             <View style={[styles.ticketIcon, { backgroundColor: c.secondary }]}>
               <AppIcon name="support" size={15} color={c.foreground} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.ticketTitle, { color: c.foreground }]} numberOfLines={1}>{ticket.subject}</Text>
+              <View style={styles.ticketHeading}>
+                <Text style={[styles.ticketTitle, { color: c.foreground, flex: 1 }]} numberOfLines={1}>{ticket.subject}</Text>
+                {ticket.unread ? <View style={[styles.unreadDot, { backgroundColor: c.primary }]} /> : null}
+              </View>
               <Text style={[styles.small, { color: c.mutedForeground }]}>
                 #{ticket.id.slice(0, 8).toUpperCase()} · {ticket.category} · {ticketStatusLabel(ticket.status)}
               </Text>
@@ -140,7 +180,7 @@ export default function ProfileScreen() {
                 <Text key={entry.id} style={[styles.small, { color: c.primary, marginTop: 4 }]} numberOfLines={2}>Assistenza: {entry.message}</Text>
               ))}
             </View>
-          </View>
+          </Pressable>
         )) : (
           <Pressable testID="apri-primo-ticket" onPress={() => setModal('ticket')} style={[styles.emptyTicket, { backgroundColor: c.card, borderColor: c.border }]}>
             <AppIcon name="support" size={18} color={c.primary} />
@@ -262,6 +302,9 @@ const styles = StyleSheet.create({
   prefIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   prefText: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 14 },
   ticket: { borderWidth: 1, borderRadius: 16, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'center' },
+  supportNotice: { borderWidth: 1, borderRadius: 16, padding: 13, flexDirection: 'row', gap: 10, alignItems: 'center' },
+  ticketHeading: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4 },
   emptyTicket: { borderWidth: 1, borderRadius: 17, padding: 14, flexDirection: 'row', gap: 11, alignItems: 'center' },
   ticketIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   ticketTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 13, marginBottom: 3 },
