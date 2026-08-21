@@ -1,6 +1,22 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and, isNull } from "drizzle-orm";
-import { db, profilesTable } from "@workspace/db";
+import {
+  db,
+  friendshipsTable,
+  groupMembershipsTable,
+  labAttemptsTable,
+  materialsTable,
+  mistakeItemsTable,
+  ownedShopItemsTable,
+  pendingUploadsTable,
+  profilesTable,
+  quickExplanationsTable,
+  quizAttemptsTable,
+  quizSessionsTable,
+  studyGroupsTable,
+  ticketMessagesTable,
+  ticketsTable,
+} from "@workspace/db";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 import { generateInviteCode } from "../lib/inviteCode";
 import { hasLabsByDefault } from "../lib/labPath";
@@ -37,6 +53,47 @@ router.get("/profile", requireAuth, async (req: Request, res: Response) => {
   } catch (err) {
     req.log.error({ err }, "Errore lettura profilo");
     res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
+/**
+ * DELETE /profile — permanently remove the current user's application data.
+ * Clerk credentials are revoked by the client after this succeeds; this route
+ * removes every server-side record owned by the authenticated Clerk user.
+ */
+router.delete("/profile", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthedRequest).clerkUserId;
+  try {
+    await db.transaction(async (tx) => {
+      const userTickets = await tx
+        .select({ id: ticketsTable.id })
+        .from(ticketsTable)
+        .where(eq(ticketsTable.userId, userId));
+      if (userTickets.length) {
+        await tx.delete(ticketMessagesTable).where(
+          inArray(ticketMessagesTable.ticketId, userTickets.map((ticket) => ticket.id)),
+        );
+        await tx.delete(ticketsTable).where(eq(ticketsTable.userId, userId));
+      }
+      await tx.delete(labAttemptsTable).where(eq(labAttemptsTable.userId, userId));
+      await tx.delete(quizAttemptsTable).where(eq(quizAttemptsTable.userId, userId));
+      await tx.delete(quizSessionsTable).where(eq(quizSessionsTable.userId, userId));
+      await tx.delete(mistakeItemsTable).where(eq(mistakeItemsTable.userId, userId));
+      await tx.delete(quickExplanationsTable).where(eq(quickExplanationsTable.userId, userId));
+      await tx.delete(ownedShopItemsTable).where(eq(ownedShopItemsTable.userId, userId));
+      await tx.delete(pendingUploadsTable).where(eq(pendingUploadsTable.ownerId, userId));
+      await tx.delete(groupMembershipsTable).where(eq(groupMembershipsTable.userId, userId));
+      await tx.delete(studyGroupsTable).where(eq(studyGroupsTable.ownerId, userId));
+      await tx.delete(friendshipsTable).where(
+        or(eq(friendshipsTable.userId, userId), eq(friendshipsTable.friendId, userId)),
+      );
+      await tx.delete(materialsTable).where(eq(materialsTable.ownerId, userId));
+      await tx.delete(profilesTable).where(eq(profilesTable.userId, userId));
+    });
+    res.status(204).send();
+  } catch (err) {
+    req.log.error({ err }, "Errore eliminazione definitiva account");
+    res.status(500).json({ error: "Impossibile eliminare definitivamente l'account." });
   }
 });
 
