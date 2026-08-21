@@ -236,7 +236,8 @@ export async function generateExamQuestions(
           `Crea esattamente ${count} quesiti per un fac-simile impegnativo.\n` +
            `Inserisci almeno ${trueFalseCount} vero/falso con esattamente due opzioni ("Vero", "Falso") e almeno ${completionCount} completamenti con "______".\n` +
           `Almeno ${applicationCount} devono verificare collegamenti, confronto o applicazione fra concetti e avere quattro opzioni.\n` +
-          "Per tutti gli altri quesiti usa quattro opzioni. Alterna gli argomenti, evita duplicati e non rivelare mai la risposta nella formulazione.\n" +
+           "Per tutti gli altri quesiti usa quattro opzioni. Scegli casualmente l'ordine dei tre formati e alterna gli argomenti; " +
+           "evita duplicati e non rivelare mai la risposta nella formulazione.\n" +
            'Per ogni elemento indica questionType ("scelta_multipla"|"completamento"|"vero_falso"). Restituisci soltanto {"questions":[{"question":"...","options":["..."],"correctIndex":0,"sourceTitle":"...","evidence":"...","difficulty":"base|medio|avanzato","questionType":"..."}]}.\n\n' +
           `CONTENUTO DA STUDIARE:\n${context}`,
       },
