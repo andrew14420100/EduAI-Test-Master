@@ -92,14 +92,14 @@ export default function HomeScreen() {
           <IconButton name="bell" label="Avvisi" onPress={() => setNotice({ title: 'Nessun nuovo avviso', message: 'Quando saranno disponibili aggiornamenti sui tuoi contenuti, li troverai qui.', icon: 'bell' })} />
         </View>
 
-        <Pressable testID="modifica-percorso" onPress={() => router.push('/onboarding')} style={[styles.levelCard, { backgroundColor: c.card, borderColor: c.border }]}>
+        <View testID="percorso-bloccato" style={[styles.levelCard, { backgroundColor: c.card, borderColor: c.border }]}>
           <View style={[styles.avatar, { backgroundColor: c.accent }]}><AppIcon name="book-open" size={17} color={c.accentForeground} /></View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.cardLabel, { color: c.mutedForeground }]}>IL TUO PERCORSO</Text>
             <Text style={[styles.level, { color: c.foreground }]}>{level ?? 'Scegli il tuo indirizzo'}</Text>
           </View>
           <AppIcon name="chevron-right" size={15} color={c.mutedForeground} />
-        </Pressable>
+        </View>
 
         <View style={styles.stats}>
           <View style={[styles.stat, { backgroundColor: c.card }]}><Text style={[styles.statValue, { color: c.primary }]}>{streak}</Text><Text style={[styles.statLabel, { color: c.mutedForeground }]}>giorni attivi</Text></View>

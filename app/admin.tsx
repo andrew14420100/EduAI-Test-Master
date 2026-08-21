@@ -115,6 +115,7 @@ export default function AdminScreen() {
         <Text style={[styles.section, { color: c.foreground }]}>Ticket e cronologia</Text>
         {tickets.isLoading ? <Text style={[styles.body, { color: c.mutedForeground }]}>Caricamento ticket…</Text> : tickets.data?.map((ticket) => (
           <Pressable key={ticket.id} onPress={() => setSelected(ticket)} style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
+            <Text style={[styles.cardTitle, { color: c.primary }]}>#{ticket.id.slice(0, 8).toUpperCase()}</Text>
             <Text style={[styles.cardTitle, { color: c.foreground }]}>{ticket.subject}</Text>
             <Text style={[styles.body, { color: c.mutedForeground }]}>{ticket.user?.username ?? ticket.userId} · {ticket.status}</Text>
             <Text style={[styles.body, { color: c.mutedForeground }]} numberOfLines={2}>{ticket.messages.at(-1)?.message}</Text>
@@ -123,7 +124,7 @@ export default function AdminScreen() {
         <Text style={[styles.section, { color: c.foreground }]}>Utenti</Text>
         <Text style={[styles.body, { color: c.mutedForeground }]}>{users.data?.length ?? 0} utenti registrati</Text>
       </ScrollView>
-      <AppModal visible={Boolean(selected)} title={selected?.subject ?? ''} message={selected?.user?.email ?? selected?.userId} icon="support" onDismiss={() => setSelected(null)} actions={[
+      <AppModal visible={Boolean(selected)} title={selected ? `Ticket #${selected.id.slice(0, 8).toUpperCase()}` : ''} message={selected?.user?.email ?? selected?.userId} icon="support" onDismiss={() => setSelected(null)} actions={[
         { label: reply.isPending ? 'Invio…' : 'Rispondi', variant: 'primaria', onPress: () => { void submit(false); } },
         { label: 'Rispondi e chiudi', variant: 'pericolo', onPress: () => { void submit(true); } },
         { label: 'Annulla', onPress: () => setSelected(null) },

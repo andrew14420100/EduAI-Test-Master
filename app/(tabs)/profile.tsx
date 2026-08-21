@@ -15,6 +15,7 @@ export default function ProfileScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { account, level, wallet, quizzes, streak, tickets, logout, createTicket, labsEnabled, hasLabsByDefault, enableLabs } = useApp();
+  const isAdmin = account?.email?.toLowerCase() === 'andcolaz@gmail.com';
   const [modal, setModal] = useState<ProfileModal>(null);
   const [togglingLabs, setTogglingLabs] = useState(false);
   const [subject, setSubject] = useState('');
@@ -31,6 +32,9 @@ export default function ProfileScreen() {
     { label: 'Impostazioni account', icon: 'book', action: () => router.push('/account-settings') },
     { label: 'Esci dall’account', icon: 'logout', action: () => setModal('uscita') },
   ];
+  if (isAdmin) {
+    preferences.splice(1, 0, { label: 'Console assistenza', icon: 'support', action: () => router.push('/admin') });
+  }
   const submitTicket = async () => {
     if (submitting) return;
     if (subject.trim().length < 3 || description.trim().length < 10) {
@@ -123,7 +127,9 @@ export default function ProfileScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.ticketTitle, { color: c.foreground }]} numberOfLines={1}>{ticket.subject}</Text>
-              <Text style={[styles.small, { color: c.mutedForeground }]}>{ticket.category} · {ticket.status}</Text>
+              <Text style={[styles.small, { color: c.mutedForeground }]}>
+                #{ticket.id.slice(0, 8).toUpperCase()} · {ticket.category} · {ticket.status}
+              </Text>
               {ticket.messages?.filter((entry) => entry.authorRole === 'admin').slice(-1).map((entry) => (
                 <Text key={entry.id} style={[styles.small, { color: c.primary, marginTop: 4 }]} numberOfLines={2}>Assistenza: {entry.message}</Text>
               ))}
