@@ -18,7 +18,7 @@ import {
   isMeaningfulText,
   type SourceMaterial,
 } from "../lib/contentStudy";
-import { generateExamQuestions, generateQuickExplanation } from "../lib/studyAi";
+import { generateExamQuestions, generateFlashcardsWithAi, generateQuickExplanation } from "../lib/studyAi";
 
 const router: IRouter = Router();
 
@@ -811,8 +811,8 @@ router.post(
         return;
       }
 
-      const seed = uniqueIds.join(",") + "|" + userId;
-      const flashcards = generateFlashcards(
+       const seed = uniqueIds.join(",") + "|" + userId;
+       const flashcards = await generateFlashcardsWithAi(
         ready.sources,
         FLASHCARDS_PER_MATERIAL,
         seed,

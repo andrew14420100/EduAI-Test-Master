@@ -9,7 +9,7 @@ import {
   materialsTable,
 } from "@workspace/db";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { aiChat, parseAiJson } from "../lib/aiProvider";
 import { hasLabsByDefault } from "../lib/labPath";
 
 const router: IRouter = Router();
@@ -52,8 +52,7 @@ router.post("/labs/generate", requireAuth, async (req: Request, res: Response) =
       .slice(0, 120000);
     let exercises: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> = [];
     for (let attempt = 0; attempt < 2 && exercises.length < 15; attempt++) {
-      const response = await openai.chat.completions.create({
-        model: "gpt-5-mini",
+      const response = await aiChat({
         max_completion_tokens: 12000,
         response_format: { type: "json_object" },
         messages: [
@@ -61,10 +60,8 @@ router.post("/labs/generate", requireAuth, async (req: Request, res: Response) =
           { role: "user", content: sourceText },
         ],
       });
-      const raw = (response.choices[0]?.message?.content ?? "{}")
-        .replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
       try {
-        const parsed = JSON.parse(raw) as { exercises?: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> };
+        const parsed = parseAiJson<{ exercises?: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> }>(response.content);
         exercises = (parsed.exercises ?? []).filter((item) => item.topic && item.title && item.prompt && item.solution).slice(0, 15);
       } catch {
         req.log.warn({ attempt }, "Risposta IA laboratori aggregati non valida");
@@ -112,8 +109,7 @@ router.post("/materials/:materialId/labs", requireAuth, async (req: Request, res
     }
     let exercises: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> = [];
     for (let attempt = 0; attempt < 2 && exercises.length < 15; attempt++) {
-      const response = await openai.chat.completions.create({
-        model: "gpt-5-mini",
+      const response = await aiChat({
         max_completion_tokens: 12000,
         response_format: { type: "json_object" },
         messages: [
@@ -121,10 +117,8 @@ router.post("/materials/:materialId/labs", requireAuth, async (req: Request, res
           { role: "user", content: `Materiale: ${material.title}\n\nCONTENUTO:\n${material.extractedText.slice(0, 120000)}` },
         ],
       });
-      const raw = (response.choices[0]?.message?.content ?? "{}")
-        .replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
       try {
-        const parsed = JSON.parse(raw) as { exercises?: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> };
+        const parsed = parseAiJson<{ exercises?: Array<{ topic?: string; title?: string; prompt?: string; solution?: string; difficulty?: string; points?: number }> }>(response.content);
         exercises = (parsed.exercises ?? []).filter((item) => item.topic && item.title && item.prompt && item.solution).slice(0, 15);
       } catch (parseError) {
         req.log.warn({ materialId, attempt, parseError }, "Risposta IA laboratori non valida, nuovo tentativo");
@@ -162,8 +156,7 @@ async function gradeFreeTextOnce(
   correctAnswer: string,
   userAnswer: string,
 ): Promise<{ score: number; feedback: string } | null> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-5-mini",
+  const response = await aiChat({
     // gpt-5-mini is a reasoning model: reasoning consumes completion tokens
     // before any visible output, so this must be generous or content is empty.
     max_completion_tokens: 2500,
@@ -187,7 +180,7 @@ async function gradeFreeTextOnce(
     ],
   });
 
-  const raw = response.choices[0]?.message?.content ?? "";
+  const raw = response.content;
   let parsed: { score?: unknown; feedback?: unknown };
   try {
     parsed = JSON.parse(raw) as { score?: unknown; feedback?: unknown };

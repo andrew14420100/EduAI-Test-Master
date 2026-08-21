@@ -1,4 +1,10 @@
-import type { GeneratedQuestion, SourceMaterial } from "./contentStudy";
+import {
+  generateFlashcards as generateLocalFlashcards,
+  generateQuestionsWithKey,
+  type Flashcard,
+  type GeneratedQuestion,
+  type SourceMaterial,
+} from "./contentStudy";
 import { aiChat, parseAiJson } from "./aiProvider";
 
 function cleanShortText(value: string, maxLength: number): string {
@@ -116,7 +122,9 @@ export async function generateExamQuestions(
 
   const trueFalseCount = Math.max(1, Math.floor(count / 5));
   const applicationCount = Math.max(2, Math.floor(count / 4));
-  const response = await aiChat({
+  let response;
+  try {
+    response = await aiChat({
     max_completion_tokens: 8192,
     response_format: { type: "json_object" },
     messages: [
@@ -141,7 +149,10 @@ export async function generateExamQuestions(
           `CONTENUTO DA STUDIARE:\n${context}`,
       },
     ],
-  });
+    });
+  } catch {
+    return generateQuestionsWithKey(sources, count, sources.map((source) => source.id).join("|"));
+  }
 
   const raw = response.content;
   if (!raw) throw new Error("RISPOSTA_IA_VUOTA");
@@ -166,4 +177,48 @@ export async function generateExamQuestions(
     throw new Error("RISPOSTA_IA_INCOMPLETA");
   }
   return result;
+}
+
+export async function generateFlashcardsWithAi(
+  sources: SourceMaterial[],
+  perMaterial: number,
+  seedInput: string,
+): Promise<Flashcard[]> {
+  const context = sourceContext(sources);
+  if (!context.trim()) return [];
+  try {
+    const response = await aiChat({
+      max_completion_tokens: Math.max(1200, sources.length * perMaterial * 100),
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "Sei un tutor italiano. Crea flashcard chiare e utili usando esclusivamente i materiali forniti. " +
+            "Non inventare informazioni. Rispondi solo JSON valido.",
+        },
+        {
+          role: "user",
+          content:
+            `Crea esattamente ${sources.length * perMaterial} flashcard, distribuite tra i materiali.\n` +
+            'Formato: {"flashcards":[{"front":"domanda o concetto","back":"spiegazione","materialTitle":"titolo"}]}.\n' +
+            context,
+        },
+      ],
+    });
+    const parsed = parseAiJson<{ flashcards?: unknown }>(response.content);
+    const cards = Array.isArray(parsed.flashcards)
+      ? parsed.flashcards.filter((card): card is Flashcard => {
+        if (!card || typeof card !== "object") return false;
+        const value = card as Record<string, unknown>;
+        return typeof value.front === "string" && value.front.trim().length >= 8
+          && typeof value.back === "string" && value.back.trim().length >= 12
+          && typeof value.materialTitle === "string" && value.materialTitle.trim().length > 0;
+      }).slice(0, sources.length * perMaterial)
+      : [];
+    if (cards.length >= Math.min(2, sources.length * perMaterial)) return cards;
+  } catch {
+    // The deterministic generator is the unlimited, no-key fallback.
+  }
+  return generateLocalFlashcards(sources, perMaterial, seedInput);
 }
