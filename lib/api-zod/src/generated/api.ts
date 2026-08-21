@@ -560,6 +560,7 @@ export const SubmitLabAttemptResponse = zod.object({
   "exerciseId": zod.string(),
   "score": zod.number().describe('0.0 = wrong, 0.5 = partial, 1.0 = correct'),
   "feedback": zod.string(),
+  "solution": zod.string().optional().describe('Soluzione completa mostrata dopo una risposta parziale o errata'),
   "earnedPoints": zod.number().int(),
   "totalPoints": zod.number().int(),
   "createdAt": zod.coerce.date()

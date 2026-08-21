@@ -12,6 +12,8 @@ export interface LabAttemptResult {
   /** 0.0 = wrong, 0.5 = partial, 1.0 = correct */
   score: number;
   feedback: string;
+  /** Soluzione completa mostrata dopo una risposta parziale o errata */
+  solution?: string;
   earnedPoints: number;
   totalPoints: number;
   createdAt: Date;
