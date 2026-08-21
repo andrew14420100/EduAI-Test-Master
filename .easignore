@@ -1,0 +1,10 @@
+node_modules/
+.git/
+.expo/
+dist/
+web-build/
+artifacts/mockup-sandbox/
+artifacts/api-server/dist/
+artifacts/api-server/*.map
+attached_assets/
+*.log

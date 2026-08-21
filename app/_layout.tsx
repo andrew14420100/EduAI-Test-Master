@@ -16,6 +16,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { AppIcon } from '@/components/AppIcon';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 
@@ -36,7 +37,7 @@ function RootLayoutNav() {
   const router = useRouter();
   const segments = useSegments();
   const { isLoaded, isSignedIn } = useAuth();
-  const { level, ready, refreshing } = useApp();
+  const { level, ready, refreshing, rewardEvent, completionAnimation, dismissRewardEvent } = useApp();
   const [navigating, setNavigating] = useState(false);
 
   useEffect(() => {
@@ -74,6 +75,57 @@ function RootLayoutNav() {
           <Text style={styles.loadingText}>{refreshing ? 'Aggiornamento…' : 'Caricamento…'}</Text>
         </View>
       ) : null}
+      {rewardEvent ? (
+        <RewardToast
+          key={rewardEvent.id}
+          event={rewardEvent}
+          animation={completionAnimation}
+          onDismiss={dismissRewardEvent}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+function RewardToast({
+  event,
+  animation,
+  onDismiss,
+}: {
+  event: NonNullable<ReturnType<typeof useApp>['rewardEvent']>;
+  animation: string | null;
+  onDismiss: () => void;
+}) {
+  useEffect(() => {
+    const timer = setTimeout(onDismiss, 2800);
+    return () => clearTimeout(timer);
+  }, [event.id, onDismiss]);
+
+  const icon = animation === 'anim_fire'
+    ? 'flame'
+    : animation === 'anim_stars'
+      ? 'star'
+      : animation === 'anim_crown'
+        ? 'award'
+        : event.kind === 'amico'
+          ? 'users'
+          : event.kind === 'laboratorio'
+            ? 'flask'
+            : event.kind === 'accesso'
+              ? 'lock'
+              : event.kind === 'negozio'
+                ? 'sparkles'
+                : 'circle-check';
+
+  return (
+    <View pointerEvents="none" style={styles.rewardToast}>
+      <View style={styles.rewardIcon}>
+        <AppIcon name={icon} size={18} color="#08111F" />
+      </View>
+      <View style={styles.rewardCopy}>
+        <Text style={styles.rewardTitle}>{event.title}</Text>
+        <Text style={styles.rewardMessage}>{event.message}</Text>
+      </View>
     </View>
   );
 }
@@ -97,6 +149,27 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   loadingText: { color: '#153A35', fontSize: 12, fontWeight: '600' },
+  rewardToast: {
+    position: 'absolute',
+    top: 56,
+    left: 18,
+    right: 18,
+    minHeight: 62,
+    borderRadius: 18,
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#D5F4E8',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  rewardIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7CF6D3' },
+  rewardCopy: { flex: 1, gap: 2 },
+  rewardTitle: { color: '#086E55', fontSize: 13, fontWeight: '700' },
+  rewardMessage: { color: '#28584B', fontSize: 12, lineHeight: 16 },
   configurationError: { flex: 1, justifyContent: 'center', padding: 28, backgroundColor: '#F4FAF7' },
   configurationTitle: { color: '#153A35', fontSize: 24, fontWeight: '700', marginBottom: 12 },
   configurationBody: { color: '#55716B', fontSize: 16, lineHeight: 24 },
