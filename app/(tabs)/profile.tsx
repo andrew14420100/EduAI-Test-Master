@@ -154,6 +154,12 @@ export default function ProfileScreen() {
           message: 'Descrivi il problema: la richiesta sarà salvata nel tuo account.',
           icon: 'support' as const,
         }
+        : modal === 'suggestion'
+          ? {
+            title: 'Consiglia una modifica',
+            message: 'Raccontaci la tua idea in modo dettagliato. Nome, email e orario saranno associati automaticamente alla proposta.',
+            icon: 'sparkles' as const,
+          }
         : modal === 'esito'
           ? { title: feedback.title, message: feedback.message, icon: feedback.success ? 'circle-check' as const : 'warning' as const }
           : modal === 'elimina-account'

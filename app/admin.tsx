@@ -20,9 +20,12 @@ import { useColors } from '@/hooks/useColors';
 const ADMIN_SESSION_KEY = 'eduai:admin-session';
 
 function ticketStatusLabel(status: string) {
+  if (status === 'accepted') return 'Accettata';
+  if (status === 'rejected') return 'Rifiutata';
+  if (status === 'in_progress') return 'In valutazione';
+  if (status === 'open') return 'In attesa';
   if (status === 'closed') return 'Chiuso';
-  if (status === 'in_progress') return 'In lavorazione';
-  return 'Aperto';
+  return status;
 }
 
 export default function AdminScreen() {
@@ -34,6 +37,7 @@ export default function AdminScreen() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [selected, setSelected] = useState<AdminTicket | null>(null);
   const [draft, setDraft] = useState('');
+  const [status, setStatus] = useState<'open' | 'in_progress' | 'accepted' | 'rejected'>('open');
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,14 +76,14 @@ export default function AdminScreen() {
     setSession(null);
   };
 
-  const submit = async (close: boolean) => {
+  const submit = async () => {
     if (!selected || draft.trim().length < 2) return;
     try {
-      await reply.mutateAsync({ ticketId: selected.id, data: { message: draft.trim(), close } });
+      await reply.mutateAsync({ ticketId: selected.id, data: { message: draft.trim(), status } });
       setDraft('');
       setSelected(null);
       await tickets.refetch();
-      setNotice(close ? 'Ticket chiuso e risposta salvata.' : 'Risposta inviata al ticket.');
+      setNotice('Risposta e stato aggiornati.');
     } catch {
       setNotice('Sessione scaduta o impossibile aggiornare il ticket.');
     }
@@ -120,22 +124,28 @@ export default function AdminScreen() {
         <View style={[styles.summary, { backgroundColor: c.primary }]}><Text style={[styles.summaryValue, { color: c.primaryForeground }]}>{openCount}</Text><Text style={[styles.summaryLabel, { color: c.primaryForeground }]}>ticket da gestire</Text></View>
         <Text style={[styles.section, { color: c.foreground }]}>Ticket e cronologia</Text>
         {tickets.isLoading ? <Text style={[styles.body, { color: c.mutedForeground }]}>Caricamento ticket…</Text> : tickets.data?.map((ticket) => (
-          <Pressable key={ticket.id} onPress={() => setSelected(ticket)} style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
+          <Pressable key={ticket.id} onPress={() => { setSelected(ticket); setStatus(ticket.status === 'accepted' || ticket.status === 'rejected' || ticket.status === 'in_progress' ? ticket.status : 'open'); }} style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
             <Text style={[styles.cardTitle, { color: c.primary }]}>#{ticket.id.slice(0, 8).toUpperCase()}</Text>
             <Text style={[styles.cardTitle, { color: c.foreground }]}>{ticket.subject}</Text>
-            <Text style={[styles.body, { color: c.mutedForeground }]}>{ticket.user?.username ?? ticket.userId} · {ticketStatusLabel(ticket.status)}</Text>
+            <Text style={[styles.body, { color: c.mutedForeground }]}>{ticket.user?.username ?? ticket.userId} · {ticket.user?.email ?? 'email non disponibile'}</Text>
+            <Text style={[styles.body, { color: c.mutedForeground }]}>{ticket.category} · {ticketStatusLabel(ticket.status)} · {new Date(ticket.createdAt).toLocaleString('it-IT')}</Text>
             <Text style={[styles.body, { color: c.mutedForeground }]} numberOfLines={2}>{ticket.messages.at(-1)?.message}</Text>
           </Pressable>
         ))}
         <Text style={[styles.section, { color: c.foreground }]}>Utenti</Text>
         <Text style={[styles.body, { color: c.mutedForeground }]}>{users.data?.length ?? 0} utenti registrati</Text>
       </ScrollView>
-      <AppModal visible={Boolean(selected)} title={selected ? `Ticket #${selected.id.slice(0, 8).toUpperCase()}` : ''} message={selected?.user?.email ?? selected?.userId} icon="support" onDismiss={() => setSelected(null)} actions={[
-        { label: reply.isPending ? 'Invio…' : 'Rispondi', variant: 'primaria', onPress: () => { void submit(false); } },
-        { label: 'Rispondi e chiudi', variant: 'pericolo', onPress: () => { void submit(true); } },
+       <AppModal visible={Boolean(selected)} title={selected ? `Ticket #${selected.id.slice(0, 8).toUpperCase()}` : ''} message={selected?.user?.email ?? selected?.userId} icon="support" onDismiss={() => setSelected(null)} actions={[
+         { label: reply.isPending ? 'Invio…' : 'Invia risposta', variant: 'primaria', onPress: () => { void submit(); } },
         { label: 'Annulla', onPress: () => setSelected(null) },
       ]}>
-        <View style={styles.thread}>{selected?.messages.map((entry) => <View key={entry.id} style={[styles.message, { backgroundColor: entry.authorRole === 'admin' ? c.accent : c.secondary }]}><Text style={[styles.body, { color: entry.authorRole === 'admin' ? c.accentForeground : c.secondaryForeground }]}>{entry.authorRole === 'admin' ? 'Assistenza' : 'Utente'} · {entry.message}</Text></View>)}</View>
+         <Text style={[styles.body, { color: c.foreground, marginTop: 12 }]}>Stato proposta</Text>
+         <View style={styles.statusRow}>{(['open', 'in_progress', 'accepted', 'rejected'] as const).map((item) => (
+           <Pressable key={item} onPress={() => setStatus(item)} style={[styles.statusChip, { backgroundColor: status === item ? c.accent : c.secondary, borderColor: status === item ? c.primary : c.border }]}>
+             <Text style={[styles.body, { color: status === item ? c.accentForeground : c.secondaryForeground }]}>{ticketStatusLabel(item)}</Text>
+           </Pressable>
+         ))}</View>
+         <View style={styles.thread}>{selected?.messages.map((entry) => <View key={entry.id} style={[styles.message, { backgroundColor: entry.authorRole === 'admin' ? c.accent : c.secondary }]}><Text style={[styles.body, { color: entry.authorRole === 'admin' ? c.accentForeground : c.secondaryForeground }]}>{entry.authorRole === 'admin' ? 'Assistenza' : 'Utente'} · {entry.message}</Text></View>)}</View>
         <TextInput value={draft} onChangeText={setDraft} multiline placeholder="Scrivi una risposta utile e completa…" placeholderTextColor={c.mutedForeground} style={[styles.input, { color: c.foreground, borderColor: c.border, backgroundColor: c.background }]} />
       </AppModal>
       <AppModal visible={Boolean(notice)} title="Assistenza" message={notice ?? ''} icon="circle-check" onDismiss={() => setNotice(null)} actions={[{ label: 'Continua', variant: 'primaria', onPress: () => setNotice(null) }]} />
@@ -144,5 +154,5 @@ export default function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, gap: 12 }, header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, eyebrow: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5 }, title: { fontFamily: 'Inter_700Bold', fontSize: 27 }, section: { fontFamily: 'Inter_700Bold', fontSize: 17, marginTop: 10 }, body: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 18 }, summary: { borderRadius: 20, padding: 18 }, summaryValue: { fontFamily: 'Inter_700Bold', fontSize: 34 }, summaryLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 12 }, card: { borderWidth: 1, borderRadius: 16, padding: 13, gap: 4 }, cardTitle: { fontFamily: 'Inter_700Bold', fontSize: 14 }, thread: { gap: 8, marginTop: 12 }, message: { borderRadius: 12, padding: 10 }, input: { borderWidth: 1, borderRadius: 12, minHeight: 48, marginTop: 12, padding: 10, fontFamily: 'Inter_500Medium', fontSize: 13 }, primary: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 }, primaryText: { fontFamily: 'Inter_700Bold', fontSize: 13 }, denied: { flex: 1, alignItems: 'center', paddingHorizontal: 28, gap: 14 },
+   content: { paddingHorizontal: 20, gap: 12 }, header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, eyebrow: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5 }, title: { fontFamily: 'Inter_700Bold', fontSize: 27 }, section: { fontFamily: 'Inter_700Bold', fontSize: 17, marginTop: 10 }, body: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 18 }, summary: { borderRadius: 20, padding: 18 }, summaryValue: { fontFamily: 'Inter_700Bold', fontSize: 34 }, summaryLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 12 }, card: { borderWidth: 1, borderRadius: 16, padding: 13, gap: 4 }, cardTitle: { fontFamily: 'Inter_700Bold', fontSize: 14 }, statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }, statusChip: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 7 }, thread: { gap: 8, marginTop: 12 }, message: { borderRadius: 12, padding: 10 }, input: { borderWidth: 1, borderRadius: 12, minHeight: 48, marginTop: 12, padding: 10, fontFamily: 'Inter_500Medium', fontSize: 13 }, primary: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 }, primaryText: { fontFamily: 'Inter_700Bold', fontSize: 13 }, denied: { flex: 1, alignItems: 'center', paddingHorizontal: 28, gap: 14 },
 });
