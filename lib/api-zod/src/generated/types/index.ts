@@ -41,6 +41,8 @@ export * from './quizQuestion';
 export * from './quizSessionResponse';
 export * from './recoveryItem';
 export * from './recoverySummary';
+export * from './registerPushTokenRequest';
+export * from './registerPushTokenRequestPlatform';
 export * from './setLabsEnabledRequest';
 export * from './startQuizSessionRequest';
 export * from './startQuizSessionRequestTotalQuestions';

@@ -327,6 +327,23 @@ export interface CreateTicketRequest {
   message: string;
 }
 
+export type RegisterPushTokenRequestPlatform = typeof RegisterPushTokenRequestPlatform[keyof typeof RegisterPushTokenRequestPlatform];
+
+
+export const RegisterPushTokenRequestPlatform = {
+  ios: 'ios',
+  android: 'android',
+} as const;
+
+export interface RegisterPushTokenRequest {
+  /**
+     * @minLength 20
+     * @maxLength 256
+     */
+  token: string;
+  platform: RegisterPushTokenRequestPlatform;
+}
+
 export interface LeaderboardEntry {
   username: string;
   wallet: number;

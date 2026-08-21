@@ -23,6 +23,16 @@ export const ticketMessagesTable = pgTable("ticket_messages", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const pushTokensTable = pgTable("push_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  platform: text("platform").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export type InsertTicket = typeof ticketsTable.$inferInsert;
 export type Ticket = typeof ticketsTable.$inferSelect;
 export type TicketMessage = typeof ticketMessagesTable.$inferSelect;
+export type PushToken = typeof pushTokensTable.$inferSelect;

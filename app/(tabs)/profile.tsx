@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon, type AppIconName } from '@/components/AppIcon';
@@ -20,6 +20,7 @@ function ticketStatusLabel(status: string) {
 export default function ProfileScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const { ticketId } = useLocalSearchParams<{ ticketId?: string }>();
   const {
     account,
     level,
@@ -45,6 +46,11 @@ export default function ProfileScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState({ title: '', message: '', success: false });
   const [deletingAccount, setDeletingAccount] = useState(false);
+
+  useEffect(() => {
+    const ticket = tickets.find((item) => item.id === ticketId);
+    if (ticket?.unread) void markTicketRead(ticket.id);
+  }, [markTicketRead, ticketId, tickets]);
 
   const openSupport = () => {
     setModal('ticket');

@@ -50,6 +50,13 @@
       "when": 1787346805722,
       "tag": "0006_aromatic_nextwave",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787350670492,
+      "tag": "0007_closed_famine",
+      "breakpoints": true
     }
   ]
 }

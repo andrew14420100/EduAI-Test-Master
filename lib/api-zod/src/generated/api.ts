@@ -671,6 +671,22 @@ export const CreateTicketResponse = zod.object({
 
 
 /**
+ * @summary Register the current device for push notifications
+ */
+export const registerPushTokenBodyTokenMin = 20;
+export const registerPushTokenBodyTokenMax = 256;
+
+
+
+export const RegisterPushTokenBody = zod.object({
+  "token": zod.string().min(registerPushTokenBodyTokenMin).max(registerPushTokenBodyTokenMax),
+  "platform": zod.enum(['ios', 'android'])
+})
+
+export const RegisterPushTokenResponse = zod.void()
+
+
+/**
  * @summary Mark a support ticket response as read
  */
 export const MarkTicketReadParams = zod.object({

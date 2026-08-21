@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { db, profilesTable, ticketMessagesTable, ticketsTable } from "@workspace/db";
+import { db, profilesTable, pushTokensTable, ticketMessagesTable, ticketsTable } from "@workspace/db";
 import { requireAdminSession, requireAuth, type AdminSessionRequest, type AuthedRequest } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -55,6 +55,35 @@ router.get("/tickets", requireAuth, async (req: Request, res: Response) => {
     res.json(await ticketDetails(tickets));
   } catch (err) {
     req.log.error({ err }, "Errore lista ticket");
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
+router.post("/push-tokens", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthedRequest).clerkUserId;
+  const { token, platform } = req.body as { token?: unknown; platform?: unknown };
+  if (typeof token !== "string" || !token.startsWith("ExponentPushToken[") || token.length > 256) {
+    res.status(400).json({ error: "Token push non valido" });
+    return;
+  }
+  if (platform !== "ios" && platform !== "android") {
+    res.status(400).json({ error: "Piattaforma non valida" });
+    return;
+  }
+  try {
+    await db.insert(pushTokensTable).values({
+      id: randomUUID(),
+      userId,
+      token,
+      platform,
+      updatedAt: new Date(),
+    }).onConflictDoUpdate({
+      target: pushTokensTable.token,
+      set: { userId, platform, updatedAt: new Date() },
+    });
+    res.status(204).send();
+  } catch (err) {
+    req.log.error({ err }, "Errore registrazione token push");
     res.status(500).json({ error: "Errore interno del server" });
   }
 });
@@ -216,11 +245,52 @@ router.post("/admin/tickets/:ticketId/reply", requireAdminSession, async (req: R
       res.status(404).json({ error: "Ticket non trovato" });
       return;
     }
+    void sendTicketPushNotifications(ticket.userId, ticket.id, ticket.subject, message.trim(), req);
     res.json((await ticketDetails([ticket]))[0]);
   } catch (err) {
     req.log.error({ err }, "Errore risposta ticket amministratore");
     res.status(500).json({ error: "Errore interno del server" });
   }
 });
+
+async function sendTicketPushNotifications(
+  userId: string,
+  ticketId: string,
+  subject: string,
+  message: string,
+  req: Request,
+) {
+  try {
+    const tokens = await db.select().from(pushTokensTable).where(eq(pushTokensTable.userId, userId));
+    if (!tokens.length) return;
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tokens.map(({ token }) => ({
+        to: token,
+        title: subject || "Risposta dall’assistenza",
+        body: message,
+        sound: "default",
+        data: { type: "ticket-reply", ticketId },
+      }))),
+    });
+    if (!response.ok) {
+      req.log.warn({ status: response.status }, "Invio notifiche push non riuscito");
+      return;
+    }
+    const result = await response.json() as {
+      data?: Array<{ status?: string; details?: { error?: string } }>;
+    };
+    const invalidTokens = tokens.filter((_, index) =>
+      result.data?.[index]?.details?.error === "DeviceNotRegistered"
+      || result.data?.[index]?.details?.error === "InvalidCredentials",
+    );
+    if (invalidTokens.length) {
+      await db.delete(pushTokensTable).where(inArray(pushTokensTable.token, invalidTokens.map(({ token }) => token)));
+    }
+  } catch (err) {
+    req.log.warn({ err }, "Errore invio notifica push");
+  }
+}
 
 export default router;

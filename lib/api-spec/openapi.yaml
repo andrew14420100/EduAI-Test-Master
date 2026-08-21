@@ -1042,6 +1042,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+
     post:
       operationId: createTicket
       tags: [tickets]
@@ -1061,6 +1062,27 @@ paths:
                 $ref: "#/components/schemas/Ticket"
         "400":
           description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /push-tokens:
+    post:
+      operationId: registerPushToken
+      tags: [tickets]
+      summary: Register the current device for push notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterPushTokenRequest"
+      responses:
+        "204":
+          description: Push token registered
+        "400":
+          description: Invalid token or platform
           content:
             application/json:
               schema:
@@ -1752,6 +1774,18 @@ components:
         message:
           type: string
           minLength: 1
+
+    RegisterPushTokenRequest:
+      type: object
+      required: [token, platform]
+      properties:
+        token:
+          type: string
+          minLength: 20
+          maxLength: 256
+        platform:
+          type: string
+          enum: [ios, android]
 
     LeaderboardEntry:
       type: object

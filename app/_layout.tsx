@@ -20,7 +20,7 @@ import {
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppIcon } from '@/components/AppIcon';
 import { AppProvider, useApp } from '@/context/AppContext';
-import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
+import { customFetch, setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 
 SplashScreen.preventAutoHideAsync();
 Notifications.setNotificationHandler({
@@ -84,8 +84,36 @@ function RootLayoutNav() {
           sound: 'default',
         });
       }
+      if ((await Notifications.getPermissionsAsync()).granted) {
+        try {
+          const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+          const token = (await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined)).data;
+          await customFetch('/api/push-tokens', {
+            method: 'POST',
+            responseType: 'json',
+            body: JSON.stringify({ token, platform: Platform.OS }),
+          });
+        } catch {
+          // Push registration is best-effort; local notifications remain available.
+        }
+      }
     })();
   }, [isSignedIn]);
+
+  useEffect(() => {
+    if (!isSignedIn || Platform.OS === 'web') return;
+    const openTicketFromNotification = (response: Notifications.NotificationResponse) => {
+      const data = response.notification.request.content.data as { type?: string; ticketId?: string } | undefined;
+      if (data?.type === 'ticket-reply' && data.ticketId) {
+        router.push({ pathname: '/(tabs)/profile', params: { ticketId: data.ticketId } });
+      }
+    };
+    const subscription = Notifications.addNotificationResponseReceivedListener(openTicketFromNotification);
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) openTicketFromNotification(response);
+    });
+    return () => subscription.remove();
+  }, [isSignedIn, router]);
 
   useEffect(() => {
     if (!rewardEvent || rewardEvent.kind !== 'assistenza' || Platform.OS === 'web') return;
