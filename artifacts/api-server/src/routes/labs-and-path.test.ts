@@ -23,7 +23,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const labsSource = fs.readFileSync(path.join(here, "labs.ts"), "utf8");
 const profileSource = fs.readFileSync(path.join(here, "profile.ts"), "utf8");
 const onboardingSource = fs.readFileSync(
-  path.join(here, "../../../eduai-test-master/app/onboarding.tsx"),
+  path.join(here, "../../../../app/onboarding.tsx"),
   "utf8",
 );
 
@@ -126,8 +126,8 @@ test("the saved study path cannot be changed through the API", () => {
   );
   assert.match(
     profilePut,
-    /if \(existing\.level\)[\s\S]*?res\.status\(409\)/,
-    "profile upsert must also reject onboarding edits after the first choice",
+    /if \(existing\)[\s\S]*?res\.json\(toPublicProfile\(existing\)\)/,
+    "profile upsert must preserve the existing profile after onboarding",
   );
 });
 
