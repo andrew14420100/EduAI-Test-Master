@@ -8,6 +8,7 @@
 
 export * from './adminTicket';
 export * from './adminTicketReplyRequest';
+export * from './adminTicketReplyRequestStatus';
 export * from './adminUser';
 export * from './buyShopItemRequest';
 export * from './completeQuizSessionRequest';

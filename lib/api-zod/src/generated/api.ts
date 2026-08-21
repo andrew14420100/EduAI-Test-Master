@@ -788,7 +788,8 @@ export const replyToAdminTicketBodyCloseDefault = false;
 
 export const ReplyToAdminTicketBody = zod.object({
   "message": zod.string().min(replyToAdminTicketBodyMessageMin).max(replyToAdminTicketBodyMessageMax),
-  "close": zod.boolean().default(replyToAdminTicketBodyCloseDefault)
+  "close": zod.boolean().default(replyToAdminTicketBodyCloseDefault),
+  "status": zod.enum(['open', 'in_progress', 'accepted', 'rejected', 'closed']).optional()
 })
 
 export const ReplyToAdminTicketResponse = zod.object({

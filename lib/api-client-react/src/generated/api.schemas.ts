@@ -303,6 +303,17 @@ export type AdminTicket = Ticket & ({
   user: AdminUser | null;
 });
 
+export type AdminTicketReplyRequestStatus = typeof AdminTicketReplyRequestStatus[keyof typeof AdminTicketReplyRequestStatus];
+
+
+export const AdminTicketReplyRequestStatus = {
+  open: 'open',
+  in_progress: 'in_progress',
+  accepted: 'accepted',
+  rejected: 'rejected',
+  closed: 'closed',
+} as const;
+
 export interface AdminTicketReplyRequest {
   /**
      * @minLength 2
@@ -310,6 +321,7 @@ export interface AdminTicketReplyRequest {
      */
   message: string;
   close?: boolean;
+  status?: AdminTicketReplyRequestStatus;
 }
 
 export interface CreateTicketRequest {

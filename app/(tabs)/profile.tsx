@@ -432,6 +432,7 @@ const styles = StyleSheet.create({
   label: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginTop: 5 },
   input: { borderWidth: 1, borderRadius: 14, minHeight: 48, paddingHorizontal: 13, paddingVertical: 11, fontFamily: 'Inter_500Medium', fontSize: 13 },
   textarea: { minHeight: 92 },
+  textareaSmall: { minHeight: 62 },
   categories: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   category: { borderWidth: 1, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 7 },
   categoryText: { fontFamily: 'Inter_600SemiBold', fontSize: 10 },

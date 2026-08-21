@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminTicketReplyRequestStatus } from './adminTicketReplyRequestStatus';
 
 export interface AdminTicketReplyRequest {
   /**
@@ -13,4 +14,5 @@ export interface AdminTicketReplyRequest {
      */
   message: string;
   close?: boolean;
+  status?: AdminTicketReplyRequestStatus;
 }
