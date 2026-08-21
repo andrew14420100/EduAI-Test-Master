@@ -657,6 +657,19 @@ function buildQuestionFromSentence(
     distractors.push(candidate);
     if (distractors.length === 3) break;
   }
+  // With short notes there may be fewer than four independent statements.
+  // Derive a false option by negating an extracted statement rather than
+  // inventing a generic distractor or an unrelated fact.
+  if (distractors.length < 3) {
+    for (const candidate of deterministicShuffle(candidates, rng)) {
+      const negated = `Non è corretto affermare che ${candidate.charAt(0).toLocaleLowerCase("it-IT")}${candidate.slice(1)}`;
+      const normalized = negated.toLocaleLowerCase("it-IT");
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      distractors.push(negated);
+      if (distractors.length === 3) break;
+    }
+  }
   if (distractors.length < 3) return null;
 
   const options = deterministicShuffle([answer, ...distractors], rng);
