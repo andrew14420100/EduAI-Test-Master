@@ -67,6 +67,7 @@ export default function ProfileScreen() {
   const preferences: { label: string; icon: AppIconName; action: () => void }[] = [
     { label: 'Percorso di studio', icon: 'book', action: () => router.push('/onboarding') },
     { label: 'Assistenza', icon: 'support', action: openSupport },
+    { label: 'Consiglia una modifica', icon: 'sparkles', action: () => setModal('suggestion') },
     { label: 'Avvisi', icon: 'bell', action: () => setModal('avvisi') },
     { label: 'Privacy e dati', icon: 'shield', action: () => setModal('privacy') },
     { label: 'Impostazioni account', icon: 'book', action: () => router.push('/account-settings') },
@@ -324,6 +325,11 @@ export default function ProfileScreen() {
               { label: submitting ? 'Invio…' : 'Invia ticket', variant: 'primaria', onPress: () => { void submitTicket(); } },
               { label: 'Annulla', onPress: () => setModal(null) },
             ]
+            : modal === 'suggestion'
+              ? [
+                { label: submitting ? 'Invio…' : 'Invia proposta', variant: 'primaria', onPress: () => { void submitSuggestion(); } },
+                { label: 'Annulla', onPress: () => setModal(null) },
+              ]
             : [{ label: 'Ho capito', variant: 'primaria', onPress: () => setModal(null) }]}
       >
         {modal === 'ticket' ? (
@@ -361,6 +367,28 @@ export default function ProfileScreen() {
               textAlignVertical="top"
               style={[styles.input, styles.textarea, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]}
             />
+          </View>
+        ) : null}
+        {modal === 'suggestion' ? (
+          <View style={styles.form}>
+            <Text style={[styles.label, { color: c.foreground }]}>Titolo della proposta *</Text>
+            <TextInput value={subject} onChangeText={setSubject} placeholder="Es. Aggiungere un calendario di studio" placeholderTextColor={c.mutedForeground} style={[styles.input, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]} />
+            <Text style={[styles.label, { color: c.foreground }]}>Categoria *</Text>
+            <View style={styles.categories}>
+              {['Grafica', 'Funzione', 'Bug', 'Contenuti', 'Altro'].map((item) => (
+                <Pressable key={item} onPress={() => setCategory(item)} style={[styles.category, { backgroundColor: category === item ? c.accent : c.secondary, borderColor: category === item ? c.primary : c.border }]}>
+                  <Text style={[styles.categoryText, { color: category === item ? c.accentForeground : c.secondaryForeground }]}>{item}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={[styles.label, { color: c.foreground }]}>Descrizione dettagliata *</Text>
+            <TextInput value={description} onChangeText={setDescription} placeholder="Descrivi con precisione la modifica o il problema." placeholderTextColor={c.mutedForeground} multiline textAlignVertical="top" style={[styles.input, styles.textarea, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]} />
+            <Text style={[styles.label, { color: c.foreground }]}>Perché sarebbe utile (facoltativo)</Text>
+            <TextInput value={motivation} onChangeText={setMotivation} placeholder="Quale beneficio porterebbe?" placeholderTextColor={c.mutedForeground} multiline style={[styles.input, styles.textareaSmall, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]} />
+            <Text style={[styles.label, { color: c.foreground }]}>Come dovrebbe funzionare (facoltativo)</Text>
+            <TextInput value={steps} onChangeText={setSteps} placeholder="Descrivi il comportamento ideale." placeholderTextColor={c.mutedForeground} multiline style={[styles.input, styles.textareaSmall, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]} />
+            <Text style={[styles.label, { color: c.foreground }]}>Screenshot o allegato (facoltativo)</Text>
+            <TextInput value={attachment} onChangeText={setAttachment} placeholder="Incolla un link condivisibile allo screenshot" placeholderTextColor={c.mutedForeground} autoCapitalize="none" style={[styles.input, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]} />
           </View>
         ) : null}
       </AppModal>
