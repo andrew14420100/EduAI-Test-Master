@@ -1,6 +1,5 @@
 const { getDefaultConfig } = require("expo/metro-config");
 const path = require("path");
-const { exclusionList } = require("metro-config");
 
 const config = getDefaultConfig(__dirname);
 
@@ -12,8 +11,8 @@ config.resolver.unstable_enablePackageExports = true;
 config.watchFolders = [path.resolve(__dirname)];
 // I file temporanei degli strumenti possono essere creati e rimossi mentre
 // Metro sta scansionando il workspace; escludili per evitare watcher stantii.
-config.resolver.blockList = exclusionList([
+config.resolver.blockList = [
   /\/\.local\/secondary_skills(?:\/|$)/,
-]);
+];
 
 module.exports = config;
