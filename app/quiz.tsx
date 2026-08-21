@@ -455,13 +455,13 @@ export default function QuizScreen() {
           <IconButton name="close" label="Chiudi" onPress={close} />
         </View>
 
-        <View style={[styles.resultIconWrap, { backgroundColor: '#3D1921' }]}>
+        <View style={[styles.resultIconWrap, { backgroundColor: c.secondary }]}>
           <AppIcon name="warning" size={30} color={c.destructive} />
         </View>
         <Text style={[styles.kicker, { color: c.destructive }]}>FLASHCARD NON DISPONIBILI</Text>
         <Text style={[styles.heading, { color: c.foreground }]}>Impossibile generare le flashcard</Text>
 
-        <View style={[styles.saveErrorBanner, { backgroundColor: '#3D1921', borderColor: c.destructive }]}>
+        <View style={[styles.saveErrorBanner, { backgroundColor: c.secondary, borderColor: c.destructive }]}>
           <AppIcon name="warning" size={15} color={c.destructive} />
           <Text style={[styles.saveErrorText, { color: c.destructive }]}>
             {flashcardError ?? 'Si è verificato un errore imprevisto.'}
@@ -622,7 +622,7 @@ export default function QuizScreen() {
         <View style={styles.top}>
           <IconButton name="close" label="Chiudi" onPress={goLibrary} />
         </View>
-        <View style={[styles.resultIconWrap, { backgroundColor: '#3D1921' }]}>
+        <View style={[styles.resultIconWrap, { backgroundColor: c.secondary }]}>
           <AppIcon name="warning" size={30} color={c.destructive} />
         </View>
         <Text style={[styles.kicker, { color: c.destructive }]}>RECUPERO ERRORI</Text>
@@ -668,7 +668,7 @@ export default function QuizScreen() {
 
         {/* Load error */}
         {loadError !== null && (
-          <View style={[styles.saveErrorBanner, { backgroundColor: '#3D1921', borderColor: c.destructive }]}>
+          <View style={[styles.saveErrorBanner, { backgroundColor: c.secondary, borderColor: c.destructive }]}>
             <AppIcon name="warning" size={15} color={c.destructive} />
             <Text style={[styles.saveErrorText, { color: c.destructive }]}>{loadError}</Text>
           </View>
@@ -879,7 +879,7 @@ export default function QuizScreen() {
 
         {/* Submit error banner shown in quiz phase */}
         {submitError !== null && phase === 'quiz' && (
-          <View style={[styles.saveErrorBanner, { backgroundColor: '#3D1921', borderColor: c.destructive }]}>
+          <View style={[styles.saveErrorBanner, { backgroundColor: c.secondary, borderColor: c.destructive }]}>
             <AppIcon name="warning" size={15} color={c.destructive} />
             <Text style={[styles.saveErrorText, { color: c.destructive }]}>
               {submitError}
@@ -997,11 +997,11 @@ export default function QuizScreen() {
           <IconButton name="close" label="Chiudi" onPress={goLibrary} />
         </View>
 
-        <View style={[styles.resultIconWrap, { backgroundColor: passed ? '#193D2A' : '#3D1921' }]}>
+        <View style={[styles.resultIconWrap, { backgroundColor: passed ? c.accent : c.secondary }]}>
           <AppIcon
             name={passed ? 'circle-check' : 'warning'}
             size={32}
-            color={passed ? '#4ADE80' : c.destructive}
+            color={passed ? c.primary : c.destructive}
           />
         </View>
         {passed ? (
@@ -1019,22 +1019,22 @@ export default function QuizScreen() {
           </View>
         ) : null}
 
-        <Text style={[styles.kicker, { color: passed ? '#4ADE80' : c.destructive }]}>
+        <Text style={[styles.kicker, { color: passed ? c.primary : c.destructive }]}>
           {passed ? 'SUPERATO' : 'NON SUPERATO'}
         </Text>
         <Text style={[styles.heading, { color: c.foreground }]}>{quizTitle}</Text>
 
         {/* Percentage circle */}
-        <View style={[styles.scoreBadge, { backgroundColor: c.card, borderColor: passed ? '#4ADE80' : c.destructive }]}>
-          <Text style={[styles.scoreNumber, { color: passed ? '#4ADE80' : c.destructive }]}>{percentage}%</Text>
+        <View style={[styles.scoreBadge, { backgroundColor: c.card, borderColor: passed ? c.primary : c.destructive }]}>
+          <Text style={[styles.scoreNumber, { color: passed ? c.primary : c.destructive }]}>{percentage}%</Text>
           <Text style={[styles.scoreLabel, { color: c.mutedForeground }]}>punteggio</Text>
         </View>
 
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: c.card, borderColor: c.border }]}>
-            <AppIcon name="circle-check" size={18} color="#4ADE80" />
-            <Text style={[styles.statNumber, { color: '#4ADE80' }]}>{correct}</Text>
+            <AppIcon name="circle-check" size={18} color={c.primary} />
+            <Text style={[styles.statNumber, { color: c.primary }]}>{correct}</Text>
             <Text style={[styles.statLabel, { color: c.mutedForeground }]}>Corrette</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: c.card, borderColor: c.border }]}>

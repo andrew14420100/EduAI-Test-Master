@@ -429,7 +429,7 @@ export default function LibraryScreen() {
                   const ready = item.extractionStatus === 'ready';
                   const failed = item.extractionStatus === 'failed';
                   const analyzing = item.extractionStatus === 'pending' || item.extractionStatus === 'processing';
-                  const badgeColor = ready ? '#4ADE80' : failed ? c.destructive : c.mutedForeground;
+                  const badgeColor = ready ? c.primary : failed ? c.destructive : c.mutedForeground;
                   const badgeLabel = ready
                     ? 'Pronto per lo studio'
                     : item.extractionStatus === 'unsupported'
