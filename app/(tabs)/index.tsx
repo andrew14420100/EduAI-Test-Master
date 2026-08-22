@@ -289,8 +289,6 @@ const styles = StyleSheet.create({
   progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   progressBig: { fontFamily: 'Inter_700Bold', fontSize: 17 },
   progressValue: { fontFamily: 'Inter_700Bold', fontSize: 17 },
-  track: { height: 8, borderRadius: 4, overflow: 'hidden', marginTop: 14 },
-  fill: { height: '100%', borderRadius: 4 },
   small: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
   community: { borderWidth: 1, borderRadius: 20, padding: 12 },
   rankingTabs: { flexDirection: 'row', padding: 4, borderRadius: 14, marginBottom: 4 },
