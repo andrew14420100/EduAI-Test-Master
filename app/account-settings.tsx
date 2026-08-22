@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { useColors } from '@/hooks/useColors';
+import { upsertProfile } from '@workspace/api-client-react';
 
 export default function AccountSettingsScreen() {
   const c = useColors();
@@ -29,6 +30,7 @@ export default function AccountSettingsScreen() {
       }
       if (nextUsername !== (user.username ?? '')) {
         await (user as unknown as { update: (args: { username: string }) => Promise<unknown> }).update({ username: nextUsername });
+        await upsertProfile({ username: nextUsername, email: user.primaryEmailAddress?.emailAddress ?? email.trim() });
       }
       if (newPassword.trim()) {
         await (user as unknown as { updatePassword: (args: { currentPassword: string; newPassword: string }) => Promise<unknown> })
