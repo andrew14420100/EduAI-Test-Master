@@ -22,6 +22,14 @@ export default function AccountSettingsScreen() {
     setBusy(true);
     setStatus('');
     try {
+      const nextUsername = username.trim();
+      if (!/^[A-Za-z0-9_]{3,20}$/.test(nextUsername)) {
+        setStatus('Username non valido: usa 3–20 caratteri, solo lettere, numeri e underscore.');
+        return;
+      }
+      if (nextUsername !== (user.username ?? '')) {
+        await (user as unknown as { update: (args: { username: string }) => Promise<unknown> }).update({ username: nextUsername });
+      }
       if (newPassword.trim()) {
         await (user as unknown as { updatePassword: (args: { currentPassword: string; newPassword: string }) => Promise<unknown> })
           .updatePassword({ currentPassword, newPassword });
@@ -52,8 +60,19 @@ export default function AccountSettingsScreen() {
       <Text style={[styles.eyebrow, { color: c.primary }]}>ACCOUNT</Text>
       <Text style={[styles.title, { color: c.foreground }]}>Impostazioni</Text>
       <Text style={[styles.description, { color: c.mutedForeground }]}>Il percorso di studio resta bloccato perché determina i contenuti dell’app.</Text>
-       <Text style={[styles.label, { color: c.foreground }]}>Nome utente (non modificabile)</Text>
-       <TextInput value={username} editable={false} autoCapitalize="none" style={[styles.input, styles.disabledInput, { color: c.mutedForeground, backgroundColor: c.secondary, borderColor: c.border }]} />
+       <Text style={[styles.label, { color: c.foreground }]}>Nome utente</Text>
+       <TextInput
+         value={username}
+         onChangeText={setUsername}
+         editable={!busy}
+         autoCapitalize="none"
+         autoCorrect={false}
+         maxLength={20}
+         placeholder="es. mario_rossi"
+         placeholderTextColor={c.mutedForeground}
+         style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]}
+       />
+       <Text style={[styles.helper, { color: c.mutedForeground }]}>3–20 caratteri · lettere, numeri e underscore</Text>
       <Text style={[styles.label, { color: c.foreground }]}>Nuova email</Text>
       <TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
       <Text style={[styles.label, { color: c.foreground }]}>Password attuale</Text>
@@ -81,4 +100,5 @@ const styles = StyleSheet.create({
   button: { borderRadius: 16, padding: 15, alignItems: 'center', marginTop: 10 },
   buttonText: { fontFamily: 'Inter_700Bold', fontSize: 15 },
   status: { fontFamily: 'Inter_500Medium', fontSize: 13, lineHeight: 19, marginTop: 4 },
+  helper: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: -5 },
 });
