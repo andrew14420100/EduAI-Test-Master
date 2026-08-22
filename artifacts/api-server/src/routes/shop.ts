@@ -33,6 +33,10 @@ const SHOP_CATALOG: Record<string, CatalogEntry> = {
   event_answer:   { itemType: "animazione_risposta", price: 30 },
   event_unlock:   { itemType: "animazione_sblocco", price: 55 },
   event_interface:{ itemType: "animazione_interfaccia", price: 60 },
+  avatar_gold_frame: { itemType: "cornice_avatar", price: 95 },
+  avatar_glow_frame: { itemType: "cornice_avatar", price: 160 },
+  profile_stats_glow: { itemType: "decorazione_profilo", price: 75 },
+  profile_stats_glitch: { itemType: "decorazione_profilo", price: 180 },
   // Stili carta
   card_glass:     { itemType: "stile_carta", price: 30  },
   card_gradient:  { itemType: "stile_carta", price: 45  },

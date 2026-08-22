@@ -81,7 +81,8 @@ export type ShopItem = {
   subtitle: string;
   cost: number;
   icon: 'moon' | 'zap' | 'award' | 'star' | 'sparkles' | 'layers' | 'flame' | 'shield' | 'paintbrush' | 'tag' | 'upload';
-  itemType: 'tema' | 'distintivo' | 'collezionabile' | 'icona_futura' | 'animazione' | 'animazione_completamento' | 'animazione_livello' | 'animazione_streak' | 'animazione_upload' | 'animazione_risposta' | 'animazione_sblocco' | 'animazione_interfaccia' | 'stile_carta' | 'titolo';
+  itemType: 'tema' | 'distintivo' | 'collezionabile' | 'icona_futura' | 'animazione' | 'animazione_completamento' | 'animazione_livello' | 'animazione_streak' | 'animazione_upload' | 'animazione_risposta' | 'animazione_sblocco' | 'animazione_interfaccia' | 'stile_carta' | 'cornice_avatar' | 'decorazione_profilo' | 'titolo';
+  rarity?: 'comune' | 'non_comune' | 'raro' | 'epico' | 'leggendario';
   owned: boolean;
   equipped: boolean;
   ownedItemId?: string;
@@ -234,6 +235,10 @@ const shopCatalog: Omit<ShopItem, 'owned' | 'equipped' | 'ownedItemId'>[] = [
   { id: 'event_answer', title: 'Colpo di genio', subtitle: 'Risposta corretta o sbagliata · equipaggiabile', cost: 30, icon: 'zap', itemType: 'animazione_risposta' },
   { id: 'event_unlock', title: 'Mappa sbloccata', subtitle: 'Mappa e flashcard · equipaggiabile', cost: 55, icon: 'layers', itemType: 'animazione_sblocco' },
   { id: 'event_interface', title: 'Bordo luminoso', subtitle: 'Interfaccia e tema schede · equipaggiabile', cost: 60, icon: 'sparkles', itemType: 'animazione_interfaccia' },
+  { id: 'avatar_gold_frame', title: 'Cornice Aurea', subtitle: 'Cornice avatar · equipaggiabile', cost: 95, icon: 'award', itemType: 'cornice_avatar', rarity: 'epico' },
+  { id: 'avatar_glow_frame', title: 'Aureola luminosa', subtitle: 'Cornice avatar animata · equipaggiabile', cost: 160, icon: 'sparkles', itemType: 'cornice_avatar', rarity: 'leggendario' },
+  { id: 'profile_stats_glow', title: 'Statistiche Neon', subtitle: 'Decorazione contatori profilo · equipaggiabile', cost: 75, icon: 'zap', itemType: 'decorazione_profilo', rarity: 'raro' },
+  { id: 'profile_stats_glitch', title: 'Glitch Leggendario', subtitle: 'Bordo animato statistiche · equipaggiabile', cost: 180, icon: 'zap', itemType: 'decorazione_profilo', rarity: 'leggendario' },
 
   // ── STILI CARTA (aspetto delle card materiali e quiz, equipaggiabili) ────────
   { id: 'card_glass',     title: 'Vetro smerigliato', subtitle: 'Stile carta · equipaggiabile',          cost: 30,  icon: 'layers',     itemType: 'stile_carta' },

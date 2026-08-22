@@ -42,6 +42,8 @@ const CATEGORIES: {
     description: `Cambiano l’aspetto delle card materiali e quiz. Uno attivo alla volta.`,
     icon: 'paintbrush',
   },
+  { itemType: 'cornice_avatar', eyebrow: 'PROFILO', title: 'Cornici Avatar', description: 'Cornici e auree luminose per l’immagine del profilo.', icon: 'award' },
+  { itemType: 'decorazione_profilo', eyebrow: 'PROFILO', title: 'Decorazioni Statistiche', description: 'Bordi speciali per punti e statistiche del profilo.', icon: 'zap' },
   {
     itemType: 'titolo',
     eyebrow: 'IDENTITÀ',
@@ -65,7 +67,7 @@ const CATEGORIES: {
   },
 ];
 
-const EQUIPPABLE_TYPES: ShopItem['itemType'][] = ['tema', 'animazione', 'animazione_completamento', 'animazione_livello', 'animazione_streak', 'animazione_upload', 'animazione_risposta', 'animazione_sblocco', 'animazione_interfaccia', 'stile_carta', 'titolo'];
+const EQUIPPABLE_TYPES: ShopItem['itemType'][] = ['tema', 'animazione', 'animazione_completamento', 'animazione_livello', 'animazione_streak', 'animazione_upload', 'animazione_risposta', 'animazione_sblocco', 'animazione_interfaccia', 'stile_carta', 'cornice_avatar', 'decorazione_profilo', 'titolo'];
 
 function rewardDescription(item: ShopItem): string {
   if (item.itemType === 'tema') return 'Cambia immediatamente i colori e l’atmosfera dell’intera app.';
@@ -74,6 +76,15 @@ function rewardDescription(item: ShopItem): string {
   if (item.itemType === 'titolo') return 'Compare sotto il tuo nome nel profilo quando lo equipaggi.';
   if (item.itemType === 'icona_futura') return 'È una ricompensa preparata per cambiare l’icona di avvio in un futuro aggiornamento.';
   return 'Resta nella tua collezione come ricordo del traguardo raggiunto.';
+}
+
+function rarityFor(item: ShopItem): NonNullable<ShopItem['rarity']> {
+  if (item.rarity) return item.rarity;
+  if (item.cost >= 150) return 'leggendario';
+  if (item.cost >= 100) return 'epico';
+  if (item.cost >= 60) return 'raro';
+  if (item.cost >= 35) return 'non_comune';
+  return 'comune';
 }
 
 function pointsForNextLevel(level: number): number {
@@ -326,6 +337,9 @@ function ShopItemRow({
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.itemTitle, { color: c.foreground }]}>{item.title}</Text>
+        <Text style={[styles.rarity, { color: ({ comune: '#6F6252', non_comune: c.primary, raro: '#3478C9', epico: '#8B4BC2', leggendario: '#C77A16' } as Record<string, string>)[rarityFor(item)] }]}>
+          {rarityFor(item).replace('_', ' ').toUpperCase()}
+        </Text>
         <Text style={[styles.small, { color: c.mutedForeground }]}>{item.subtitle}</Text>
       </View>
       {item.equipped ? (
