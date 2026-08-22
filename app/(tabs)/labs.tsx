@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
+import { CentralLoader } from '@/components/CentralLoader';
 import { Pill, PrimaryButton, SectionTitle } from '@/components/Ui';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -99,11 +100,7 @@ export default function LabsScreen() {
   }
 
   if (labsLoading) {
-    return (
-      <View style={[styles.centerWrap, { backgroundColor: c.background }]}>
-        <Text style={[styles.emptyBody, { color: c.mutedForeground }]}>Caricamento esercizi…</Text>
-      </View>
-    );
+    return <CentralLoader message="Preparazione dei laboratori…" />;
   }
 
   if (materials.length === 0 || (readyMaterials.length === 0 && labExercises.length === 0)) {
