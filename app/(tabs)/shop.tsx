@@ -23,12 +23,18 @@ const CATEGORIES: {
     icon: 'moon',
   },
   {
-    itemType: 'animazione',
-    eyebrow: 'ANIMAZIONI',
-    title: 'Effetti globali',
-    description: 'Celebrano gli eventi importanti in tutta l’app. Equipaggiarne uno alla volta.',
+    itemType: 'animazione_completamento',
+    eyebrow: 'COMPLETAMENTO TEST',
+    title: 'Fine verifica',
+    description: 'Coriandoli, stelle e incoronazioni quando concludi una verifica.',
     icon: 'sparkles',
   },
+  { itemType: 'animazione_livello', eyebrow: 'LEVEL UP', title: 'Passaggio di livello', description: 'Celebra ogni nuovo livello raggiunto.', icon: 'award' },
+  { itemType: 'animazione_streak', eyebrow: 'LOGIN / STREAK', title: 'Serie giornaliera', description: 'Dà energia al tuo accesso quotidiano e alla serie.', icon: 'flame' },
+  { itemType: 'animazione_upload', eyebrow: 'UPLOAD RIUSCITO', title: 'Materiale pronto', description: 'Feedback quando un materiale o laboratorio è pronto.', icon: 'upload' },
+  { itemType: 'animazione_risposta', eyebrow: 'RISPOSTA', title: 'Risposta corretta / sbagliata', description: 'Feedback immediato durante gli esercizi.', icon: 'zap' },
+  { itemType: 'animazione_sblocco', eyebrow: 'SBLOCCO', title: 'Mappa e flashcard', description: 'Effetti quando sblocchi nuovi strumenti di studio.', icon: 'layers' },
+  { itemType: 'animazione_interfaccia', eyebrow: 'INTERFACCIA', title: 'Tema schede', description: 'Bordi ed effetti per le card dell’app.', icon: 'sparkles' },
   {
     itemType: 'stile_carta',
     eyebrow: 'STILE',
@@ -59,11 +65,11 @@ const CATEGORIES: {
   },
 ];
 
-const EQUIPPABLE_TYPES: ShopItem['itemType'][] = ['tema', 'animazione', 'stile_carta', 'titolo'];
+const EQUIPPABLE_TYPES: ShopItem['itemType'][] = ['tema', 'animazione', 'animazione_completamento', 'animazione_livello', 'animazione_streak', 'animazione_upload', 'animazione_risposta', 'animazione_sblocco', 'animazione_interfaccia', 'stile_carta', 'titolo'];
 
 function rewardDescription(item: ShopItem): string {
   if (item.itemType === 'tema') return 'Cambia immediatamente i colori e l’atmosfera dell’intera app.';
-  if (item.itemType === 'animazione') return 'Viene mostrata al login, ai passaggi di livello, agli inviti accettati, ai quiz, ai laboratori, agli acquisti e agli altri traguardi.';
+  if (item.itemType.startsWith('animazione')) return 'Effetto equipaggiabile per questo evento, con sblocco progressivo usando punti e livello.';
   if (item.itemType === 'stile_carta') return 'Modifica il modo in cui vengono visualizzate le card di materiali, quiz e laboratori.';
   if (item.itemType === 'titolo') return 'Compare sotto il tuo nome nel profilo quando lo equipaggi.';
   if (item.itemType === 'icona_futura') return 'È una ricompensa preparata per cambiare l’icona di avvio in un futuro aggiornamento.';
