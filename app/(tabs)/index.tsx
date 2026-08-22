@@ -22,7 +22,6 @@ export default function HomeScreen() {
     streak,
     quizzes,
     materials,
-    shop,
     leaderboard,
     friends,
     inviteCode,
@@ -45,9 +44,8 @@ export default function HomeScreen() {
     }
     router.push({ pathname: '/quiz', params: { mode: 'recovery', title: 'Recupero Errori' } });
   };
-  const nextReward = shop.find((item) => !item.owned);
-  const rewardProgress = nextReward ? Math.min(100, Math.round((wallet / nextReward.cost) * 100)) : 100;
   const experienceLevel = Math.min(50, Math.floor(xp / 100) + 1);
+  const xpInLevel = xp % 100;
 
   const shareCode = async () => {
     if (!inviteCode) {
@@ -107,10 +105,10 @@ export default function HomeScreen() {
           <View style={[styles.stat, { backgroundColor: c.card }]}><Text style={[styles.statValue, { color: c.foreground }]}>{wallet}</Text><Text style={[styles.statLabel, { color: c.mutedForeground }]}>punti</Text></View>
           <View style={[styles.stat, { backgroundColor: c.card }]}><Text style={[styles.statValue, { color: c.foreground }]}>{quizzes.length}</Text><Text style={[styles.statLabel, { color: c.mutedForeground }]}>verifiche</Text></View>
         </View>
-        <View style={[styles.xpCard, { backgroundColor: c.card, borderColor: c.border }]}>
+        <Pressable onPress={() => setNotice({ title: `Livello ${experienceLevel}`, message: `${xpInLevel}/100 XP nel livello attuale (${xpInLevel}%).\\n\\nGuadagna XP completando quiz e laboratori e mantenendo la tua serie giornaliera.`, icon: 'award' })} style={[styles.xpCard, { backgroundColor: c.card, borderColor: c.border }]}>
           <View style={styles.xpHeader}><Text style={[styles.statLabel, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {experienceLevel}</Text><Text style={[styles.statLabel, { color: c.primary }]}>{xp} XP</Text></View>
           <View style={[styles.track, { backgroundColor: c.secondary }]}><View style={[styles.fill, { backgroundColor: c.primary, width: `${Math.min(100, xp % 100)}%` }]} /></View>
-        </View>
+        </Pressable>
 
         <View style={[styles.hero, { backgroundColor: c.primary }]}>
           <View style={{ flex: 1 }}>
@@ -150,20 +148,6 @@ export default function HomeScreen() {
             </Text>
             <AppIcon name="chevron-right" size={14} color={recoveryCount ? c.primaryForeground : c.secondaryForeground} />
           </View>
-        </Pressable>
-
-        <SectionTitle eyebrow="Premi" title="Prossimo sblocco" />
-        <Pressable onPress={() => router.push('/(tabs)/shop')} style={[styles.progressCard, { backgroundColor: c.card, borderColor: c.border }]}>
-          <View style={styles.progressHeader}>
-            <View>
-              <Text style={[styles.progressBig, { color: c.foreground }]}>{nextReward?.title ?? 'Collezione completata'}</Text>
-              <Text style={[styles.small, { color: c.mutedForeground }]}>
-                {nextReward ? wallet >= nextReward.cost ? 'Puoi sbloccarlo ora.' : `Mancano ${nextReward.cost - wallet} punti.` : 'Hai già ottenuto tutti i premi.'}
-              </Text>
-            </View>
-            <Text style={[styles.progressValue, { color: c.primary }]}>{rewardProgress}%</Text>
-          </View>
-          <View style={[styles.track, { backgroundColor: c.secondary }]}><View style={[styles.fill, { backgroundColor: c.primary, width: `${rewardProgress}%` }]} /></View>
         </Pressable>
 
         <SectionTitle eyebrow="Community" title="Classifica" />

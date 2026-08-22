@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { AppIcon } from '@/components/AppIcon';
 import { useColors } from '@/hooks/useColors';
+
+const appLogo = require('@/assets/images/icon.png');
 
 export function CentralLoader({ message = 'Caricamento in corso…' }: { message?: string }) {
   const c = useColors();
@@ -40,7 +42,7 @@ export function CentralLoader({ message = 'Caricamento in corso…' }: { message
         <Animated.View style={[styles.ringOuter, { borderTopColor: c.primary, borderRightColor: c.primary, transform: [{ rotate: spin }] }]} />
         <Animated.View style={[styles.ringInner, { borderBottomColor: c.accent, borderLeftColor: c.accent, transform: [{ rotate: counterSpin }] }]} />
         <View style={[styles.logo, { backgroundColor: c.primary }]}>
-          <AppIcon name="graduation-cap" size={31} color={c.primaryForeground} />
+          <Image source={appLogo} style={styles.logoImage} resizeMode="contain" />
         </View>
       </View>
       <Text style={[styles.message, { color: c.foreground }]}>{message}</Text>
@@ -54,7 +56,8 @@ const styles = StyleSheet.create({
   logoStage: { width: 142, height: 142, alignItems: 'center', justifyContent: 'center' },
   ringOuter: { position: 'absolute', width: 132, height: 132, borderRadius: 66, borderWidth: 4, borderColor: 'transparent' },
   ringInner: { position: 'absolute', width: 112, height: 112, borderRadius: 56, borderWidth: 4, borderColor: 'transparent' },
-  logo: { width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  logoImage: { width: 70, height: 70 },
   message: { fontFamily: 'Inter_700Bold', fontSize: 18, textAlign: 'center', marginTop: 25 },
   hint: { fontFamily: 'Inter_500Medium', fontSize: 13, textAlign: 'center', marginTop: 8 },
 });

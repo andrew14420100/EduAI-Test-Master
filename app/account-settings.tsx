@@ -29,7 +29,11 @@ export default function AccountSettingsScreen() {
         return;
       }
       if (nextUsername !== (user.username ?? '')) {
-        await (user as unknown as { update: (args: { username: string }) => Promise<unknown> }).update({ username: nextUsername });
+        const updateUser = (user as unknown as { update: (args: { username: string }) => Promise<unknown> }).update;
+        if (typeof updateUser !== 'function') {
+          throw new Error('Il tuo account Clerk non consente la modifica dello username.');
+        }
+        await updateUser.call(user, { username: nextUsername });
         await upsertProfile({ username: nextUsername, email: user.primaryEmailAddress?.emailAddress ?? email.trim() });
       }
       if (newPassword.trim()) {
@@ -48,7 +52,11 @@ export default function AccountSettingsScreen() {
       setNewPassword('');
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      setStatus(/taken|already|occupat|unique/i.test(message) ? 'Username già occupato.' : (message || 'Impossibile aggiornare le impostazioni.'));
+      setStatus(/taken|already|occupat|unique/i.test(message)
+        ? 'Username già occupato. Scegline uno diverso.'
+        : /valid parameter|not allowed|username.*enabled/i.test(message)
+          ? 'La modifica username non è abilitata per questo account Clerk.'
+          : (message || 'Impossibile aggiornare le impostazioni.'));
     } finally {
       setBusy(false);
     }
