@@ -282,6 +282,8 @@ export interface Ticket {
   /** Ticket category (e.g. "bug", "domanda", "altro"). */
   category: string;
   message: string;
+  /** Numeric priority; 100 identifies urgent onboarding problems. */
+  priority: number;
   status: string;
   createdAt: string;
   updatedAt: string;

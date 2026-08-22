@@ -57,6 +57,13 @@
       "when": 1787350670492,
       "tag": "0007_closed_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787358054260,
+      "tag": "0008_cold_ezekiel_stane",
+      "breakpoints": true
     }
   ]
 }
