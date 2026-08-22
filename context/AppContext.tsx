@@ -665,7 +665,26 @@ export function AppProvider({
       || ticketsQuery.isFetching
       || leaderboardQuery.isFetching
       || inviteQuery.isFetching
-      || labExercisesQuery.isFetching,
+       || labExercisesQuery.isFetching
+       || updateLevelMutation.isPending
+       || requestUploadMutation.isPending
+       || retryMaterialAnalysisMutation.isPending
+       || finalizeMaterialMutation.isPending
+       || createGroupMutation.isPending
+       || deleteMaterialMutation.isPending
+       || startQuizSessionMutation.isPending
+       || completeQuizSessionMutation.isPending
+       || generateFlashcardsMutation.isPending
+       || startRecoverySessionMutation.isPending
+       || quickExplanationMutation.isPending
+       || buyItemMutation.isPending
+       || equipItemMutation.isPending
+       || useLightThemeMutation.isPending
+       || createTicketMutation.isPending
+       || markTicketReadMutation.isPending
+       || useInviteMutation.isPending
+       || submitLabAttemptMutation.isPending
+       || setLabsEnabledMutation.isPending,
     logout: async () => {
       await signOut();
       queryClient.clear();
@@ -679,6 +698,15 @@ export function AppProvider({
         const updated = await updateLevelMutation.mutateAsync({ data: { level: nextLevel } });
         setProfileSeed(updated);
         queryClient.setQueryData(getGetProfileQueryKey(), updated);
+         await Promise.all([
+           profileQuery.refetch(),
+           materialsQuery.refetch(),
+           quizzesQuery.refetch(),
+           recoveryQuery.refetch(),
+           inventoryQuery.refetch(),
+           leaderboardQuery.refetch(),
+           inviteQuery.refetch(),
+         ]);
         triggerReward('livello', 'Percorso salvato', 'Il tuo percorso è pronto: puoi iniziare a studiare.');
         return { ok: true };
       } catch (error) {

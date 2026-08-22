@@ -36,6 +36,8 @@ export default function ProfileScreen() {
     labsEnabled,
     hasLabsByDefault,
     enableLabs,
+    soundEnabled,
+    setSoundEnabled,
   } = useApp();
   const isAdmin = account?.email?.toLowerCase() === 'andcolaz13@gmail.com';
   const [modal, setModal] = useState<ProfileModal>(null);
@@ -46,6 +48,7 @@ export default function ProfileScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState({ title: '', message: '', success: false });
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [updatingSound, setUpdatingSound] = useState(false);
 
   useEffect(() => {
     const ticket = tickets.find((item) => item.id === ticketId);
@@ -253,6 +256,24 @@ export default function ProfileScreen() {
             <AppIcon name="chevron-right" size={14} color={c.mutedForeground} />
           </Pressable>
         ))}
+        <View style={[styles.preference, { borderBottomColor: c.border }]}>
+          <View style={[styles.prefIcon, { backgroundColor: c.secondary }]}><AppIcon name="sparkles" size={15} color={c.foreground} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.prefText, { color: c.foreground }]}>Feedback sonoro</Text>
+            <Text style={[styles.small, { color: c.mutedForeground }]}>Suoni e vibrazioni per premi e risposte</Text>
+          </View>
+          <Switch
+            testID="toggle-feedback-sonoro"
+            value={soundEnabled}
+            disabled={updatingSound}
+            onValueChange={(next) => {
+              setUpdatingSound(true);
+              void setSoundEnabled(next).finally(() => setUpdatingSound(false));
+            }}
+            trackColor={{ false: c.border, true: c.primary }}
+            thumbColor={c.background}
+          />
+        </View>
         <View style={styles.footer}><Pill>EDUAI TEST MASTER</Pill><Text style={[styles.small, { color: c.mutedForeground }]}>Il tuo spazio di studio sincronizzato.</Text></View>
       </ScrollView>
 
