@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN "xp" integer DEFAULT 0 NOT NULL;
