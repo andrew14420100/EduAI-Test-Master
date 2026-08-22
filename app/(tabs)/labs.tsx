@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -67,6 +66,8 @@ export default function LabsScreen() {
   const [enablingLabs, setEnablingLabs] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generationMessage, setGenerationMessage] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LabExercise | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const readyMaterials = materials.filter((material) => material.isStudyReady);
   const analyzingMaterials = materials.filter((material) => material.extractionStatus === 'pending' || material.extractionStatus === 'processing');
 
@@ -376,22 +377,10 @@ export default function LabsScreen() {
                 <Pressable
                   accessibilityLabel={`Elimina ${ex.title}`}
                   hitSlop={10}
-                  onPress={() => Alert.alert(
-                    'Eliminare il laboratorio?',
-                    'Il laboratorio e i suoi tentativi verranno eliminati definitivamente.',
-                    [
-                      { text: 'Annulla', style: 'cancel' },
-                      {
-                        text: 'Elimina',
-                        style: 'destructive',
-                        onPress: () => {
-                          void deleteLabExercise(ex.id).then((deleted) => {
-                            if (!deleted.ok) setErrorModal(deleted.message);
-                          });
-                        },
-                      },
-                    ],
-                  )}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    setDeleteTarget(ex);
+                  }}
                 >
                   <AppIcon name="trash" size={15} color={c.destructive} />
                 </Pressable>
