@@ -1699,7 +1699,7 @@ components:
 
     Ticket:
       type: object
-      required: [id, userId, subject, category, message, status, createdAt, updatedAt, messages]
+      required: [id, userId, subject, category, message, priority, status, createdAt, updatedAt, messages]
       properties:
         id:
           type: string
@@ -1712,6 +1712,9 @@ components:
           description: Ticket category (e.g. "bug", "domanda", "altro").
         message:
           type: string
+        priority:
+          type: integer
+          description: Numeric priority; 100 identifies urgent onboarding problems.
         status:
           type: string
         createdAt:

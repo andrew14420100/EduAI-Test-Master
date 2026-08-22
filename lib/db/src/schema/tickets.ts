@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const ticketsTable = pgTable("tickets", {
   id: text("id").primaryKey(), // uuid
@@ -6,6 +6,7 @@ export const ticketsTable = pgTable("tickets", {
   subject: text("subject").notNull(),
   category: text("category").notNull(), // e.g. "bug", "domanda", "altro"
   message: text("message").notNull(),
+  priority: integer("priority").notNull().default(0), // 100 = urgent onboarding issue
   status: text("status").notNull().default("open"), // open | closed | in_progress
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

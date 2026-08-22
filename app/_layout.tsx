@@ -37,7 +37,7 @@ const buildExtra = (Constants.expoConfig?.extra ?? {}) as {
   clerkPublishableKey?: string;
   clerkProxyUrl?: string;
 };
-const domain = process.env.EXPO_PUBLIC_DOMAIN || buildExtra.apiDomain;
+const domain = process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_DOMAIN || buildExtra.apiDomain;
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || buildExtra.clerkPublishableKey;
 const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || buildExtra.clerkProxyUrl || undefined;
 

@@ -64,7 +64,8 @@ import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { ThemeProvider, type AppTheme } from '@/context/ThemeContext';
 
-const configuredApiDomain = process.env.EXPO_PUBLIC_DOMAIN
+const configuredApiDomain = process.env.EXPO_PUBLIC_API_URL
+  || process.env.EXPO_PUBLIC_DOMAIN
   || (Constants.expoConfig?.extra as { apiDomain?: string } | undefined)?.apiDomain
   || '';
 
