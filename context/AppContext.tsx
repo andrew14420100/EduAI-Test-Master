@@ -80,7 +80,7 @@ export type ShopItem = {
   title: string;
   subtitle: string;
   cost: number;
-  icon: 'moon' | 'zap' | 'award' | 'star' | 'sparkles' | 'layers' | 'flame' | 'shield' | 'paintbrush' | 'tag';
+  icon: 'moon' | 'zap' | 'award' | 'star' | 'sparkles' | 'layers' | 'flame' | 'shield' | 'paintbrush' | 'tag' | 'upload';
   itemType: 'tema' | 'distintivo' | 'collezionabile' | 'icona_futura' | 'animazione' | 'animazione_completamento' | 'animazione_livello' | 'animazione_streak' | 'animazione_upload' | 'animazione_risposta' | 'animazione_sblocco' | 'animazione_interfaccia' | 'stile_carta' | 'titolo';
   owned: boolean;
   equipped: boolean;
@@ -221,12 +221,12 @@ const shopCatalog: Omit<ShopItem, 'owned' | 'equipped' | 'ownedItemId'>[] = [
   { id: 'arctic',   title: 'Artico',                subtitle: 'Bianco ghiaccio e accenti ciano',          cost: 130, icon: 'moon',       itemType: 'tema' },
 
   // ── ANIMAZIONI DI COMPLETAMENTO (effetto visivo fine verifica, equipaggiabili) ──
-  { id: 'anim_confetti',  title: 'Coriandoli',       subtitle: 'Animazione completamento · equipaggiabile', cost: 25,  icon: 'sparkles',   itemType: 'animazione' },
-  { id: 'anim_stars',     title: 'Pioggia di stelle', subtitle: 'Animazione completamento · equipaggiabile', cost: 35,  icon: 'star',       itemType: 'animazione' },
-  { id: 'anim_fire',      title: 'Fiamme del successo', subtitle: 'Animazione completamento · equipaggiabile', cost: 50,  icon: 'flame',      itemType: 'animazione' },
-  { id: 'anim_aurora',    title: 'Aurora boreale',   subtitle: 'Animazione completamento · equipaggiabile', cost: 70,  icon: 'sparkles',   itemType: 'animazione' },
-  { id: 'anim_lightning', title: 'Lampi di genio',   subtitle: 'Animazione completamento · equipaggiabile', cost: 90,  icon: 'zap',        itemType: 'animazione' },
-  { id: 'anim_crown',     title: 'Incoronazione',    subtitle: 'Animazione completamento · equipaggiabile', cost: 120, icon: 'award',      itemType: 'animazione' },
+  { id: 'anim_confetti',  title: 'Coriandoli',       subtitle: 'Animazione completamento · equipaggiabile', cost: 25,  icon: 'sparkles',   itemType: 'animazione_completamento' },
+  { id: 'anim_stars',     title: 'Pioggia di stelle', subtitle: 'Animazione completamento · equipaggiabile', cost: 35,  icon: 'star',       itemType: 'animazione_completamento' },
+  { id: 'anim_fire',      title: 'Fiamme del successo', subtitle: 'Animazione completamento · equipaggiabile', cost: 50,  icon: 'flame',      itemType: 'animazione_completamento' },
+  { id: 'anim_aurora',    title: 'Aurora boreale',   subtitle: 'Passaggio di livello · equipaggiabile', cost: 70,  icon: 'sparkles',   itemType: 'animazione_livello' },
+  { id: 'anim_lightning', title: 'Lampi di genio',   subtitle: 'Passaggio di livello · equipaggiabile', cost: 90,  icon: 'zap',        itemType: 'animazione_livello' },
+  { id: 'anim_crown',     title: 'Incoronazione',    subtitle: 'Animazione completamento · equipaggiabile', cost: 120, icon: 'award',      itemType: 'animazione_completamento' },
   { id: 'event_levelup', title: 'Salto stellare', subtitle: 'Passaggio di livello · equipaggiabile', cost: 45, icon: 'star', itemType: 'animazione_livello' },
   { id: 'event_streak', title: 'Fiamma quotidiana', subtitle: 'Login e serie giornaliera · equipaggiabile', cost: 40, icon: 'flame', itemType: 'animazione_streak' },
   { id: 'event_upload', title: 'Materiale pronto', subtitle: 'Upload riuscito · equipaggiabile', cost: 35, icon: 'upload', itemType: 'animazione_upload' },
