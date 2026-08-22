@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
+import { CentralLoader } from '@/components/CentralLoader';
 import { IconButton, PrimaryButton } from '@/components/Ui';
 import { useApp } from '@/context/AppContext';
 import type { StartQuizResult, StudyFlashcard } from '@/context/AppContext';
@@ -430,17 +431,7 @@ export default function QuizScreen() {
 
   // FLASHCARD LOADING PHASE
   if (phase === 'flashcardLoad') {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: c.background }]}>
-        <View style={[styles.iconLarge, { backgroundColor: c.accent }]}>
-          <AppIcon name="flashcards" size={26} color={c.accentForeground} />
-        </View>
-        <Text style={[styles.kicker, { color: c.primary }]}>PREPARAZIONE FLASHCARD</Text>
-        <Text style={[styles.body, { color: c.mutedForeground }]}>
-          Generazione flashcard dal contenuto in corso…
-        </Text>
-      </View>
-    );
+    return <CentralLoader message="Preparazione flashcard…" />;
   }
 
   // FLASHCARD ERROR PHASE
@@ -609,17 +600,7 @@ export default function QuizScreen() {
 
   // LOADING PHASE
   if (phase === 'loading') {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: c.background }]}>
-        <View style={[styles.iconLarge, { backgroundColor: c.accent }]}>
-          <AppIcon name="question" size={26} color={c.accentForeground} />
-        </View>
-        <Text style={[styles.kicker, { color: c.primary }]}>PREPARAZIONE VERIFICA</Text>
-        <Text style={[styles.body, { color: c.mutedForeground }]}>
-          {mode === 'recovery' ? 'Preparazione del ripasso dagli errori in corso…' : 'Generazione domande in corso…'}
-        </Text>
-      </View>
-    );
+    return <CentralLoader message={mode === 'recovery' ? 'Preparazione del ripasso…' : 'Generazione domande…'} />;
   }
 
   if (phase === 'recoveryError') {
