@@ -61,6 +61,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import React, { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 import { ThemeProvider, type AppTheme } from '@/context/ThemeContext';
 
@@ -158,6 +159,8 @@ type AppState = {
   retryProfileSync: () => void;
   wallet: number;
   theme: AppTheme;
+  soundEnabled: boolean;
+  setSoundEnabled: (enabled: boolean) => Promise<void>;
   streak: number;
   quizzes: QuizRecord[];
   materials: Material[];
@@ -332,12 +335,32 @@ export function AppProvider({
   // Bumping this manually re-arms a single retry attempt for the current user.
   const [profileSyncNonce, setProfileSyncNonce] = useState(0);
   const [storedTheme, setStoredTheme] = useState<AppTheme | null>(initialStoredTheme);
+  const [soundEnabled, setSoundEnabledState] = useState(true);
   const [rewardEvent, setRewardEvent] = useState<RewardEvent | null>(null);
   const rewardEventIdRef = useRef(0);
   const triggerReward = (kind: RewardEvent['kind'], title: string, message: string) => {
     rewardEventIdRef.current += 1;
     setRewardEvent({ id: rewardEventIdRef.current, kind, title, message });
   };
+
+  useEffect(() => {
+    if (!user?.id) {
+      setSoundEnabledState(true);
+      return;
+    }
+    let cancelled = false;
+    void AsyncStorage.getItem(`eduai:sound:${user.id}`).then((value) => {
+      if (!cancelled) setSoundEnabledState(value !== 'off');
+    });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!rewardEvent || !soundEnabled || Platform.OS === 'web') return;
+    void Haptics.notificationAsync(
+      rewardEvent.kind === 'verifica' || rewardEvent.kind === 'livello' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Success,
+    );
+  }, [rewardEvent, soundEnabled]);
 
   const upsertProfile = useUpsertProfile();
   const profileQuery = useGetProfile({
@@ -616,6 +639,11 @@ export function AppProvider({
     },
     wallet: profile?.wallet ?? 0,
     theme,
+    soundEnabled,
+    setSoundEnabled: async (enabled) => {
+      setSoundEnabledState(enabled);
+      if (user?.id) await AsyncStorage.setItem(`eduai:sound:${user.id}`, enabled ? 'on' : 'off');
+    },
     streak: profile?.streak ?? 0,
     quizzes,
     materials,

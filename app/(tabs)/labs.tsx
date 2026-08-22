@@ -389,6 +389,30 @@ export default function LabsScreen() {
           </View>
         ))
       )}
+      <AppModal
+        visible={Boolean(deleteTarget)}
+        title="Eliminare il laboratorio?"
+        message={deleteTarget ? `"${deleteTarget.title}" e i suoi tentativi verranno eliminati definitivamente.` : undefined}
+        icon="trash"
+        onDismiss={() => { if (!deletingId) setDeleteTarget(null); }}
+        actions={deleteTarget ? [
+          { label: 'Annulla', onPress: () => { if (!deletingId) setDeleteTarget(null); } },
+          {
+            label: deletingId ? 'Eliminazione…' : 'Elimina',
+            variant: 'pericolo',
+            onPress: () => {
+              if (!deleteTarget || deletingId) return;
+              const id = deleteTarget.id;
+              setDeletingId(id);
+              void deleteLabExercise(id).then((deleted) => {
+                setDeletingId(null);
+                if (deleted.ok) setDeleteTarget(null);
+                else setErrorModal(deleted.message);
+              });
+            },
+          },
+        ] : []}
+      />
       {labAttempts.some((attempt) => attempt.score < 1) ? (
         <View>
           <SectionTitle eyebrow="DA RIPASSARE" title="Laboratori non passati" />
