@@ -22,7 +22,9 @@ test("ticket flow keeps the initial request and admin reply in the user's histor
   assert.match(route, /id: `initial-\$\{ticket\.id\}`/);
 
   // The admin response is persisted as a message and close=true is durable.
-  assert.match(route, /status: closing \? "closed" : current\.status === "closed" \? "closed" : "in_progress"/);
+  assert.match(route, /const nextStatus =/);
+  assert.match(route, /status: nextStatus/);
+  assert.match(route, /priority: category\.trim\(\) === "problema_percorso_prioritario" \? 100 : 0/);
   assert.match(route, /closedAt: new Date\(\), closedBy: adminId/);
   assert.match(route, /authorRole: "admin"/);
   assert.match(route, /message: message\.trim\(\)/);
