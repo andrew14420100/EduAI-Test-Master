@@ -232,6 +232,14 @@ export default function ProfileScreen() {
         )}
 
         <SectionTitle eyebrow="Impostazioni" title="Preferenze" />
+        <View testID="percorso-statico" style={[styles.preference, { borderBottomColor: c.border }]}>
+          <View style={[styles.prefIcon, { backgroundColor: c.secondary }]}><AppIcon name="book" size={15} color={c.foreground} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.prefText, { color: c.foreground }]}>Percorso di studio</Text>
+            <Text style={[styles.small, { color: c.mutedForeground }]}>Scelta definitiva: determina i contenuti dell’app</Text>
+          </View>
+          <AppIcon name="shield" size={14} color={c.mutedForeground} />
+        </View>
         {!hasLabsByDefault ? (
           <View style={[styles.preference, { borderBottomColor: c.border }]}>
             <View style={[styles.prefIcon, { backgroundColor: c.secondary }]}><AppIcon name="flask" size={15} color={c.foreground} /></View>
