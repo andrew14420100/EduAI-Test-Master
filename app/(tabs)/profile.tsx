@@ -121,11 +121,11 @@ export default function ProfileScreen() {
         message: 'Account, percorso, materiali, progressi e ticket sono salvati in modo protetto sul backend e associati esclusivamente al tuo account.',
         icon: 'shield' as const,
       }
-      : modal === 'ticket'
+      : modal === 'proponi-modifica'
         ? {
-          title: 'Contatta l’assistenza',
-          message: 'Descrivi il problema: la richiesta sarà salvata nel tuo account.',
-          icon: 'support' as const,
+          title: 'Proponi una modifica',
+          message: 'Condividi un suggerimento, segnala un errore o proponi una nuova funzionalità. La richiesta sarà salvata nel tuo account.',
+          icon: 'sparkles' as const,
         }
         : modal === 'esito'
           ? { title: feedback.title, message: feedback.message, icon: feedback.success ? 'circle-check' as const : 'warning' as const }
@@ -319,21 +319,21 @@ export default function ProfileScreen() {
               },
               { label: 'Annulla', onPress: () => setModal(null) },
             ]
-          : modal === 'ticket'
+          : modal === 'proponi-modifica'
             ? [
-              { label: submitting ? 'Invio…' : 'Invia ticket', variant: 'primaria', onPress: () => { void submitTicket(); } },
+              { label: submitting ? 'Invio…' : 'Invia proposta', variant: 'primaria', onPress: () => { void submitTicket(); } },
               { label: 'Annulla', onPress: () => setModal(null) },
             ]
             : [{ label: 'Ho capito', variant: 'primaria', onPress: () => setModal(null) }]}
       >
-        {modal === 'ticket' ? (
+        {modal === 'proponi-modifica' ? (
           <View style={styles.form}>
             <Text style={[styles.label, { color: c.foreground }]}>Oggetto</Text>
             <TextInput
               testID="ticket-oggetto"
               value={subject}
               onChangeText={setSubject}
-              placeholder="Es. Non riesco a caricare un PDF"
+              placeholder="Es. Aggiungi una modalità di ripasso"
               placeholderTextColor={c.mutedForeground}
               style={[styles.input, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]}
             />
@@ -355,7 +355,7 @@ export default function ProfileScreen() {
               testID="ticket-descrizione"
               value={description}
               onChangeText={setDescription}
-              placeholder="Spiega cosa è successo e cosa ti aspettavi."
+              placeholder="Descrivi l’idea o il problema in almeno 10 caratteri."
               placeholderTextColor={c.mutedForeground}
               multiline
               textAlignVertical="top"
