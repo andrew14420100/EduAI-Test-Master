@@ -4,3 +4,4 @@
 - [Development database migration history](development-db-migration-history.md) — dev may have tables without Drizzle’s ledger; inspect schema before applying generated migrations.
 - [Metro workspace watcher](metro-workspace-watcher.md) — exclude ephemeral tool directories when Expo watches the monorepo root, or Metro can fail on deleted paths.
 - [Native TypeScript test runner](native-typescript-test-runner.md) — Node’s native type stripping needs explicit `.ts` extensions for local ESM imports; bundling may hide this.
+- [Expo API URL normalization](expo-api-url-normalization.md) — EXPO_PUBLIC_API_URL may already include https://; normalize before passing it to clients or native fetch fails.
