@@ -41,7 +41,7 @@ const domain = process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_DOMAIN
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || buildExtra.clerkPublishableKey;
 const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || buildExtra.clerkProxyUrl || undefined;
 
-if (domain) setBaseUrl(`https://${domain}`);
+if (domain) setBaseUrl(domain.startsWith('http://') || domain.startsWith('https://') ? domain : `https://${domain}`);
 
 function RootLayoutNav() {
   const router = useRouter();

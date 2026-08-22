@@ -68,6 +68,9 @@ const configuredApiDomain = process.env.EXPO_PUBLIC_API_URL
   || process.env.EXPO_PUBLIC_DOMAIN
   || (Constants.expoConfig?.extra as { apiDomain?: string } | undefined)?.apiDomain
   || '';
+const configuredApiBaseUrl = configuredApiDomain.startsWith('http://') || configuredApiDomain.startsWith('https://')
+  ? configuredApiDomain
+  : configuredApiDomain ? `https://${configuredApiDomain}` : '';
 
 export type Level = string;
 export type Account = { username: string; email: string };
@@ -802,7 +805,7 @@ export function AppProvider({
     generateLabsForMaterial: async (id) => {
       try {
         const token = await getToken();
-        const base = configuredApiDomain ? `https://${configuredApiDomain}` : '';
+        const base = configuredApiBaseUrl;
         const response = await fetch(`${base}/api/materials/${id}/labs`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token ?? ''}` },
@@ -957,7 +960,7 @@ export function AppProvider({
     deleteLabExercise: async (exerciseId) => {
       try {
         const token = await getToken();
-        const base = configuredApiDomain ? `https://${configuredApiDomain}` : '';
+        const base = configuredApiBaseUrl;
         const response = await fetch(`${base}/api/labs/exercises/${exerciseId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token ?? ''}` },
