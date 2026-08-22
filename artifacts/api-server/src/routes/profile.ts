@@ -161,6 +161,7 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
           email: email ?? "",
           level: null,
           wallet: 0,
+          xp: 0,
           streak: 0,
           inviteCode,
         })

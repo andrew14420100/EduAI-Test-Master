@@ -417,6 +417,7 @@ router.post(
           .update(profilesTable)
           .set({
             wallet: sql`${profilesTable.wallet} + ${earnedCoins}`,
+            xp: sql`${profilesTable.xp} + ${earnedCoins * 10}`,
             updatedAt: new Date(),
           })
           .where(eq(profilesTable.userId, userId));

@@ -553,6 +553,7 @@ router.post("/labs/attempts", requireAuth, async (req: Request, res: Response) =
           .update(profilesTable)
           .set({
             wallet: sql`${profilesTable.wallet} + ${earnedPoints}`,
+            xp: sql`${profilesTable.xp} + ${earnedPoints * 10}`,
             updatedAt: new Date(),
           })
           .where(eq(profilesTable.userId, userId));

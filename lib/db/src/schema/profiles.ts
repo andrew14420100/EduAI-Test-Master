@@ -7,6 +7,7 @@ export const profilesTable = pgTable("profiles", {
   // Full Italian study-path string, e.g. "Liceo Scientifico". Null before onboarding.
   level: text("level"),
   wallet: integer("wallet").notNull().default(0),
+  xp: integer("xp").notNull().default(0),
   streak: integer("streak").notNull().default(0),
   inviteCode: text("invite_code").notNull().unique(), // stable 6-char code
   avatarObjectPath: text("avatar_object_path"),
