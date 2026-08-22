@@ -13,6 +13,7 @@ config.watchFolders = [path.resolve(__dirname)];
 // Metro sta scansionando il workspace; escludili per evitare watcher stantii.
 config.resolver.blockList = [
   /\/\.local\/secondary_skills(?:\/|$)/,
+  /\/\.cache\/typescript(?:\/|$)/,
 ];
 
 module.exports = config;
