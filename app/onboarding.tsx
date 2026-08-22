@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
@@ -52,10 +52,13 @@ const levels: { group: string; items: Level[] }[] = [
 export default function OnboardingScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { level, completeOnboarding } = useApp();
+  const { level, completeOnboarding, createTicket } = useApp();
   const [selected, setSelected] = useState<Level | null>(level);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [supportVisible, setSupportVisible] = useState(false);
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportSubmitting, setSupportSubmitting] = useState(false);
 
   const save = async () => {
     if (!selected) return;
@@ -64,6 +67,24 @@ export default function OnboardingScreen() {
     setSaving(false);
     if (result.ok) router.replace('/(tabs)');
     else setErrorMessage(result.message);
+  };
+
+  const submitPrioritySupport = async () => {
+    if (supportSubmitting || supportMessage.trim().length < 10) return;
+    setSupportSubmitting(true);
+    const result = await createTicket(
+      'Segnala problema nella scelta del percorso',
+      'problema_percorso_prioritario',
+      supportMessage.trim(),
+    );
+    setSupportSubmitting(false);
+    if (result.ok) {
+      setSupportMessage('');
+      setSupportVisible(false);
+      setErrorMessage('La segnalazione prioritaria è stata inviata. Puoi riprovare il salvataggio del percorso.');
+    } else {
+      setErrorMessage(result.message);
+    }
   };
 
   return (
@@ -131,8 +152,32 @@ export default function OnboardingScreen() {
         message={errorMessage ?? undefined}
         icon="warning"
         onDismiss={() => setErrorMessage(null)}
-        actions={[{ label: 'Riprova', variant: 'primaria', onPress: () => setErrorMessage(null) }]}
+         actions={[
+           { label: 'Riprova', variant: 'primaria', onPress: () => setErrorMessage(null) },
+           { label: 'Segnala il problema', onPress: () => { setErrorMessage(null); setSupportVisible(true); } },
+         ]}
       />
+      <AppModal
+        visible={supportVisible}
+        title="Segnala problema nella scelta del percorso"
+        message="Descrivi cosa è successo. La segnalazione sarà marcata come prioritaria e inviata subito all’assistenza."
+        icon="support"
+        onDismiss={() => setSupportVisible(false)}
+        actions={[
+          { label: supportSubmitting ? 'Invio…' : 'Invia segnalazione', variant: 'primaria', onPress: () => { void submitPrioritySupport(); } },
+          { label: 'Annulla', onPress: () => setSupportVisible(false) },
+        ]}
+      >
+        <TextInput
+          value={supportMessage}
+          onChangeText={setSupportMessage}
+          placeholder="Descrivi l’errore e il percorso selezionato."
+          placeholderTextColor={c.mutedForeground}
+          multiline
+          textAlignVertical="top"
+          style={[styles.supportInput, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]}
+        />
+      </AppModal>
     </>
   );
 }
@@ -149,4 +194,5 @@ const styles = StyleSheet.create({
   optionText: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 14, lineHeight: 20 },
   radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   lockedNotice: { borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  supportInput: { borderWidth: 1, borderRadius: 14, minHeight: 110, marginTop: 16, padding: 13, fontFamily: 'Inter_500Medium', fontSize: 14 },
 });
