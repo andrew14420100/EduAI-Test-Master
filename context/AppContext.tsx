@@ -159,6 +159,7 @@ type AppState = {
   profileSyncError: string | null;
   retryProfileSync: () => void;
   wallet: number;
+  xp: number;
   theme: AppTheme;
   soundEnabled: boolean;
   setSoundEnabled: (enabled: boolean) => Promise<void>;
@@ -650,6 +651,7 @@ export function AppProvider({
       setProfileSyncNonce((n) => n + 1);
     },
     wallet: profile?.wallet ?? 0,
+    xp: profile?.xp ?? 0,
     theme,
     soundEnabled,
     setSoundEnabled: async (enabled) => {

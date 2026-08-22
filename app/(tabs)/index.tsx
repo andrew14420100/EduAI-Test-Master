@@ -18,6 +18,7 @@ export default function HomeScreen() {
     account,
     level,
     wallet,
+    xp,
     streak,
     quizzes,
     materials,
@@ -104,6 +105,10 @@ export default function HomeScreen() {
           <View style={[styles.stat, { backgroundColor: c.card }]}><Text style={[styles.statValue, { color: c.primary }]}>{streak}</Text><Text style={[styles.statLabel, { color: c.mutedForeground }]}>giorni attivi</Text></View>
           <View style={[styles.stat, { backgroundColor: c.card }]}><Text style={[styles.statValue, { color: c.foreground }]}>{wallet}</Text><Text style={[styles.statLabel, { color: c.mutedForeground }]}>punti</Text></View>
           <View style={[styles.stat, { backgroundColor: c.card }]}><Text style={[styles.statValue, { color: c.foreground }]}>{quizzes.length}</Text><Text style={[styles.statLabel, { color: c.mutedForeground }]}>verifiche</Text></View>
+        </View>
+        <View style={[styles.xpCard, { backgroundColor: c.card, borderColor: c.border }]}>
+          <View style={styles.xpHeader}><Text style={[styles.statLabel, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {level ?? 1}</Text><Text style={[styles.statLabel, { color: c.primary }]}>{xp} XP</Text></View>
+          <View style={[styles.track, { backgroundColor: c.secondary }]}><View style={[styles.fill, { backgroundColor: c.primary, width: `${Math.min(100, xp % 100)}%` }]} /></View>
         </View>
 
         <View style={[styles.hero, { backgroundColor: c.primary }]}>
@@ -262,6 +267,10 @@ const styles = StyleSheet.create({
   cardLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.3, marginBottom: 3 },
   level: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
   stats: { flexDirection: 'row', gap: 8 },
+  xpCard: { borderRadius: 16, borderWidth: 1, padding: 13, gap: 8 },
+  xpHeader: { flexDirection: 'row', justifyContent: 'space-between' },
+  track: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 4 },
   stat: { flex: 1, borderRadius: 15, padding: 12 },
   statValue: { fontFamily: 'Inter_700Bold', fontSize: 22 },
   statLabel: { fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: 3 },

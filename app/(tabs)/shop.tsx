@@ -108,7 +108,7 @@ function levelFromWallet(wallet: number): number {
 export default function ShopScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { wallet, theme, shop, buyItem, equipItem, useLightTheme } = useApp();
+  const { wallet, xp, level, theme, shop, buyItem, equipItem, useLightTheme } = useApp();
   const [message, setMessage] = useState<{ title: string; message: string; success: boolean } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<ShopItem['itemType']>('tema');
@@ -187,6 +187,10 @@ export default function ShopScreen() {
             <AppIcon name="zap" size={14} color={c.accentForeground} />
             <Text style={[styles.walletText, { color: c.accentForeground }]}>{wallet}</Text>
           </View>
+        </View>
+        <View style={[styles.xpBar, { backgroundColor: c.card, borderColor: c.border }]}>
+          <View style={styles.xpHeader}><Text style={[styles.small, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {level ?? 1}</Text><Text style={[styles.small, { color: c.primary }]}>{xp} XP</Text></View>
+          <View style={[styles.track, { backgroundColor: c.secondary }]}><View style={[styles.fill, { backgroundColor: c.primary, width: `${Math.min(100, xp % 100)}%` }]} /></View>
         </View>
         <Text style={[styles.intro, { color: c.mutedForeground }]}>
           Supera le verifiche, guadagna punti e personalizza ogni aspetto del tuo spazio di studio.
@@ -368,6 +372,8 @@ const styles = StyleSheet.create({
   wallet: { borderRadius: 18, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', gap: 6, alignItems: 'center' },
   walletText: { fontFamily: 'Inter_700Bold', fontSize: 15 },
   balance: { borderRadius: 22, padding: 19 },
+  xpBar: { borderRadius: 16, borderWidth: 1, padding: 13, gap: 8 },
+  xpHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   balanceLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.3, opacity: 0.8 },
   balanceValue: { fontFamily: 'Inter_700Bold', fontSize: 37, marginTop: 4 },
   pts: { fontFamily: 'Inter_500Medium', fontSize: 14 },

@@ -25,6 +25,8 @@ export default function ProfileScreen() {
     account,
     level,
     wallet,
+    xp,
+    shop,
     quizzes,
     streak,
     tickets,
@@ -49,6 +51,8 @@ export default function ProfileScreen() {
   const [feedback, setFeedback] = useState({ title: '', message: '', success: false });
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [updatingSound, setUpdatingSound] = useState(false);
+  const avatarFrame = shop.find((item) => item.itemType === 'cornice_avatar' && item.equipped);
+  const statsDecoration = shop.find((item) => item.itemType === 'decorazione_profilo' && item.equipped);
 
   useEffect(() => {
     const ticket = tickets.find((item) => item.id === ticketId);
@@ -142,7 +146,7 @@ export default function ProfileScreen() {
     <>
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 100 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.profileTop}>
-          <View style={[styles.avatar, { backgroundColor: c.primary }]}><AppIcon name="profile" size={25} color={c.primaryForeground} /></View>
+          <View style={[styles.avatar, { backgroundColor: c.primary, borderColor: avatarFrame ? (avatarFrame.rarity === 'leggendario' ? '#C77A16' : '#8B4BC2') : 'transparent', borderWidth: avatarFrame ? 3 : 0 }]}><AppIcon name="profile" size={25} color={c.primaryForeground} /></View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.name, { color: c.foreground }]}>{account?.username ?? 'Il tuo profilo'}</Text>
             <Text style={[styles.subtitle, { color: c.mutedForeground }]}>{account?.email ?? 'Account EduAI'}</Text>
@@ -161,9 +165,9 @@ export default function ProfileScreen() {
 
         <SectionTitle eyebrow="I tuoi dati" title="Riepilogo" />
         <View style={styles.metrics}>
-          <View style={[styles.metric, { backgroundColor: c.card }]}><Text style={[styles.metricValue, { color: c.primary }]}>{wallet}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>punti</Text></View>
-          <View style={[styles.metric, { backgroundColor: c.card }]}><Text style={[styles.metricValue, { color: c.foreground }]}>{streak}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>giorni attivi</Text></View>
-          <View style={[styles.metric, { backgroundColor: c.card }]}><Text style={[styles.metricValue, { color: c.foreground }]}>{quizzes.filter((quiz) => quiz.passed).length}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>superate</Text></View>
+          <View style={[styles.metric, { backgroundColor: c.card, borderColor: statsDecoration ? c.primary : 'transparent', borderWidth: statsDecoration ? 2 : 0 }]}><Text style={[styles.metricValue, { color: c.primary }]}>{wallet}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>punti</Text></View>
+          <View style={[styles.metric, { backgroundColor: c.card, borderColor: statsDecoration ? c.primary : 'transparent', borderWidth: statsDecoration ? 2 : 0 }]}><Text style={[styles.metricValue, { color: c.foreground }]}>{xp}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>XP</Text></View>
+          <View style={[styles.metric, { backgroundColor: c.card, borderColor: statsDecoration ? c.primary : 'transparent', borderWidth: statsDecoration ? 2 : 0 }]}><Text style={[styles.metricValue, { color: c.foreground }]}>{streak}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>giorni attivi</Text></View>
         </View>
 
         <SectionTitle eyebrow="Assistenza" title="Le tue richieste" />
