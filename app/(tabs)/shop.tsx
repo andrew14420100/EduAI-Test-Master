@@ -87,6 +87,11 @@ function rarityFor(item: ShopItem): NonNullable<ShopItem['rarity']> {
   return 'comune';
 }
 
+function requiredLevel(item: ShopItem): number {
+  const rarity = rarityFor(item);
+  return rarity === 'leggendario' ? 15 : rarity === 'epico' ? 10 : rarity === 'raro' ? 5 : rarity === 'non_comune' ? 2 : 1;
+}
+
 function pointsForNextLevel(level: number): number {
   // The threshold increases when entering levels 11, 21, 31 and 41:
   // level 10 → 11 costs 150, level 20 → 21 costs 200.
