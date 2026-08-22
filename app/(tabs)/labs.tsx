@@ -56,6 +56,7 @@ export default function LabsScreen() {
     labsLoading,
     generateLabsForMaterials,
     deleteLabExercise,
+    deleteLabExercises,
   } = useApp();
 
   const [view, setView] = useState<ViewMode>('list');
@@ -69,6 +70,9 @@ export default function LabsScreen() {
   const [generationMessage, setGenerationMessage] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LabExercise | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const readyMaterials = materials.filter((material) => material.isStudyReady);
   const analyzingMaterials = materials.filter((material) => material.extractionStatus === 'pending' || material.extractionStatus === 'processing');
 
@@ -94,6 +98,9 @@ export default function LabsScreen() {
           <Text style={[styles.enableButtonText, { color: c.primaryForeground }]}>
             {enablingLabs ? 'Attivazione…' : 'Attiva laboratori'}
           </Text>
+        </Pressable>
+        <Pressable onPress={() => { setSelectionMode((value) => !value); setSelectedIds([]); }} style={[styles.historyButton, { backgroundColor: selectionMode ? c.primary : c.card, borderColor: c.border }]}>
+          <Text style={[styles.historyButtonText, { color: selectionMode ? c.primaryForeground : c.mutedForeground }]}>{selectionMode ? 'Annulla' : 'Seleziona'}</Text>
         </Pressable>
       </View>
     );
@@ -356,9 +363,38 @@ export default function LabsScreen() {
                   { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.76 : 1 },
                 ]}
               >
+                {selectionMode ? (
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selectedIds.includes(ex.id) }}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      setSelectedIds((ids) => ids.includes(ex.id) ? ids.filter((id) => id !== ex.id) : [...ids, ex.id]);
+                    }}
+                    style={[styles.checkbox, { borderColor: selectedIds.includes(ex.id) ? c.primary : c.border, backgroundColor: selectedIds.includes(ex.id) ? c.primary : 'transparent' }]}
+                  >
+                    {selectedIds.includes(ex.id) ? <AppIcon name="check" size={12} color={c.primaryForeground} /> : null}
+                  </Pressable>
+                ) : null}
                 <View style={[styles.exerciseItemIcon, { backgroundColor: c.accent }]}>
                   <AppIcon name="flask" size={16} color={c.accentForeground} />
                 </View>
+      {selectionMode && selectedIds.length > 0 ? (
+        <Pressable
+          disabled={bulkDeleting}
+          onPress={() => {
+            setBulkDeleting(true);
+            void deleteLabExercises(selectedIds).then((deleted) => {
+              setBulkDeleting(false);
+              if (deleted.ok) { setSelectionMode(false); setSelectedIds([]); } else setErrorModal(deleted.message);
+            });
+          }}
+          style={[styles.bulkDelete, { backgroundColor: c.destructive, opacity: bulkDeleting ? 0.6 : 1 }]}
+        >
+          <AppIcon name="trash" size={15} color={c.primaryForeground} />
+          <Text style={[styles.historyButtonText, { color: c.primaryForeground }]}>{bulkDeleting ? 'Eliminazione…' : `Elimina selezionati (${selectedIds.length})`}</Text>
+        </Pressable>
+      ) : null}
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.exerciseItemTitle, { color: c.foreground }]}>{ex.title}</Text>
                   <View style={styles.exerciseItemMeta}>
@@ -432,6 +468,8 @@ export default function LabsScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, gap: 16 },
+  checkbox: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginRight: 4 },
+  bulkDelete: { borderRadius: 14, padding: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   eyebrow: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1.6, marginBottom: 5 },
   heading: { fontFamily: 'Inter_700Bold', fontSize: 27, letterSpacing: -0.8 },

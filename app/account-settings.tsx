@@ -45,7 +45,8 @@ export default function AccountSettingsScreen() {
       setCurrentPassword('');
       setNewPassword('');
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Impossibile aggiornare le impostazioni.');
+      const message = error instanceof Error ? error.message : '';
+      setStatus(/taken|already|occupat|unique/i.test(message) ? 'Username già occupato.' : (message || 'Impossibile aggiornare le impostazioni.'));
     } finally {
       setBusy(false);
     }
