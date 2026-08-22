@@ -119,6 +119,7 @@ export default function ShopScreen() {
   const [selectedCategory, setSelectedCategory] = useState<ShopItem['itemType']>('tema');
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
   const experienceLevel = Math.min(50, Math.floor(xp / 100) + 1);
+  const xpInLevel = xp % 100;
 
   const purchase = async (id: string, title: string, cost: number, owned: boolean) => {
     if (busyId) return;
@@ -147,6 +148,11 @@ export default function ShopScreen() {
 
     if (wallet < cost) {
       setMessage({ title: 'Punti insufficienti', message: `Ti servono ancora ${cost - wallet} punti per sbloccare questo premio.`, success: false });
+      return;
+    }
+    const required = selected ? requiredLevel(selected) : 1;
+    if (experienceLevel < required) {
+      setMessage({ title: 'Oggetto bloccato', message: `Richiede Livello ${required}. Continua a guadagnare XP per sbloccarlo.`, success: false });
       return;
     }
     setBusyId(id);
@@ -194,10 +200,10 @@ export default function ShopScreen() {
             <Text style={[styles.walletText, { color: c.accentForeground }]}>{wallet}</Text>
           </View>
         </View>
-        <View style={[styles.xpBar, { backgroundColor: c.card, borderColor: c.border }]}>
+        <Pressable onPress={() => setMessage({ title: `Esperienza · Livello ${experienceLevel}`, message: `${xpInLevel}/100 XP nel livello attuale (${xpInLevel}%).\n\nGuida XP\nQuiz: +20 XP\nLaboratorio: +50 XP\nStreak: +15 XP`, success: true })} style={[styles.xpBar, { backgroundColor: c.card, borderColor: c.border }]}>
           <View style={styles.xpHeader}><Text style={[styles.small, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {experienceLevel}</Text><Text style={[styles.small, { color: c.primary }]}>{xp} XP</Text></View>
           <View style={[styles.track, { backgroundColor: c.secondary }]}><View style={[styles.fill, { backgroundColor: c.primary, width: `${Math.min(100, xp % 100)}%` }]} /></View>
-        </View>
+        </Pressable>
         <Text style={[styles.intro, { color: c.mutedForeground }]}>
           Supera le verifiche, guadagna punti e personalizza ogni aspetto del tuo spazio di studio.
         </Text>
@@ -281,7 +287,7 @@ export default function ShopScreen() {
       <AppModal
         visible={Boolean(selectedItem)}
         title={selectedItem?.title ?? ''}
-        message={selectedItem ? `${selectedItem.subtitle}\n\n${rewardDescription(selectedItem)}` : undefined}
+        message={selectedItem ? `${selectedItem.subtitle}\n\n${rewardDescription(selectedItem)}${!selectedItem.owned && experienceLevel < requiredLevel(selectedItem) ? `\n\n🔒 Richiede Livello ${requiredLevel(selectedItem)}` : ''}` : undefined}
         icon={(selectedItem?.icon as AppIconName | undefined) ?? 'award'}
         onDismiss={() => setSelectedItem(null)}
         actions={selectedItem ? [
@@ -289,10 +295,10 @@ export default function ShopScreen() {
           {
             label: selectedItem.owned
               ? (EQUIPPABLE_TYPES.includes(selectedItem.itemType) ? 'Equipaggia' : 'Già sbloccato')
-              : `Sblocca · ${selectedItem.cost} pt`,
+              : experienceLevel < requiredLevel(selectedItem) ? `🔒 Richiede Livello ${requiredLevel(selectedItem)}` : `Sblocca · ${selectedItem.cost} pt`,
             variant: 'primaria' as const,
             onPress: () => {
-              if (!selectedItem.owned || EQUIPPABLE_TYPES.includes(selectedItem.itemType)) {
+              if ((!selectedItem.owned && experienceLevel >= requiredLevel(selectedItem)) || EQUIPPABLE_TYPES.includes(selectedItem.itemType)) {
                 const item = selectedItem;
                 setSelectedItem(null);
                 void purchase(item.id, item.title, item.cost, item.owned);
