@@ -8,6 +8,7 @@
     "build": "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check:react-versions": "node scripts/check-react-versions.mjs",
     "test:theme-restart": "node scripts/theme-restart.mjs",
     "android": "expo run:android",
     "ios": "expo run:ios"
@@ -70,7 +71,7 @@
     "expo-file-system": "~19.0.24",
     "expo-notifications": "~0.32.17",
     "expo-secure-store": "~15.0.8",
-    "react": "19.1.0",
+    "react": "catalog:",
     "react-native": "0.81.5"
   }
 }

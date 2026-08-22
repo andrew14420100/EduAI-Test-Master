@@ -197,7 +197,7 @@ importers:
         specifier: ~15.0.8
         version: 15.0.8(expo@54.0.37)
       react:
-        specifier: 19.1.0
+        specifier: 'catalog:'
         version: 19.1.0
       react-native:
         specifier: 0.81.5
