@@ -57,7 +57,7 @@ router.get("/tickets", requireAuth, async (req: Request, res: Response) => {
       .select()
       .from(ticketsTable)
       .where(eq(ticketsTable.userId, userId))
-      .orderBy(desc(ticketsTable.updatedAt));
+      .orderBy(desc(ticketsTable.priority), desc(ticketsTable.updatedAt));
     res.json(await ticketDetails(tickets));
   } catch (err) {
     req.log.error({ err }, "Errore lista ticket");
@@ -159,6 +159,7 @@ router.post("/tickets", requireAuth, async (req: Request, res: Response) => {
           subject: subject.trim(),
           category: category.trim(),
           message: message.trim(),
+          priority: category.trim() === "problema_percorso_prioritario" ? 100 : 0,
           status: "open",
         })
         .returning();
@@ -193,7 +194,7 @@ router.get("/admin/users", requireAdminSession, async (req: Request, res: Respon
 
 router.get("/admin/tickets", requireAdminSession, async (req: Request, res: Response) => {
   try {
-    const tickets = await db.select().from(ticketsTable).orderBy(desc(ticketsTable.updatedAt)).limit(300);
+    const tickets = await db.select().from(ticketsTable).orderBy(desc(ticketsTable.priority), desc(ticketsTable.updatedAt)).limit(300);
     const profiles = await db
       .select({ userId: profilesTable.userId, username: profilesTable.username, email: profilesTable.email })
       .from(profilesTable);
