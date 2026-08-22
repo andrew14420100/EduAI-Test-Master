@@ -15,6 +15,13 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ],
+  "exclude": [
+    "artifacts/api-server",
+    "artifacts/mockup-sandbox",
+    "lib/api-spec",
+    "scripts",
+    "**/*.test.ts"
+  ],
   "references": [
     {
       "path": "./lib/api-client-react"

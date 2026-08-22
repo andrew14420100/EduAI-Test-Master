@@ -114,7 +114,7 @@ router.get(
 
       if (response.body) {
         const nodeStream = Readable.fromWeb(
-          response.body as ReadableStream<Uint8Array>,
+          response.body as unknown as import("node:stream/web").ReadableStream,
         );
         nodeStream.pipe(res);
       } else {
@@ -161,7 +161,7 @@ router.get(
 
       if (response.body) {
         const nodeStream = Readable.fromWeb(
-          response.body as ReadableStream<Uint8Array>,
+          response.body as unknown as import("node:stream/web").ReadableStream,
         );
         nodeStream.pipe(res);
       } else {

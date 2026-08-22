@@ -5,6 +5,7 @@
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
+    "baseUrl": ".",
     "noEmit": true,
     "lib": ["es2022", "dom", "dom.iterable"],
     "jsx": "preserve",
