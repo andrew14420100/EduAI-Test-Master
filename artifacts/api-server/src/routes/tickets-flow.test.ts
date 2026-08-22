@@ -45,7 +45,7 @@ test("ticket flow keeps the initial request and admin reply in the user's histor
   assert.match(profile, /ticketStatusLabel\(ticket\.status\)/);
 
   // The console sends the close flag and refreshes its own list after replying.
-  assert.match(admin, /data: \{ message: draft\.trim\(\), close \}/);
+  assert.match(admin, /data: \{ message: draft\.trim\(\), status \}/);
   assert.match(admin, /await tickets\.refetch\(\)/);
   assert.match(admin, /ticketStatusLabel\(ticket\.status\)/);
 });
