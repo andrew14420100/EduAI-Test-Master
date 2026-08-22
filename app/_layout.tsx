@@ -129,6 +129,14 @@ function RootLayoutNav() {
     });
   }, [rewardEvent]);
 
+  if (!isLoaded || !ready) {
+    return (
+      <View style={styles.root}>
+        <CentralLoader message={!isLoaded ? 'Connessione in corso…' : 'Preparazione del tuo spazio…'} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <Stack screenOptions={{ headerShown: false }}>

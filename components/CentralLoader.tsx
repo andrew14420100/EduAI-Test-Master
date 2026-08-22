@@ -9,7 +9,7 @@ export function CentralLoader({ message = 'Caricamento in corso…' }: { message
   const counterRotation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const loop = (value: Animated.Value, duration: number, reverse = false) => Animated.loop(
+    const loop = (value: Animated.Value, duration: number) => Animated.loop(
       Animated.timing(value, {
         toValue: 1,
         duration,
