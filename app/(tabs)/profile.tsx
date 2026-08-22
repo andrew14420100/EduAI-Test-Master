@@ -8,8 +8,8 @@ import { Pill, SectionTitle } from '@/components/Ui';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
-type ProfileModal = 'avvisi' | 'privacy' | 'uscita' | 'elimina-account' | 'ticket' | 'esito' | null;
-const ticketCategories = ['Problema tecnico', 'Account', 'Materiali', 'Verifiche', 'Altro'];
+type ProfileModal = 'avvisi' | 'privacy' | 'uscita' | 'elimina-account' | 'proponi-modifica' | 'esito' | null;
+const ticketCategories = ['Suggerimento', 'Segnalazione errore', 'Nuova funzionalità', 'Altro'];
 
 function ticketStatusLabel(status: string) {
   if (status === 'closed') return 'Chiuso';
@@ -61,16 +61,15 @@ export default function ProfileScreen() {
 
   const notificationTicket = ticketId ? tickets.find((item) => item.id === ticketId) : undefined;
 
-  const openSupport = () => {
-    setModal('ticket');
+  const openSuggestion = () => {
+    setModal('proponi-modifica');
     for (const ticket of tickets) {
       if (ticket.unread) void markTicketRead(ticket.id);
     }
   };
 
   const preferences: { label: string; icon: AppIconName; action: () => void }[] = [
-    { label: 'Percorso di studio', icon: 'book', action: () => router.push('/onboarding') },
-    { label: 'Assistenza', icon: 'support', action: openSupport },
+    { label: 'Proponi una modifica', icon: 'sparkles', action: openSuggestion },
     { label: 'Avvisi', icon: 'bell', action: () => setModal('avvisi') },
     { label: 'Privacy e dati', icon: 'shield', action: () => setModal('privacy') },
     { label: 'Impostazioni account', icon: 'book', action: () => router.push('/account-settings') },
@@ -190,7 +189,7 @@ export default function ProfileScreen() {
         {unreadSupportCount > 0 ? (
           <Pressable
             testID="avviso-risposta-assistenza"
-            onPress={openSupport}
+            onPress={openSuggestion}
             style={[styles.supportNotice, { backgroundColor: c.accent, borderColor: c.primary }]}
           >
             <AppIcon name="bell" size={17} color={c.accentForeground} />
@@ -198,7 +197,7 @@ export default function ProfileScreen() {
               <Text style={[styles.ticketTitle, { color: c.accentForeground }]}>
                 {unreadSupportCount === 1 ? 'Hai una nuova risposta' : `Hai ${unreadSupportCount} nuove risposte`}
               </Text>
-              <Text style={[styles.small, { color: c.accentForeground }]}>Apri l’assistenza per leggerle.</Text>
+            <Text style={[styles.small, { color: c.accentForeground }]}>Apri le richieste per leggerle.</Text>
             </View>
             <AppIcon name="chevron-right" size={14} color={c.accentForeground} />
           </Pressable>
@@ -222,11 +221,11 @@ export default function ProfileScreen() {
             </View>
           </Pressable>
         )) : (
-          <Pressable testID="apri-primo-ticket" onPress={() => setModal('ticket')} style={[styles.emptyTicket, { backgroundColor: c.card, borderColor: c.border }]}>
+           <Pressable testID="apri-primo-ticket" onPress={openSuggestion} style={[styles.emptyTicket, { backgroundColor: c.card, borderColor: c.border }]}>
             <AppIcon name="support" size={18} color={c.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.ticketTitle, { color: c.foreground }]}>Hai bisogno di aiuto?</Text>
-              <Text style={[styles.small, { color: c.mutedForeground }]}>Apri un ticket direttamente dall’app.</Text>
+              <Text style={[styles.ticketTitle, { color: c.foreground }]}>Hai un’idea o hai trovato un errore?</Text>
+              <Text style={[styles.small, { color: c.mutedForeground }]}>Proponi una modifica direttamente dall’app.</Text>
             </View>
             <AppIcon name="chevron-right" size={14} color={c.mutedForeground} />
           </Pressable>
