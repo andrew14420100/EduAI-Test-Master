@@ -81,7 +81,7 @@ export type ShopItem = {
   subtitle: string;
   cost: number;
   icon: 'moon' | 'zap' | 'award' | 'star' | 'sparkles' | 'layers' | 'flame' | 'shield' | 'paintbrush' | 'tag';
-  itemType: 'tema' | 'distintivo' | 'collezionabile' | 'icona_futura' | 'animazione' | 'stile_carta' | 'titolo';
+  itemType: 'tema' | 'distintivo' | 'collezionabile' | 'icona_futura' | 'animazione' | 'animazione_completamento' | 'animazione_livello' | 'animazione_streak' | 'animazione_upload' | 'animazione_risposta' | 'animazione_sblocco' | 'animazione_interfaccia' | 'stile_carta' | 'titolo';
   owned: boolean;
   equipped: boolean;
   ownedItemId?: string;
@@ -227,6 +227,12 @@ const shopCatalog: Omit<ShopItem, 'owned' | 'equipped' | 'ownedItemId'>[] = [
   { id: 'anim_aurora',    title: 'Aurora boreale',   subtitle: 'Animazione completamento · equipaggiabile', cost: 70,  icon: 'sparkles',   itemType: 'animazione' },
   { id: 'anim_lightning', title: 'Lampi di genio',   subtitle: 'Animazione completamento · equipaggiabile', cost: 90,  icon: 'zap',        itemType: 'animazione' },
   { id: 'anim_crown',     title: 'Incoronazione',    subtitle: 'Animazione completamento · equipaggiabile', cost: 120, icon: 'award',      itemType: 'animazione' },
+  { id: 'event_levelup', title: 'Salto stellare', subtitle: 'Passaggio di livello · equipaggiabile', cost: 45, icon: 'star', itemType: 'animazione_livello' },
+  { id: 'event_streak', title: 'Fiamma quotidiana', subtitle: 'Login e serie giornaliera · equipaggiabile', cost: 40, icon: 'flame', itemType: 'animazione_streak' },
+  { id: 'event_upload', title: 'Materiale pronto', subtitle: 'Upload riuscito · equipaggiabile', cost: 35, icon: 'upload', itemType: 'animazione_upload' },
+  { id: 'event_answer', title: 'Colpo di genio', subtitle: 'Risposta corretta o sbagliata · equipaggiabile', cost: 30, icon: 'zap', itemType: 'animazione_risposta' },
+  { id: 'event_unlock', title: 'Mappa sbloccata', subtitle: 'Mappa e flashcard · equipaggiabile', cost: 55, icon: 'layers', itemType: 'animazione_sblocco' },
+  { id: 'event_interface', title: 'Bordo luminoso', subtitle: 'Interfaccia e tema schede · equipaggiabile', cost: 60, icon: 'sparkles', itemType: 'animazione_interfaccia' },
 
   // ── STILI CARTA (aspetto delle card materiali e quiz, equipaggiabili) ────────
   { id: 'card_glass',     title: 'Vetro smerigliato', subtitle: 'Stile carta · equipaggiabile',          cost: 30,  icon: 'layers',     itemType: 'stile_carta' },
@@ -540,7 +546,7 @@ export function AppProvider({
       ownedItemId: owned?.id,
     };
   }), [inventoryQuery.data]);
-  const completionAnimation = shop.find((item) => item.itemType === 'animazione' && item.equipped)?.id ?? null;
+  const completionAnimation = shop.find((item) => item.itemType.startsWith('animazione') && item.equipped)?.id ?? null;
   const serverTheme: AppTheme = shop.some((item) => item.id === 'dark' && item.equipped)
     ? 'dark'
     : 'light';

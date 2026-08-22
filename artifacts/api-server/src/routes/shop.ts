@@ -27,6 +27,12 @@ const SHOP_CATALOG: Record<string, CatalogEntry> = {
   anim_aurora:    { itemType: "animazione",  price: 70  },
   anim_lightning: { itemType: "animazione",  price: 90  },
   anim_crown:     { itemType: "animazione",  price: 120 },
+  event_levelup:  { itemType: "animazione_livello", price: 45 },
+  event_streak:   { itemType: "animazione_streak", price: 40 },
+  event_upload:   { itemType: "animazione_upload", price: 35 },
+  event_answer:   { itemType: "animazione_risposta", price: 30 },
+  event_unlock:   { itemType: "animazione_sblocco", price: 55 },
+  event_interface:{ itemType: "animazione_interfaccia", price: 60 },
   // Stili carta
   card_glass:     { itemType: "stile_carta", price: 30  },
   card_gradient:  { itemType: "stile_carta", price: 45  },
