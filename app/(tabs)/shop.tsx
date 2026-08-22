@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
@@ -90,6 +90,10 @@ function rarityFor(item: ShopItem): NonNullable<ShopItem['rarity']> {
 function requiredLevel(item: ShopItem): number {
   const rarity = rarityFor(item);
   return rarity === 'leggendario' ? 15 : rarity === 'epico' ? 10 : rarity === 'raro' ? 5 : rarity === 'non_comune' ? 2 : 1;
+}
+
+function rarityColor(item: ShopItem, c: any): string {
+  return ({ comune: '#B7A58D', non_comune: c.primary, raro: '#3478C9', epico: '#8B4BC2', leggendario: '#C77A16' } as Record<string, string>)[rarityFor(item)];
 }
 
 function pointsForNextLevel(level: number): number {
@@ -334,6 +338,15 @@ function ShopItemRow({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   c: any;
 }) {
+  const spin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const animation = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 2600, useNativeDriver: true }));
+    animation.start();
+    return () => animation.stop();
+  }, [spin]);
+  const spinValue = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const rarity = rarityFor(item);
+  const rarityAccent = rarityColor(item, c);
   return (
     <Pressable
       testID={`negozio-${item.id}`}
@@ -348,12 +361,13 @@ function ShopItemRow({
         },
       ]}
     >
+       <Animated.View pointerEvents="none" style={[styles.rarityOrb, { backgroundColor: rarityAccent, transform: [{ rotate: spinValue }] }]} />
       <View style={[styles.itemIcon, { backgroundColor: item.equipped ? c.primary : c.secondary }]}>
         <AppIcon name={item.icon as AppIconName} size={18} color={item.equipped ? c.primaryForeground : c.foreground} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.itemTitle, { color: c.foreground }]}>{item.title}</Text>
-        <Text style={[styles.rarity, { color: ({ comune: '#6F6252', non_comune: c.primary, raro: '#3478C9', epico: '#8B4BC2', leggendario: '#C77A16' } as Record<string, string>)[rarityFor(item)] }]}>
+        <Text style={[styles.rarity, { color: rarityAccent }]}>
           {rarityFor(item).replace('_', ' ').toUpperCase()}
         </Text>
         <Text style={[styles.small, { color: c.mutedForeground }]}>{item.subtitle}</Text>
@@ -407,7 +421,8 @@ const styles = StyleSheet.create({
   themeButton: { borderRadius: 12, paddingHorizontal: 11, paddingVertical: 9 },
   themeButtonText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
   catDesc: { fontFamily: 'Inter_500Medium', fontSize: 13, lineHeight: 18, marginBottom: 8, marginTop: -6 },
-  item: { borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  item: { borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8, overflow: 'hidden' },
+  rarityOrb: { position: 'absolute', top: -1, right: 16, width: 52, height: 3, borderRadius: 2 },
   itemIcon: { width: 43, height: 43, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   itemTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, marginBottom: 2 },
   rarity: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.1, marginBottom: 2 },
