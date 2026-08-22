@@ -440,6 +440,33 @@ router.delete("/labs/exercises/:id", requireAuth, async (req: Request, res: Resp
   }
 });
 
+router.post("/labs/exercises/delete-many", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthedRequest).clerkUserId;
+  const rawIds = (req.body as { ids?: unknown }).ids;
+  const ids = Array.isArray(rawIds) ? rawIds.filter((id): id is string => typeof id === "string").slice(0, 100) : [];
+  if (!ids.length) {
+    res.status(400).json({ error: "Seleziona almeno un laboratorio." });
+    return;
+  }
+  try {
+    const owned = await db.select({ id: labExercisesTable.id })
+      .from(labExercisesTable)
+      .innerJoin(materialsTable, eq(labExercisesTable.sourceMaterialId, materialsTable.id))
+      .where(and(inArray(labExercisesTable.id, ids), eq(materialsTable.ownerId, userId)));
+    const ownedIds = owned.map((item) => item.id);
+    await db.transaction(async (tx) => {
+      if (ownedIds.length) {
+        await tx.delete(labAttemptsTable).where(inArray(labAttemptsTable.exerciseId, ownedIds));
+        await tx.delete(labExercisesTable).where(inArray(labExercisesTable.id, ownedIds));
+      }
+    });
+    res.json({ deleted: ownedIds.length });
+  } catch (err) {
+    req.log.error({ err, userId }, "Errore eliminazione multipla laboratori");
+    res.status(500).json({ error: "Impossibile eliminare i laboratori selezionati." });
+  }
+});
+
 // ── POST /labs/attempts ────────────────────────────────────────────────────────
 
 router.post("/labs/attempts", requireAuth, async (req: Request, res: Response) => {
