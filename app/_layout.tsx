@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import Constants from 'expo-constants';
@@ -21,6 +21,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppIcon } from '@/components/AppIcon';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { customFetch, setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
+import { CentralLoader } from '@/components/CentralLoader';
 
 SplashScreen.preventAutoHideAsync();
 Notifications.setNotificationHandler({
@@ -137,12 +138,7 @@ function RootLayoutNav() {
         <Stack.Screen name="admin" options={{ presentation: 'modal' }} />
         <Stack.Screen name="accesso" options={{ animation: 'fade' }} />
       </Stack>
-      {(navigating || refreshing) ? (
-        <View pointerEvents="none" style={styles.loadingBar}>
-          <ActivityIndicator size="small" color="#0D8F72" />
-          <Text style={styles.loadingText}>{refreshing ? 'Aggiornamento…' : 'Caricamento…'}</Text>
-        </View>
-      ) : null}
+      {(navigating || refreshing) ? <CentralLoader message={refreshing ? 'Aggiornamento in corso…' : 'Preparazione schermata…'} /> : null}
       {rewardEvent ? (
         <RewardToast
           key={rewardEvent.id}
@@ -204,23 +200,6 @@ function RewardToast({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  loadingBar: {
-    position: 'absolute',
-    top: 48,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: 99,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  loadingText: { color: '#153A35', fontSize: 12, fontWeight: '600' },
   rewardToast: {
     position: 'absolute',
     top: 56,
