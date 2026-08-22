@@ -47,6 +47,7 @@ export default function HomeScreen() {
   };
   const nextReward = shop.find((item) => !item.owned);
   const rewardProgress = nextReward ? Math.min(100, Math.round((wallet / nextReward.cost) * 100)) : 100;
+  const experienceLevel = Math.min(50, Math.floor(xp / 100) + 1);
 
   const shareCode = async () => {
     if (!inviteCode) {
@@ -107,7 +108,7 @@ export default function HomeScreen() {
           <View style={[styles.stat, { backgroundColor: c.card }]}><Text style={[styles.statValue, { color: c.foreground }]}>{quizzes.length}</Text><Text style={[styles.statLabel, { color: c.mutedForeground }]}>verifiche</Text></View>
         </View>
         <View style={[styles.xpCard, { backgroundColor: c.card, borderColor: c.border }]}>
-          <View style={styles.xpHeader}><Text style={[styles.statLabel, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {level ?? 1}</Text><Text style={[styles.statLabel, { color: c.primary }]}>{xp} XP</Text></View>
+          <View style={styles.xpHeader}><Text style={[styles.statLabel, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {experienceLevel}</Text><Text style={[styles.statLabel, { color: c.primary }]}>{xp} XP</Text></View>
           <View style={[styles.track, { backgroundColor: c.secondary }]}><View style={[styles.fill, { backgroundColor: c.primary, width: `${Math.min(100, xp % 100)}%` }]} /></View>
         </View>
 

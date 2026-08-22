@@ -113,6 +113,7 @@ export default function ShopScreen() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<ShopItem['itemType']>('tema');
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
+  const experienceLevel = Math.min(50, Math.floor(xp / 100) + 1);
 
   const purchase = async (id: string, title: string, cost: number, owned: boolean) => {
     if (busyId) return;
@@ -189,7 +190,7 @@ export default function ShopScreen() {
           </View>
         </View>
         <View style={[styles.xpBar, { backgroundColor: c.card, borderColor: c.border }]}>
-          <View style={styles.xpHeader}><Text style={[styles.small, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {level ?? 1}</Text><Text style={[styles.small, { color: c.primary }]}>{xp} XP</Text></View>
+          <View style={styles.xpHeader}><Text style={[styles.small, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {experienceLevel}</Text><Text style={[styles.small, { color: c.primary }]}>{xp} XP</Text></View>
           <View style={[styles.track, { backgroundColor: c.secondary }]}><View style={[styles.fill, { backgroundColor: c.primary, width: `${Math.min(100, xp % 100)}%` }]} /></View>
         </View>
         <Text style={[styles.intro, { color: c.mutedForeground }]}>
