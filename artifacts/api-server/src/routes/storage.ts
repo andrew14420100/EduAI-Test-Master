@@ -21,6 +21,35 @@ const objectStorageService = new ObjectStorageService();
 const UPLOAD_TTL_SEC = 900;
 const PENDING_UPLOAD_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 const PENDING_UPLOAD_CLEANUP_BATCH_SIZE = 100;
+const PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD = 3;
+
+let cleanupFailureCount = 0;
+let cleanupFailureAlerted = false;
+
+type CleanupLog = Pick<Console, "warn" | "error">;
+
+function recordCleanupFailure(log: CleanupLog, failedCount = 1): void {
+  cleanupFailureCount += failedCount;
+  if (
+    !cleanupFailureAlerted &&
+    cleanupFailureCount >= PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD
+  ) {
+    cleanupFailureAlerted = true;
+    log.error(
+      {
+        event: "pending_upload_cleanup_failure_alert",
+        failureCount: cleanupFailureCount,
+        threshold: PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD,
+      },
+      "Repeated abandoned upload cleanup failures",
+    );
+  }
+}
+
+function recordCleanupSuccess(): void {
+  cleanupFailureCount = 0;
+  cleanupFailureAlerted = false;
+}
 
 /**
  * Remove upload bookkeeping that can no longer be finalized.
@@ -30,7 +59,7 @@ const PENDING_UPLOAD_CLEANUP_BATCH_SIZE = 100;
  * cleanup time cannot be removed.
  */
 export async function cleanupExpiredPendingUploads(
-  log: Pick<Console, "warn" | "error"> = console,
+  log: CleanupLog = console,
 ): Promise<number> {
   const expired = await db
     .select()
@@ -39,6 +68,7 @@ export async function cleanupExpiredPendingUploads(
     .limit(PENDING_UPLOAD_CLEANUP_BATCH_SIZE);
 
   let cleaned = 0;
+  let failed = 0;
   for (const pending of expired) {
     // A finalized material is the source of truth. Never delete its object,
     // even if a stale pending row remains for any reason.
@@ -55,6 +85,7 @@ export async function cleanupExpiredPendingUploads(
         await objectStorageService.deleteObjectEntity(pending.objectPath);
       } catch (error) {
         log.warn({ err: error, objectPath: pending.objectPath }, "Impossibile eliminare upload abbandonato");
+        failed += 1;
         continue;
       }
     }
@@ -71,14 +102,20 @@ export async function cleanupExpiredPendingUploads(
       );
     cleaned += result.rowCount ?? 0;
   }
+  if (failed > 0) {
+    recordCleanupFailure(log, failed);
+  } else {
+    recordCleanupSuccess();
+  }
   return cleaned;
 }
 
 export function schedulePendingUploadCleanup(
-  log: Pick<Console, "error" | "warn"> = console,
+  log: CleanupLog = console,
 ): NodeJS.Timeout {
   const runCleanup = () => {
     void cleanupExpiredPendingUploads(log).catch((error) => {
+      recordCleanupFailure(log);
       log.error("Pending upload cleanup failed", error);
     });
   };

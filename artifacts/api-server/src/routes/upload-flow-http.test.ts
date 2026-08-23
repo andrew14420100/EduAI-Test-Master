@@ -466,13 +466,16 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
   assert.equal(cleanupPut.status, 200);
   memory.pending.get(cleanupData.objectPath).expiresAt = new Date(Date.now() - 1);
   const cleanupWarnings: unknown[][] = [];
-  s3.setDeleteFailure(true);
-  await cleanupExpiredPendingUploads({
+  const cleanupLog = {
     warn(...args: unknown[]) {
       cleanupWarnings.push(args);
     },
-    error() {},
-  });
+    error(...args: unknown[]) {
+      cleanupWarnings.push(args);
+    },
+  };
+  s3.setDeleteFailure(true);
+  await cleanupExpiredPendingUploads(cleanupLog);
   assert.equal(memory.pending.has(cleanupData.objectPath), true);
   assert.ok(cleanupWarnings.length > 0);
   const cleanupWarning = cleanupWarnings.find(([context]) =>
@@ -480,6 +483,15 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
   );
   assert(cleanupWarning);
   assert.equal(cleanupWarning[1], "Impossibile eliminare upload abbandonato");
+
+  await cleanupExpiredPendingUploads(cleanupLog);
+  await cleanupExpiredPendingUploads(cleanupLog);
+  const cleanupAlerts = cleanupWarnings.filter(([context, message]) =>
+    (context as { event?: string })?.event ===
+      "pending_upload_cleanup_failure_alert" &&
+    message === "Repeated abandoned upload cleanup failures",
+  );
+  assert.equal(cleanupAlerts.length, 1);
 
   s3.setDeleteFailure(false);
   await cleanupExpiredPendingUploads();
