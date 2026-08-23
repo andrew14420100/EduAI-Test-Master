@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { useColors } from '@/hooks/useColors';
-import { getGetProfileQueryKey, upsertProfile, useGetProfile } from '@workspace/api-client-react';
+import { getGetProfileQueryKey, upsertProfile } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useApp } from '@/context/AppContext';
 
@@ -15,7 +15,6 @@ export default function AccountSettingsScreen() {
   const { account } = useApp();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
-  const profileQuery = useGetProfile();
   const [username, setUsername] = useState(account?.username ?? user?.username ?? '');
   const [email, setEmail] = useState(account?.email ?? user?.primaryEmailAddress?.emailAddress ?? '');
   const [currentPassword, setCurrentPassword] = useState('');
