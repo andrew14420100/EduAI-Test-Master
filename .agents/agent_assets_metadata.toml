@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "8ZW3B8lv56ePsFapi2ky6"
+uri = "file://attached_assets/generated_images/eduai-feature-graphic-1024x500.png"
+type = "image"
+title = "Immagine in primo piano EduAI Test Master"
+description = "Grafica 1024×500 pronta per il campo Immagine in primo piano della scheda Google Play."
+logical_id = "754a2904-6485-4371-ba7b-5211a4b6a205"
+content_hash = "sha256:8ba34e9995f33b6bc5c2c5fa472d4db1ddb72e147fc5ab37380ee0278bd4fd27"
+size = 472611
+mtime_ms = 1787465930643
+storage_uri = "gcs://replit-rams-assets-archer/rams/assets/repl:d3f911c4-65c0-4974-a87e-4b529a43f26d/754a2904-6485-4371-ba7b-5211a4b6a205/9347ae85-8d2e-4399-9e69-3b30c1e74607"
+storage_version_token = "1787465960165783"
+content_type = "image/png"
