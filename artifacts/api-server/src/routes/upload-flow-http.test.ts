@@ -127,6 +127,14 @@ function createMemoryDb(pendingUploadsTable: object, materialsTable: object) {
     update() {
       return { set: () => ({ where: async () => [] }) };
     },
+    delete(table: object) {
+      return {
+        where: async () => {
+          if (table === pendingUploadsTable) pending.clear();
+          return [];
+        },
+      };
+    },
     transaction: async (callback: (tx: any) => Promise<any>) => callback({
       delete(table: object) {
         return {
@@ -184,6 +192,7 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
   liveDb.insert = memory.db.insert;
   liveDb.select = memory.db.select;
   liveDb.update = memory.db.update;
+  liveDb.delete = memory.db.delete;
   liveDb.transaction = memory.db.transaction;
   const { setAuthResolverForTests } = await import("../middlewares/requireAuth.ts");
   setAuthResolverForTests((req) => {
@@ -286,4 +295,105 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
 
   const anonymousRead = await request(server, privateReadPath);
   assert.equal(anonymousRead.response.status, 401);
+
+  const expiredUpload = await request(server, "/api/storage/uploads/request-url", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer owner-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ name: "scaduto.txt", size: content.length, contentType: "text/plain" }),
+  });
+  assert.equal(expiredUpload.response.status, 200);
+  const expiredData = expiredUpload.body as { objectPath: string };
+  const expiredPending = memory.pending.get(expiredData.objectPath);
+  assert(expiredPending);
+  expiredPending.expiresAt = new Date(Date.now() - 1);
+
+  const expiredFinalize = await request(server, "/api/materials", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer owner-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      objectPath: expiredData.objectPath,
+      contentType: "text/plain",
+      size: content.length,
+    }),
+  });
+  assert.equal(expiredFinalize.response.status, 400);
+  assert.equal(memory.pending.has(expiredData.objectPath), false);
+  assert.equal(memory.materials.length, 1);
+
+  const alteredSizeUpload = await request(server, "/api/storage/uploads/request-url", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer owner-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ name: "dimensione.txt", size: content.length, contentType: "text/plain" }),
+  });
+  assert.equal(alteredSizeUpload.response.status, 200);
+  const alteredSizeData = alteredSizeUpload.body as {
+    uploadURL: string;
+    objectPath: string;
+  };
+  const alteredSizePut = await fetch(alteredSizeData.uploadURL, {
+    method: "PUT",
+    headers: { "content-type": "text/plain" },
+    body: Buffer.from("ciao"),
+  });
+  assert.equal(alteredSizePut.status, 200);
+
+  const alteredSizeFinalize = await request(server, "/api/materials", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer owner-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      objectPath: alteredSizeData.objectPath,
+      contentType: "text/plain",
+      size: content.length,
+    }),
+  });
+  assert.equal(alteredSizeFinalize.response.status, 400);
+  assert.equal(memory.pending.has(alteredSizeData.objectPath), true);
+  memory.pending.delete(alteredSizeData.objectPath);
+
+  const alteredTypeUpload = await request(server, "/api/storage/uploads/request-url", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer owner-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ name: "tipo-alterato.txt", size: content.length, contentType: "text/plain" }),
+  });
+  assert.equal(alteredTypeUpload.response.status, 200);
+  const alteredTypeData = alteredTypeUpload.body as {
+    uploadURL: string;
+    objectPath: string;
+  };
+  const alteredTypePut = await fetch(alteredTypeData.uploadURL, {
+    method: "PUT",
+    headers: { "content-type": "application/octet-stream" },
+    body: content,
+  });
+  assert.equal(alteredTypePut.status, 200);
+
+  const alteredTypeFinalize = await request(server, "/api/materials", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer owner-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      objectPath: alteredTypeData.objectPath,
+      contentType: "text/plain",
+      size: content.length,
+    }),
+  });
+  assert.equal(alteredTypeFinalize.response.status, 400);
+  assert.equal(memory.pending.has(alteredTypeData.objectPath), true);
 });
