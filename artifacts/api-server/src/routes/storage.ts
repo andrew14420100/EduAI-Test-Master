@@ -11,7 +11,12 @@ import {
   ObjectStorageService,
 } from "../lib/objectStorage";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
-import { db, materialsTable, pendingUploadsTable } from "@workspace/db";
+import {
+  db,
+  materialsTable,
+  pendingUploadCleanupTable,
+  pendingUploadsTable,
+} from "@workspace/db";
 import { MAX_MEDIA_UPLOAD_BYTES } from "../lib/mediaLimits";
 
 const router: IRouter = Router();
@@ -23,25 +28,70 @@ const PENDING_UPLOAD_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 const PENDING_UPLOAD_CLEANUP_BATCH_SIZE = 100;
 const PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD = 3;
 
-let cleanupFailureCount = 0;
+const CLEANUP_HEALTH_KEY = "pending_upload_cleanup";
 let cleanupFailureAlerted = false;
-let cleanupLastFailureAt: Date | null = null;
-let cleanupLastRecoveredAt: Date | null = null;
 
 type CleanupLog = Pick<Console, "warn" | "error">;
 
-function recordCleanupFailure(log: CleanupLog, failedCount = 1): void {
-  cleanupFailureCount += failedCount;
-  cleanupLastFailureAt = new Date();
+async function persistCleanupHealth(
+  state: {
+    status: "active" | "recovered";
+    failureCount: number;
+    lastFailureAt: Date | null;
+    incidentStartedAt: Date | null;
+    lastRecoveredAt: Date | null;
+  },
+): Promise<void> {
+  await db
+    .insert(pendingUploadCleanupTable)
+    .values({
+      key: CLEANUP_HEALTH_KEY,
+      ...state,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: pendingUploadCleanupTable.key,
+      set: {
+        status: state.status,
+        failureCount: state.failureCount,
+        lastFailureAt: state.lastFailureAt,
+        incidentStartedAt: state.incidentStartedAt,
+        lastRecoveredAt: state.lastRecoveredAt,
+        updatedAt: new Date(),
+      },
+    });
+}
+
+async function recordCleanupFailure(
+  log: CleanupLog,
+  failedCount = 1,
+  previous?: PendingUploadCleanupHealth,
+): Promise<void> {
+  const failureCount = (previous?.failureCount ?? 0) + failedCount;
+  const lastFailureAt = new Date();
+  try {
+    await persistCleanupHealth({
+      status: "active",
+      failureCount,
+      lastFailureAt,
+      incidentStartedAt:
+        previous?.status === "active" && previous.incidentStartedAt
+          ? previous.incidentStartedAt
+          : lastFailureAt,
+      lastRecoveredAt: previous?.lastRecoveredAt ?? null,
+    });
+  } catch (error) {
+    log.error({ err: error }, "Unable to persist pending upload cleanup state");
+  }
   if (
     !cleanupFailureAlerted &&
-    cleanupFailureCount >= PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD
+    failureCount >= PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD
   ) {
     cleanupFailureAlerted = true;
     log.error(
       {
         event: "pending_upload_cleanup_failure_alert",
-        failureCount: cleanupFailureCount,
+        failureCount,
         threshold: PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD,
       },
       "Repeated abandoned upload cleanup failures",
@@ -49,11 +99,23 @@ function recordCleanupFailure(log: CleanupLog, failedCount = 1): void {
   }
 }
 
-function recordCleanupSuccess(): void {
-  if (cleanupFailureCount > 0) {
-    cleanupLastRecoveredAt = new Date();
+async function recordCleanupSuccess(
+  previous?: PendingUploadCleanupHealth,
+  log: CleanupLog = console,
+): Promise<void> {
+  const lastRecoveredAt =
+    previous && previous.failureCount > 0 ? new Date() : previous?.lastRecoveredAt ?? null;
+  try {
+    await persistCleanupHealth({
+      status: "recovered",
+      failureCount: 0,
+      lastFailureAt: previous?.lastFailureAt ?? null,
+      incidentStartedAt: null,
+      lastRecoveredAt,
+    });
+  } catch (error) {
+    log.error({ err: error }, "Unable to persist pending upload cleanup state");
   }
-  cleanupFailureCount = 0;
   cleanupFailureAlerted = false;
 }
 
@@ -63,15 +125,24 @@ export type PendingUploadCleanupHealth = {
   threshold: number;
   lastFailureAt: Date | null;
   lastRecoveredAt: Date | null;
+  incidentStartedAt: Date | null;
 };
 
-export function getPendingUploadCleanupHealth(): PendingUploadCleanupHealth {
+export async function getPendingUploadCleanupHealth(): Promise<PendingUploadCleanupHealth> {
+  const [persisted] = await db
+    .select()
+    .from(pendingUploadCleanupTable)
+    .where(eq(pendingUploadCleanupTable.key, CLEANUP_HEALTH_KEY))
+    .limit(1);
+  const failureCount = persisted?.failureCount ?? 0;
   return {
-    status: cleanupFailureCount > 0 ? "active" : "recovered",
-    failureCount: cleanupFailureCount,
+    status: persisted?.status === "active" && failureCount > 0 ? "active" : "recovered",
+    failureCount,
     threshold: PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD,
-    lastFailureAt: cleanupLastFailureAt,
-    lastRecoveredAt: cleanupLastRecoveredAt,
+    lastFailureAt: persisted?.lastFailureAt ?? null,
+    lastRecoveredAt: persisted?.lastRecoveredAt ?? null,
+    incidentStartedAt:
+      persisted?.status === "active" ? persisted.lastFailureAt ?? null : null,
   };
 }
 
@@ -85,6 +156,7 @@ export function getPendingUploadCleanupHealth(): PendingUploadCleanupHealth {
 export async function cleanupExpiredPendingUploads(
   log: CleanupLog = console,
 ): Promise<number> {
+  const previous = await getPendingUploadCleanupHealth();
   const expired = await db
     .select()
     .from(pendingUploadsTable)
@@ -127,9 +199,9 @@ export async function cleanupExpiredPendingUploads(
     cleaned += result.rowCount ?? 0;
   }
   if (failed > 0) {
-    recordCleanupFailure(log, failed);
+    await recordCleanupFailure(log, failed, previous);
   } else {
-    recordCleanupSuccess();
+    await recordCleanupSuccess(previous, log);
   }
   return cleaned;
 }
@@ -139,7 +211,7 @@ export function schedulePendingUploadCleanup(
 ): NodeJS.Timeout {
   const runCleanup = () => {
     void cleanupExpiredPendingUploads(log).catch((error) => {
-      recordCleanupFailure(log);
+      void recordCleanupFailure(log).catch(() => undefined);
       log.error("Pending upload cleanup failed", error);
     });
   };

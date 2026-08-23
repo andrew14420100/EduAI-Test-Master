@@ -16,4 +16,6 @@ export interface PendingUploadCleanupHealth {
   threshold: number;
   lastFailureAt: Date | null;
   lastRecoveredAt: Date | null;
+  /** When the currently active cleanup incident began. */
+  incidentStartedAt: Date | null;
 }

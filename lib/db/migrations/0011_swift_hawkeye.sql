@@ -1,0 +1,1 @@
+ALTER TABLE "pending_upload_cleanup" ADD COLUMN "incident_started_at" timestamp;

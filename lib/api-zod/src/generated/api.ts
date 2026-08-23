@@ -19,7 +19,8 @@ export const HealthCheckResponse = zod.object({
   "failureCount": zod.number().int().describe('Number of cleanup failures in the current active incident.'),
   "threshold": zod.number().int().describe('Failure count at which the bounded structured alert is emitted.'),
   "lastFailureAt": zod.coerce.date().nullable(),
-  "lastRecoveredAt": zod.coerce.date().nullable()
+  "lastRecoveredAt": zod.coerce.date().nullable(),
+  "incidentStartedAt": zod.coerce.date().nullable().describe('When the currently active cleanup incident began.')
 })
 })
 

@@ -118,16 +118,23 @@ async function startS3() {
   };
 }
 
-function createMemoryDb(pendingUploadsTable: object, materialsTable: object) {
+function createMemoryDb(
+  pendingUploadsTable: object,
+  materialsTable: object,
+  pendingUploadCleanupTable: object,
+) {
   const pending = new Map<string, any>();
   const materials: any[] = [];
+  let cleanupState: any;
   const query = (table: object, projected: boolean) => {
     // The cleanup query asks only for a projected objectPath and the memory
     // database does not evaluate Drizzle predicates; return no references for
     // that query so its storage behavior can be exercised independently.
     const result = table === pendingUploadsTable
       ? [...pending.values()]
-      : projected ? [] : materials.slice();
+      : table === pendingUploadCleanupTable
+        ? (cleanupState ? [cleanupState] : [])
+        : projected ? [] : materials.slice();
     Object.assign(result, {
       limit: async (count: number) => result.slice(0, count),
     });
@@ -142,6 +149,7 @@ function createMemoryDb(pendingUploadsTable: object, materialsTable: object) {
           return {
             onConflictDoUpdate: async () => {
               if (table === pendingUploadsTable) pending.set(value.objectPath, { ...value });
+              if (table === pendingUploadCleanupTable) cleanupState = { ...cleanupState, ...value };
             },
           };
         },
@@ -220,7 +228,11 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
   });
 
   const dbModule = await import("@workspace/db");
-  const memory = createMemoryDb(dbModule.pendingUploadsTable, dbModule.materialsTable);
+  const memory = createMemoryDb(
+    dbModule.pendingUploadsTable,
+    dbModule.materialsTable,
+    dbModule.pendingUploadCleanupTable,
+  );
   const liveDb = dbModule.db as any;
   liveDb.insert = memory.db.insert;
   liveDb.select = memory.db.select;

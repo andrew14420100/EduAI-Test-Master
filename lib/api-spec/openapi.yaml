@@ -1325,12 +1325,18 @@ components:
           type: string
           format: date-time
           nullable: true
+        incidentStartedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the currently active cleanup incident began.
       required:
         - status
         - failureCount
         - threshold
         - lastFailureAt
         - lastRecoveredAt
+        - incidentStartedAt
 
     ErrorEnvelope:
       type: object

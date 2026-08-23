@@ -25,6 +25,8 @@ export interface PendingUploadCleanupHealth {
   threshold: number;
   lastFailureAt: string | null;
   lastRecoveredAt: string | null;
+  /** When the currently active cleanup incident began. */
+  incidentStartedAt: string | null;
 }
 
 export interface HealthStatus {
@@ -57,7 +59,6 @@ export interface Profile {
   /** Full Italian study-path string (e.g. "Liceo Scientifico"). Null before onboarding. */
   level?: string | null;
   wallet: number;
-  xp: number;
   streak: number;
   inviteCode: string;
   avatarObjectPath?: string | null;

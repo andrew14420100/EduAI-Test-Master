@@ -71,6 +71,20 @@
       "when": 1787423804123,
       "tag": "0009_eager_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787492465561,
+      "tag": "0010_strange_ego",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787492504651,
+      "tag": "0011_swift_hawkeye",
+      "breakpoints": true
     }
   ]
 }

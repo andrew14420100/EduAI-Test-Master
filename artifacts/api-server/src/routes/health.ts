@@ -4,10 +4,10 @@ import { getPendingUploadCleanupHealth } from "./storage";
 
 const router: IRouter = Router();
 
-router.get("/healthz", (_req, res) => {
+router.get("/healthz", async (_req, res) => {
   const data = HealthCheckResponse.parse({
     status: "ok",
-    pendingUploadCleanup: getPendingUploadCleanupHealth(),
+    pendingUploadCleanup: await getPendingUploadCleanupHealth(),
   });
   res.json(data);
 });
