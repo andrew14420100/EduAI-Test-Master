@@ -14,7 +14,7 @@ import { execFile as nodeExecFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import type { File } from "@google-cloud/storage";
+import type { StoredObject as File } from "./objectStorage";
 
 import {
   extractStudyText,
