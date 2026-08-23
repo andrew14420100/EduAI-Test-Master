@@ -43,7 +43,9 @@ export default function PrivacyScreen() {
             onPress={() => router.back()}
             style={({ pressed }) => [styles.backButton, { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.7 : 1 }]}
           >
-            <AppIcon name="chevron-left" size={18} color={c.foreground} />
+            <View style={{ transform: [{ rotate: '180deg' }] }}>
+              <AppIcon name="chevron-right" size={18} color={c.foreground} />
+            </View>
           </Pressable>
           <View style={styles.headerCopy}>
             <Text style={[styles.eyebrow, { color: c.primary }]}>TRASPARENZA</Text>
