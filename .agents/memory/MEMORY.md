@@ -7,3 +7,4 @@
 - [Expo API URL normalization](expo-api-url-normalization.md) — EXPO_PUBLIC_API_URL may already include https://; normalize before passing it to clients or native fetch fails.
 - [S3 metadata headers](s3-metadata-headers.md) — user-metadata keys become HTTP headers; keep them token-safe and test CopyObject updates against an S3-compatible mock.
 - [Node test module mocks](node-test-module-mocks.md) — tsx requires invoking its ESM CLI through Node when enabling experimental module mocks.
+- [Abandoned upload cleanup](abandoned-upload-cleanup.md) — delete storage objects idempotently and retain pending rows when cleanup cannot remove the object.

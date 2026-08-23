@@ -28,6 +28,14 @@ import type { StoredObject as File } from "../lib/objectStorage";
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
+async function deleteAbandonedObject(objectPath: string, log: Pick<Request["log"], "warn">) {
+  try {
+    await objectStorageService.deleteObjectEntity(objectPath);
+  } catch (error) {
+    log.warn({ err: error, objectPath }, "Impossibile eliminare upload abbandonato");
+  }
+}
+
 /**
  * Download up to MAX_EXTRACT_BYTES from a storage object and extract study text.
  * Never throws: any download/extraction problem is captured as a `failed`
@@ -508,6 +516,7 @@ router.post("/materials", requireAuth, async (req: Request, res: Response) => {
                 lte(pendingUploadsTable.expiresAt, sql`now()`),
               ),
             );
+          await deleteAbandonedObject(objectPath, req.log);
           res.status(400).json({
             error:
               "L'upload è scaduto durante la finalizzazione. Richiedi un nuovo URL e ricarica il file.",

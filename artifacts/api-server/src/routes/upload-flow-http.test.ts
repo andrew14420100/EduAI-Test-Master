@@ -69,6 +69,12 @@ async function startS3() {
       res.end();
       return;
     }
+    if (req.method === "DELETE") {
+      objects.delete(key);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
 
     const object = objects.get(key);
     if (!object) {
@@ -104,11 +110,20 @@ async function startS3() {
 function createMemoryDb(pendingUploadsTable: object, materialsTable: object) {
   const pending = new Map<string, any>();
   const materials: any[] = [];
-  const query = (table: object) => ({
-    where: async () => table === pendingUploadsTable
+  const query = (table: object, projected: boolean) => {
+    // The cleanup query asks only for a projected objectPath and the memory
+    // database does not evaluate Drizzle predicates; return no references for
+    // that query so its storage behavior can be exercised independently.
+    const result = table === pendingUploadsTable
       ? [...pending.values()]
-      : materials.slice(),
-  });
+      : projected ? [] : materials.slice();
+    Object.assign(result, {
+      limit: async (count: number) => result.slice(0, count),
+    });
+    return {
+      where: () => result,
+    };
+  };
   const db = {
     insert(table: object) {
       return {
@@ -121,8 +136,10 @@ function createMemoryDb(pendingUploadsTable: object, materialsTable: object) {
         },
       };
     },
-    select() {
-      return { from: (table: object) => query(table) };
+    select(fields?: unknown) {
+      return {
+        from: (table: object) => query(table, fields !== undefined),
+      };
     },
     update() {
       return { set: () => ({ where: async () => [] }) };
@@ -311,9 +328,15 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
     body: JSON.stringify({ name: "scaduto.txt", size: content.length, contentType: "text/plain" }),
   });
   assert.equal(expiredUpload.response.status, 200);
-  const expiredData = expiredUpload.body as { objectPath: string };
+  const expiredData = expiredUpload.body as { uploadURL: string; objectPath: string };
   const expiredPending = memory.pending.get(expiredData.objectPath);
   assert(expiredPending);
+  const abandonedPut = await fetch(expiredData.uploadURL, {
+    method: "PUT",
+    headers: { "content-type": "text/plain" },
+    body: content,
+  });
+  assert.equal(abandonedPut.status, 200);
   expiredPending.expiresAt = new Date(Date.now() - 1);
 
   const expiredFinalize = await request(server, "/api/materials", {
@@ -414,4 +437,24 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
   await cleanupExpiredPendingUploads();
   assert.equal(memory.pending.has("/objects/expired-abandoned"), false);
   assert.equal(memory.pending.has("/objects/active"), true);
+  const cleanupUpload = await request(server, "/api/storage/uploads/request-url", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer owner-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ name: "cleanup.txt", size: content.length, contentType: "text/plain" }),
+  });
+  assert.equal(cleanupUpload.response.status, 200);
+  const cleanupData = cleanupUpload.body as { uploadURL: string; objectPath: string };
+  const cleanupPut = await fetch(cleanupData.uploadURL, {
+    method: "PUT",
+    headers: { "content-type": "text/plain" },
+    body: content,
+  });
+  assert.equal(cleanupPut.status, 200);
+  memory.pending.get(cleanupData.objectPath).expiresAt = new Date(Date.now() - 1);
+  await cleanupExpiredPendingUploads();
+  const abandonedObject = await fetch(cleanupData.uploadURL, { method: "HEAD" });
+  assert.equal(abandonedObject.status, 404);
 });

@@ -4,14 +4,14 @@ import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
-import { lte } from "drizzle-orm";
+import { and, eq, lte } from "drizzle-orm";
 import { ObjectPermission } from "../lib/objectAcl";
 import {
   ObjectNotFoundError,
   ObjectStorageService,
 } from "../lib/objectStorage";
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
-import { db, pendingUploadsTable } from "@workspace/db";
+import { db, materialsTable, pendingUploadsTable } from "@workspace/db";
 import { MAX_MEDIA_UPLOAD_BYTES } from "../lib/mediaLimits";
 
 const router: IRouter = Router();
@@ -20,26 +20,65 @@ const objectStorageService = new ObjectStorageService();
 // Presigned URL TTL in seconds (15 minutes)
 const UPLOAD_TTL_SEC = 900;
 const PENDING_UPLOAD_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
+const PENDING_UPLOAD_CLEANUP_BATCH_SIZE = 100;
 
 /**
  * Remove upload bookkeeping that can no longer be finalized.
  *
- * The expiry predicate is part of the DELETE itself, rather than a
- * select-then-delete sequence, so an upload that is still active at cleanup
- * time cannot be removed.
+ * The expiry predicate is part of the per-row DELETE itself, rather than a
+ * broad select-then-delete sequence, so an upload that is still active at
+ * cleanup time cannot be removed.
  */
-export async function cleanupExpiredPendingUploads(): Promise<number> {
-  const result = await db
-    .delete(pendingUploadsTable)
-    .where(lte(pendingUploadsTable.expiresAt, new Date()));
-  return result.rowCount ?? 0;
+export async function cleanupExpiredPendingUploads(
+  log: Pick<Console, "warn" | "error"> = console,
+): Promise<number> {
+  const expired = await db
+    .select()
+    .from(pendingUploadsTable)
+    .where(lte(pendingUploadsTable.expiresAt, new Date()))
+    .limit(PENDING_UPLOAD_CLEANUP_BATCH_SIZE);
+
+  let cleaned = 0;
+  for (const pending of expired) {
+    // A finalized material is the source of truth. Never delete its object,
+    // even if a stale pending row remains for any reason.
+    const [material] = await db
+      .select({ objectPath: materialsTable.objectPath })
+      .from(materialsTable)
+      .where(eq(materialsTable.objectPath, pending.objectPath))
+      .limit(1);
+
+    if (!material) {
+      try {
+        // Delete the object first. If storage is unavailable, retain the row
+        // so the next bounded pass can retry rather than losing its path.
+        await objectStorageService.deleteObjectEntity(pending.objectPath);
+      } catch (error) {
+        log.warn({ err: error, objectPath: pending.objectPath }, "Impossibile eliminare upload abbandonato");
+        continue;
+      }
+    }
+
+    // Keep the expiry guard in the DELETE so a row that became active again
+    // cannot be removed by a stale cleanup candidate.
+    const result = await db
+      .delete(pendingUploadsTable)
+      .where(
+        and(
+          eq(pendingUploadsTable.objectPath, pending.objectPath),
+          lte(pendingUploadsTable.expiresAt, new Date()),
+        ),
+      );
+    cleaned += result.rowCount ?? 0;
+  }
+  return cleaned;
 }
 
 export function schedulePendingUploadCleanup(
-  log: Pick<Console, "error"> = console,
+  log: Pick<Console, "error" | "warn"> = console,
 ): NodeJS.Timeout {
   const runCleanup = () => {
-    void cleanupExpiredPendingUploads().catch((error) => {
+    void cleanupExpiredPendingUploads(log).catch((error) => {
       log.error("Pending upload cleanup failed", error);
     });
   };

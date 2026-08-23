@@ -221,6 +221,19 @@ export class ObjectStorageService {
     return file;
   }
 
+  /**
+   * Delete a private object without first checking whether it exists.
+   *
+   * S3 DeleteObject is idempotent, which is important for abandoned uploads:
+   * the client may have requested a URL without ever putting an object.
+   */
+  async deleteObjectEntity(objectPath: string): Promise<void> {
+    if (!objectPath.startsWith("/objects/")) throw new ObjectNotFoundError();
+    const { config, client } = this.client();
+    const key = `${objectKeyFromPath(this.getPrivateObjectDir()).replace(/\/+$/, "")}/${objectPath.slice("/objects/".length)}`;
+    await new S3StoredObject(client, config.bucket, key).delete();
+  }
+
   normalizeObjectEntityPath(rawPath: string): string {
     if (rawPath.startsWith("/objects/")) return rawPath;
     try {
