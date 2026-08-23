@@ -28,3 +28,17 @@ mtime_ms = 1787466443647
 storage_uri = "gcs://replit-rams-assets-archer/rams/assets/repl:d3f911c4-65c0-4974-a87e-4b529a43f26d/1285a634-4ee2-484e-a2c1-eba895387f43/4bdcc890-9038-44a5-b233-cf328fb028e4"
 storage_version_token = "1787466472619258"
 content_type = "image/png"
+
+[[outputs]]
+id = "CBSG2qw5RTJJWP1UT9jj-"
+uri = "file://attached_assets/generated_images/eduai-feature-graphic-screens-vertical.png"
+type = "image"
+title = "Immagine in primo piano con screenshot verticali"
+description = "Grafica Google Play 1024×500 con i quattro screenshot disposti verticalmente e affiancati uno dopo l’altro, sfocati sotto una patina verde chiaro, con logo, titolo e motto centrati."
+logical_id = "51d943c1-3f90-4a24-96c3-3f50aeed69f6"
+content_hash = "sha256:3bac66856efe063703569510294cdb646e086f496f674ed0fd53827d53afe857"
+size = 135211
+mtime_ms = 1787466517302
+storage_uri = "gcs://replit-rams-assets-archer/rams/assets/repl:d3f911c4-65c0-4974-a87e-4b529a43f26d/51d943c1-3f90-4a24-96c3-3f50aeed69f6/a1fea757-8170-4eea-9237-303ced4817b2"
+storage_version_token = "1787466532557618"
+content_type = "image/png"
