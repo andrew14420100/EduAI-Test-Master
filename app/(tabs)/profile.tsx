@@ -71,7 +71,7 @@ export default function ProfileScreen() {
   const preferences: { label: string; icon: AppIconName; action: () => void }[] = [
     { label: 'Proponi una modifica', icon: 'sparkles', action: openSuggestion },
     { label: 'Avvisi', icon: 'bell', action: () => setModal('avvisi') },
-    { label: 'Privacy e dati', icon: 'shield', action: () => setModal('privacy') },
+    { label: 'Privacy e dati', icon: 'shield', action: () => router.push('/privacy') },
     { label: 'Impostazioni account', icon: 'book', action: () => router.push('/account-settings') },
     { label: 'Esci dall’account', icon: 'logout', action: () => setModal('uscita') },
     { label: 'Elimina definitivamente l’account', icon: 'trash', action: () => setModal('elimina-account') },
