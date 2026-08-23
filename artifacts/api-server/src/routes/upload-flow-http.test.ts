@@ -1,0 +1,289 @@
+import assert from "node:assert/strict";
+import { createServer, type Server } from "node:http";
+import { once } from "node:events";
+import express from "express";
+import { test } from "node:test";
+
+const storageEnv = {
+  S3_ACCESS_KEY_ID: "http-flow-access",
+  S3_SECRET_ACCESS_KEY: "http-flow-secret",
+  S3_REGION: "http-flow-region",
+  S3_BUCKET: "http-flow-bucket",
+  PRIVATE_OBJECT_DIR: "/objects/private",
+  PUBLIC_OBJECT_SEARCH_PATHS: "/objects/public",
+};
+
+type StoredObject = {
+  body: Buffer;
+  contentType: string;
+  metadata: Record<string, string>;
+};
+
+function json(res: import("node:http").ServerResponse, status: number, body: unknown) {
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
+async function body(req: import("node:http").IncomingMessage) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks);
+}
+
+async function startS3() {
+  const objects = new Map<string, StoredObject>();
+  const server = createServer(async (req, res) => {
+    const path = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
+    const [, bucket, ...parts] = path.split("/");
+    const key = parts.join("/");
+    if (bucket !== storageEnv.S3_BUCKET || !key) {
+      json(res, 404, { error: "not found" });
+      return;
+    }
+
+    if (req.method === "PUT" && req.headers["x-amz-copy-source"]) {
+      await body(req);
+      const source = decodeURIComponent(String(req.headers["x-amz-copy-source"]));
+      const sourceKey = source.replace(/^\/?[^/]+\//, "");
+      const object = objects.get(sourceKey);
+      if (!object) {
+        json(res, 404, { error: "not found" });
+        return;
+      }
+      const acl = Object.entries(req.headers).find(([name]) =>
+        name.toLowerCase() === "x-amz-meta-custom-aclpolicy",
+      )?.[1];
+      object.metadata["custom-aclpolicy"] = Array.isArray(acl) ? acl[0] ?? "" : acl ?? "";
+      res.writeHead(200);
+      res.end("<CopyObjectResult/>");
+      return;
+    }
+
+    if (req.method === "PUT") {
+      objects.set(key, {
+        body: await body(req),
+        contentType: String(req.headers["content-type"] ?? "application/octet-stream"),
+        metadata: {},
+      });
+      res.writeHead(200);
+      res.end();
+      return;
+    }
+
+    const object = objects.get(key);
+    if (!object) {
+      json(res, 404, { error: "not found" });
+      return;
+    }
+    if (req.method === "HEAD") {
+      res.writeHead(200, {
+        "content-length": String(object.body.byteLength),
+        "content-type": object.contentType,
+        "x-amz-meta-custom-aclpolicy": object.metadata["custom-aclpolicy"] ?? "",
+      });
+      res.end();
+      return;
+    }
+    if (req.method === "GET") {
+      res.writeHead(200, {
+        "content-length": String(object.body.byteLength),
+        "content-type": object.contentType,
+      });
+      res.end(object.body);
+      return;
+    }
+    json(res, 405, { error: "method not allowed" });
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert(address && typeof address === "object");
+  return { server, endpoint: `http://127.0.0.1:${address.port}` };
+}
+
+function createMemoryDb(pendingUploadsTable: object, materialsTable: object) {
+  const pending = new Map<string, any>();
+  const materials: any[] = [];
+  const query = (table: object) => ({
+    where: async () => table === pendingUploadsTable
+      ? [...pending.values()]
+      : materials.slice(),
+  });
+  const db = {
+    insert(table: object) {
+      return {
+        values(value: any) {
+          return {
+            onConflictDoUpdate: async () => {
+              if (table === pendingUploadsTable) pending.set(value.objectPath, { ...value });
+            },
+          };
+        },
+      };
+    },
+    select() {
+      return { from: (table: object) => query(table) };
+    },
+    update() {
+      return { set: () => ({ where: async () => [] }) };
+    },
+    transaction: async (callback: (tx: any) => Promise<any>) => callback({
+      delete(table: object) {
+        return {
+          where: () => ({
+            returning: async () => {
+              if (table !== pendingUploadsTable) return [];
+              const entries = [...pending.values()];
+              pending.clear();
+              return entries;
+            },
+          }),
+        };
+      },
+      insert(table: object) {
+        return {
+          values(value: any) {
+            return { returning: async () => {
+              if (table === materialsTable) materials.push({ ...value });
+              return [{ ...value }];
+            }};
+          },
+        };
+      },
+    }),
+  };
+  return { db, pending, materials };
+}
+
+async function request(server: Server, path: string, init: RequestInit = {}) {
+  const address = server.address();
+  assert(address && typeof address !== "string");
+  const response = await fetch(`http://127.0.0.1:${address.port}${path}`, init);
+  const text = await response.text();
+  return { response, body: text ? JSON.parse(text) : null };
+}
+
+test("upload lifecycle works over HTTP with simulated Clerk and database", async (t) => {
+  const s3 = await startS3();
+  t.after(() => s3.server.close());
+  const previousEnv = new Map<string, string | undefined>();
+  for (const [name, value] of Object.entries({ ...storageEnv, S3_ENDPOINT: s3.endpoint })) {
+    previousEnv.set(name, process.env[name]);
+    process.env[name] = value;
+  }
+  t.after(() => {
+    for (const [name, value] of previousEnv) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  });
+
+  const dbModule = await import("@workspace/db");
+  const memory = createMemoryDb(dbModule.pendingUploadsTable, dbModule.materialsTable);
+  const liveDb = dbModule.db as any;
+  liveDb.insert = memory.db.insert;
+  liveDb.select = memory.db.select;
+  liveDb.update = memory.db.update;
+  liveDb.transaction = memory.db.transaction;
+  const { setAuthResolverForTests } = await import("../middlewares/requireAuth.ts");
+  setAuthResolverForTests((req) => {
+    const token = req.headers.authorization;
+    return token === "Bearer owner-token"
+      ? "http-owner"
+      : token === "Bearer other-token" ? "http-other" : undefined;
+  });
+  t.after(() => setAuthResolverForTests(undefined));
+
+  const [{ default: storageRouter }, { default: materialsRouter }] = await Promise.all([
+    import("./storage.ts"),
+    import("./materials.ts"),
+  ]);
+  const app = express();
+  app.use(express.json());
+  app.use((req, _res, next) => {
+    (req as any).log = { warn() {}, error() {} };
+    next();
+  });
+  app.use("/api", storageRouter);
+  app.use("/api", materialsRouter);
+  const server = createServer(app);
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+
+  const anonymous = await request(server, "/api/storage/uploads/request-url", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "lezione.txt", size: 5, contentType: "text/plain" }),
+  });
+  assert.equal(anonymous.response.status, 401);
+
+  const content = Buffer.from("ciao!");
+  const upload = await request(server, "/api/storage/uploads/request-url", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer owner-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ name: "lezione.txt", size: content.length, contentType: "text/plain" }),
+  });
+  assert.equal(upload.response.status, 200);
+  const uploadData = upload.body as { uploadURL: string; objectPath: string };
+  assert.equal(memory.pending.size, 1);
+
+  const put = await fetch(uploadData.uploadURL, {
+    method: "PUT",
+    headers: { "content-type": "text/plain" },
+    body: content,
+  });
+  assert.equal(put.status, 200);
+
+  const otherFinalize = await request(server, "/api/materials", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer other-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      objectPath: uploadData.objectPath,
+      contentType: "text/plain",
+      size: content.length,
+    }),
+  });
+  assert.equal(otherFinalize.response.status, 403);
+  assert.equal(memory.pending.size, 1);
+
+  const finalized = await request(server, "/api/materials", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer owner-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      objectPath: uploadData.objectPath,
+      contentType: "text/plain",
+      size: content.length,
+      description: "materiale di prova",
+    }),
+  });
+  assert.equal(finalized.response.status, 201);
+  assert.equal(memory.pending.size, 0);
+  assert.equal(memory.materials.length, 1);
+
+  const address = server.address();
+  assert(address && typeof address !== "string");
+  const privateReadPath = `/api/storage/objects${uploadData.objectPath.replace(/^\/objects/, "")}`;
+  const ownerRead = await fetch(`http://127.0.0.1:${address.port}${privateReadPath}`, {
+    headers: { authorization: "Bearer owner-token" },
+  });
+  assert.equal(ownerRead.status, 200);
+  assert.equal(await ownerRead.text(), content.toString());
+
+  const otherRead = await request(server, privateReadPath, {
+    headers: { authorization: "Bearer other-token" },
+  });
+  assert.equal(otherRead.response.status, 403);
+
+  const anonymousRead = await request(server, privateReadPath);
+  assert.equal(anonymousRead.response.status, 401);
+});

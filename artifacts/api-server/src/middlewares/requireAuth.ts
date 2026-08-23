@@ -5,6 +5,14 @@ export interface AuthedRequest extends Request {
   clerkUserId: string;
 }
 
+type AuthResolver = (req: Request) => string | undefined;
+let authResolverForTests: AuthResolver | undefined;
+
+/** Test-only seam for exercising protected routes without a Clerk network call. */
+export const setAuthResolverForTests = (resolver: AuthResolver | undefined): void => {
+  authResolverForTests = resolver;
+};
+
 export interface AdminRequest extends AuthedRequest {
   isAdmin: true;
 }
@@ -46,12 +54,13 @@ export const requireAuth = (
   res: Response,
   next: NextFunction,
 ): void => {
-  const auth = getAuth(req);
+  const resolvedUserId = authResolverForTests?.(req);
+  const auth = authResolverForTests ? undefined : getAuth(req);
   const claimedUserId = auth?.sessionClaims?.userId;
-  const userId =
-    typeof claimedUserId === "string" ? claimedUserId : auth?.userId;
+  const userId = resolvedUserId
+    ?? (typeof claimedUserId === "string" ? claimedUserId : auth?.userId);
   if (!userId) {
-    const authDetails = auth as unknown as Record<string, unknown>;
+    const authDetails = (auth ?? {}) as unknown as Record<string, unknown>;
     req.log.warn(
       {
         hasAuthorizationHeader: Boolean(req.headers.authorization),
