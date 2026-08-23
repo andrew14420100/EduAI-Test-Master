@@ -5,3 +5,4 @@
 - [Metro workspace watcher](metro-workspace-watcher.md) — exclude ephemeral tool directories when Expo watches the monorepo root, or Metro can fail on deleted paths.
 - [Native TypeScript test runner](native-typescript-test-runner.md) — Node’s native type stripping needs explicit `.ts` extensions for local ESM imports; bundling may hide this.
 - [Expo API URL normalization](expo-api-url-normalization.md) — EXPO_PUBLIC_API_URL may already include https://; normalize before passing it to clients or native fetch fails.
+- [S3 metadata headers](s3-metadata-headers.md) — user-metadata keys become HTTP headers; keep them token-safe and test CopyObject updates against an S3-compatible mock.

@@ -1,6 +1,10 @@
 import type { StoredObject } from './objectStorage';
 
-const ACL_POLICY_METADATA_KEY = 'custom:aclPolicy';
+// S3 user-metadata keys become HTTP header names. A colon is not a valid
+// header-token character, so keep the key HTTP-safe. The reader below also
+// accepts the former colon-separated spelling for already stored objects.
+const ACL_POLICY_METADATA_KEY = "custom-aclpolicy";
+const LEGACY_ACL_POLICY_METADATA_KEY = "custom:aclpolicy";
 
 // Can be flexibly defined according to the use case.
 //
@@ -87,9 +91,11 @@ export async function getObjectAclPolicy(
   objectFile: StoredObject,
 ): Promise<ObjectAclPolicy | null> {
   const [metadata] = await objectFile.getMetadata();
-  const aclPolicyEntry = Object.entries(metadata?.metadata ?? {}).find(
-    ([key]) => key.toLowerCase() === ACL_POLICY_METADATA_KEY.toLowerCase(),
-  );
+  const aclPolicyEntry = Object.entries(metadata?.metadata ?? {}).find(([key]) => {
+    const normalizedKey = key.toLowerCase();
+    return normalizedKey === ACL_POLICY_METADATA_KEY
+      || normalizedKey === LEGACY_ACL_POLICY_METADATA_KEY;
+  });
   const aclPolicy = aclPolicyEntry?.[1];
   if (!aclPolicy) {
     return null;
