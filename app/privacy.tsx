@@ -56,13 +56,6 @@ export default function PrivacyScreen() {
           </View>
         </View>
 
-        <View style={[styles.notice, { backgroundColor: c.accent, borderColor: c.primary }]}>
-          <AppIcon name="info" size={18} color={c.accentForeground} />
-          <Text style={[styles.noticeText, { color: c.accentForeground }]}>
-            Questa è una bozza informativa. Prima della pubblicazione, il titolare deve verificarla e completarla con i dati giuridici corretti, preferibilmente con il supporto di un professionista.
-          </Text>
-        </View>
-
         <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
           <Text style={[styles.updated, { color: c.primary }]}>Ultimo aggiornamento: 23 agosto 2026</Text>
           <Paragraph>

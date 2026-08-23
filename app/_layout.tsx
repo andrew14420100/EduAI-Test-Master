@@ -22,6 +22,8 @@ import { AppIcon } from '@/components/AppIcon';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { customFetch, setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 import { CentralLoader } from '@/components/CentralLoader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { APP_VERSION } from '@/constants/app';
 
 SplashScreen.preventAutoHideAsync();
 Notifications.setNotificationHandler({
@@ -49,6 +51,7 @@ function RootLayoutNav() {
   const segments = useSegments();
   const { isLoaded, isSignedIn } = useAuth();
   const { level, ready, refreshing, rewardEvent, completionAnimation, dismissRewardEvent } = useApp();
+  const insets = useSafeAreaInsets();
   const [navigating, setNavigating] = useState(false);
 
   useEffect(() => {
@@ -155,6 +158,9 @@ function RootLayoutNav() {
           onDismiss={dismissRewardEvent}
         />
       ) : null}
+      <View pointerEvents="none" style={[styles.versionBadge, { bottom: insets.bottom + 68 }]}>
+        <Text style={styles.versionText}>v{APP_VERSION}</Text>
+      </View>
     </View>
   );
 }
@@ -229,6 +235,8 @@ const styles = StyleSheet.create({
   rewardCopy: { flex: 1, gap: 2 },
   rewardTitle: { color: '#086E55', fontSize: 13, fontWeight: '700' },
   rewardMessage: { color: '#28584B', fontSize: 12, lineHeight: 16 },
+  versionBadge: { position: 'absolute', right: 12, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(8, 17, 31, 0.08)' },
+  versionText: { color: '#55716B', fontSize: 10, fontWeight: '600' },
   configurationError: { flex: 1, justifyContent: 'center', padding: 28, backgroundColor: '#F4FAF7' },
   configurationTitle: { color: '#153A35', fontSize: 24, fontWeight: '700', marginBottom: 12 },
   configurationBody: { color: '#55716B', fontSize: 16, lineHeight: 24 },

@@ -107,14 +107,10 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
     email?: string;
   };
 
-  if (!username || typeof username !== "string" || username.trim().length < 2) {
-    res.status(400).json({ error: "Username non valido (minimo 2 caratteri)" });
-    return;
-  }
-  if (username.length > 32) {
-    res
-      .status(400)
-      .json({ error: "Username troppo lungo (massimo 32 caratteri)" });
+  if (!username || typeof username !== "string" || !/^[A-Za-z0-9_]{3,20}$/.test(username.trim())) {
+    res.status(400).json({
+      error: "Username non valido (usa 3–20 caratteri, lettere, numeri e underscore)",
+    });
     return;
   }
 
@@ -125,14 +121,30 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
       .where(eq(profilesTable.userId, userId));
 
     if (existing) {
-      // Bootstrap is idempotent. Never overwrite the persisted username or
-      // study path with Clerk data: usernames are unique and the study path is
-      // immutable after onboarding. Keep the verified Clerk email current so
-      // account-based features (including admin access) use the active address.
-      if (email && email !== existing.email) {
+      // Bootstrap calls keep the current values, while an explicit profile
+      // update can change the app username or the verified email.
+      const nextUsername = username.trim();
+      const usernameChanged = nextUsername !== existing.username;
+      const emailChanged = Boolean(email && email !== existing.email);
+      if (usernameChanged || emailChanged) {
+        if (usernameChanged) {
+          const [usernameOwner] = await db
+            .select({ userId: profilesTable.userId })
+            .from(profilesTable)
+            .where(eq(profilesTable.username, nextUsername))
+            .limit(1);
+          if (usernameOwner && usernameOwner.userId !== userId) {
+            res.status(400).json({ error: "Username già in uso. Scegline uno diverso." });
+            return;
+          }
+        }
         const [updated] = await db
           .update(profilesTable)
-          .set({ email, updatedAt: new Date() })
+          .set({
+            ...(usernameChanged ? { username: nextUsername } : {}),
+            ...(emailChanged ? { email } : {}),
+            updatedAt: new Date(),
+          })
           .where(eq(profilesTable.userId, userId))
           .returning();
         res.json(toPublicProfile(updated ?? existing));

@@ -5,20 +5,25 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { useColors } from '@/hooks/useColors';
-import { upsertProfile } from '@workspace/api-client-react';
+import { getGetProfileQueryKey, upsertProfile, useGetProfile } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useApp } from '@/context/AppContext';
 
 export default function AccountSettingsScreen() {
   const c = useColors();
   const { user } = useUser();
+  const { account } = useApp();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
-  const [username, setUsername] = useState(user?.username ?? '');
-  const [email, setEmail] = useState(user?.primaryEmailAddress?.emailAddress ?? '');
+  const profileQuery = useGetProfile();
+  const [username, setUsername] = useState(account?.username ?? user?.username ?? '');
+  const [email, setEmail] = useState(account?.email ?? user?.primaryEmailAddress?.emailAddress ?? '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const save = async () => {
+  const saveUsername = async () => {
     if (!user || busy) return;
     setBusy(true);
     setStatus('');
@@ -28,35 +33,59 @@ export default function AccountSettingsScreen() {
         setStatus('Username non valido: usa 3–20 caratteri, solo lettere, numeri e underscore.');
         return;
       }
-      if (nextUsername !== (user.username ?? '')) {
-        const updateUser = (user as unknown as { update: (args: { username: string }) => Promise<unknown> }).update;
-        if (typeof updateUser !== 'function') {
-          throw new Error('Il tuo account Clerk non consente la modifica dello username.');
-        }
-        await updateUser.call(user, { username: nextUsername });
-        await upsertProfile({ username: nextUsername, email: user.primaryEmailAddress?.emailAddress ?? email.trim() });
-      }
-      if (newPassword.trim()) {
-        await (user as unknown as { updatePassword: (args: { currentPassword: string; newPassword: string }) => Promise<unknown> })
-          .updatePassword({ currentPassword, newPassword });
-      }
-      if (email.trim() && email.trim() !== user.primaryEmailAddress?.emailAddress) {
-        const address = await (user as unknown as { createEmailAddress: (args: { email: string }) => Promise<{ prepareVerification: (args: { strategy: string }) => Promise<unknown> }> })
-          .createEmailAddress({ email: email.trim() });
-        await address.prepareVerification({ strategy: 'email_link' });
-        setStatus('Controlla la nuova email e conferma il link. Diventerà attiva solo dopo la verifica.');
-      } else {
-        setStatus('Impostazioni aggiornate.');
-      }
-      setCurrentPassword('');
-      setNewPassword('');
+      const updated = await upsertProfile({ username: nextUsername, email: account?.email ?? user.primaryEmailAddress?.emailAddress });
+      queryClient.setQueryData(getGetProfileQueryKey(), updated);
+      setStatus('Nome utente aggiornato.');
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      setStatus(/taken|already|occupat|unique/i.test(message)
-        ? 'Username già occupato. Scegline uno diverso.'
-        : /valid parameter|not allowed|username.*enabled/i.test(message)
-          ? 'La modifica username non è abilitata per questo account Clerk.'
-          : (message || 'Impossibile aggiornare le impostazioni.'));
+      setStatus(/taken|already|occupat|unique/i.test(message) ? 'Username già occupato. Scegline uno diverso.' : (message || 'Impossibile aggiornare il nome utente.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveEmail = async () => {
+    if (!user || busy) return;
+    setBusy(true);
+    setStatus('');
+    try {
+      const nextEmail = email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+        setStatus('Inserisci un indirizzo email valido.');
+        return;
+      }
+      if (nextEmail === user.primaryEmailAddress?.emailAddress?.toLowerCase()) {
+        setStatus('L’email è già aggiornata.');
+        return;
+      }
+      const address = await (user as unknown as { createEmailAddress: (args: { email: string }) => Promise<{ prepareVerification: (args: { strategy: string }) => Promise<unknown> }> })
+        .createEmailAddress({ email: nextEmail });
+      await address.prepareVerification({ strategy: 'email_link' });
+      setStatus('Controlla la nuova email e conferma il link. Diventerà attiva solo dopo la verifica.');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Impossibile aggiornare l’email.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const savePassword = async () => {
+    if (!user || busy) return;
+    setBusy(true);
+    setStatus('');
+    try {
+      if (!currentPassword || !newPassword) {
+        setStatus('Inserisci la password attuale e quella nuova.');
+        return;
+      }
+      await (user as unknown as { updatePassword: (args: { currentPassword: string; newPassword: string }) => Promise<unknown> })
+        .updatePassword({ currentPassword, newPassword });
+      setCurrentPassword('');
+      setNewPassword('');
+      setStatus('Password aggiornata.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      setStatus(message || 'Impossibile aggiornare la password.');
     } finally {
       setBusy(false);
     }
@@ -70,7 +99,7 @@ export default function AccountSettingsScreen() {
       </Pressable>
       <Text style={[styles.eyebrow, { color: c.primary }]}>ACCOUNT</Text>
       <Text style={[styles.title, { color: c.foreground }]}>Impostazioni</Text>
-      <Text style={[styles.description, { color: c.mutedForeground }]}>Il percorso di studio resta bloccato perché determina i contenuti dell’app.</Text>
+      <Text style={[styles.description, { color: c.mutedForeground }]}>Modifica ogni informazione separatamente. Il percorso di studio resta bloccato perché determina i contenuti dell’app.</Text>
        <Text style={[styles.label, { color: c.foreground }]}>Nome utente</Text>
        <TextInput
          value={username}
@@ -84,14 +113,20 @@ export default function AccountSettingsScreen() {
          style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]}
        />
        <Text style={[styles.helper, { color: c.mutedForeground }]}>3–20 caratteri · lettere, numeri e underscore</Text>
+       <Pressable disabled={busy} onPress={() => void saveUsername()} style={[styles.secondaryButton, { borderColor: c.primary, opacity: busy ? 0.6 : 1 }]}>
+         <Text style={[styles.secondaryButtonText, { color: c.primary }]}>Salva nome utente</Text>
+       </Pressable>
       <Text style={[styles.label, { color: c.foreground }]}>Nuova email</Text>
-      <TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
+       <TextInput value={email} onChangeText={setEmail} editable={!busy} keyboardType="email-address" autoCapitalize="none" style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
+       <Pressable disabled={busy} onPress={() => void saveEmail()} style={[styles.secondaryButton, { borderColor: c.primary, opacity: busy ? 0.6 : 1 }]}>
+         <Text style={[styles.secondaryButtonText, { color: c.primary }]}>Salva email</Text>
+       </Pressable>
       <Text style={[styles.label, { color: c.foreground }]}>Password attuale</Text>
-      <TextInput value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
+       <TextInput value={currentPassword} onChangeText={setCurrentPassword} editable={!busy} secureTextEntry style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
       <Text style={[styles.label, { color: c.foreground }]}>Nuova password</Text>
-      <TextInput value={newPassword} onChangeText={setNewPassword} secureTextEntry style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
-      <Pressable disabled={busy} onPress={() => void save()} style={[styles.button, { backgroundColor: c.primary, opacity: busy ? 0.6 : 1 }]}>
-        <Text style={[styles.buttonText, { color: c.primaryForeground }]}>{busy ? 'Salvataggio…' : 'Salva modifiche'}</Text>
+       <TextInput value={newPassword} onChangeText={setNewPassword} editable={!busy} secureTextEntry style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
+       <Pressable disabled={busy} onPress={() => void savePassword()} style={[styles.secondaryButton, { borderColor: c.primary, opacity: busy ? 0.6 : 1 }]}>
+         <Text style={[styles.secondaryButtonText, { color: c.primary }]}>{busy ? 'Salvataggio…' : 'Salva password'}</Text>
       </Pressable>
       {status ? <Text style={[styles.status, { color: c.mutedForeground }]}>{status}</Text> : null}
     </ScrollView>
@@ -110,6 +145,8 @@ const styles = StyleSheet.create({
   disabledInput: { opacity: 0.8 },
   button: { borderRadius: 16, padding: 15, alignItems: 'center', marginTop: 10 },
   buttonText: { fontFamily: 'Inter_700Bold', fontSize: 15 },
+  secondaryButton: { borderWidth: 1, borderRadius: 14, padding: 13, alignItems: 'center', marginTop: -3 },
+  secondaryButtonText: { fontFamily: 'Inter_700Bold', fontSize: 14 },
   status: { fontFamily: 'Inter_500Medium', fontSize: 13, lineHeight: 19, marginTop: 4 },
   helper: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: -5 },
 });
