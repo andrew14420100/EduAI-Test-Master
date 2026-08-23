@@ -5,8 +5,8 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  PutObjectCommand,
   S3Client,
-  type HeadObjectCommandOutput,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -207,7 +207,7 @@ export class ObjectStorageService {
     const privateDir = this.getPrivateObjectDir();
     const prefix = objectKeyFromPath(privateDir).replace(/\/+$/, "");
     const key = `${prefix}/uploads/${randomUUID()}`;
-    return getSignedUrl(client, new (await import("@aws-sdk/client-s3")).PutObjectCommand({
+    return getSignedUrl(client, new PutObjectCommand({
       Bucket: config.bucket,
       Key: key,
     }), { expiresIn: 900 });

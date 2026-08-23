@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { pipeline } from "node:stream/promises";
-import type { File } from "@google-cloud/storage";
+import type { StoredObject as File } from "./objectStorage";
 import { aiOcr, aiTranscribe } from "./aiProvider.ts";
 import { isMeaningfulText, normalizeText } from "./contentStudy.ts";
 import type { ExtractionResult } from "./contentStudy.ts";

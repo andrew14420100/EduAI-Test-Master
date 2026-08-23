@@ -23,7 +23,7 @@ import {
 import { generateMaterialTitle } from "../lib/studyAi";
 import { ocrMediaObject, transcribeMediaObject } from "../lib/mediaTranscription";
 import { MAX_MEDIA_UPLOAD_BYTES } from "../lib/mediaLimits";
-import type { File } from "@google-cloud/storage";
+import type { StoredObject as File } from "../lib/objectStorage";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
