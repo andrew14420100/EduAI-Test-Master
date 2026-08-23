@@ -5,7 +5,9 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PendingUploadCleanupHealth } from './pendingUploadCleanupHealth';
 
 export interface HealthStatus {
   status: string;
+  pendingUploadCleanup: PendingUploadCleanupHealth;
 }

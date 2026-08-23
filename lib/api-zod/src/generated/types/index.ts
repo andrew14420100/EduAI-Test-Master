@@ -34,6 +34,8 @@ export * from './leaderboardEntry';
 export * from './material';
 export * from './materialExtractionStatus';
 export * from './ownedShopItem';
+export * from './pendingUploadCleanupHealth';
+export * from './pendingUploadCleanupHealthStatus';
 export * from './profile';
 export * from './quickExplanationRequest';
 export * from './quickExplanationResponse';

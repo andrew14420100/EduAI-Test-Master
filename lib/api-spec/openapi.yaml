@@ -1298,8 +1298,39 @@ components:
       properties:
         status:
           type: string
+        pendingUploadCleanup:
+          $ref: "#/components/schemas/PendingUploadCleanupHealth"
       required:
         - status
+        - pendingUploadCleanup
+
+    PendingUploadCleanupHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, recovered]
+          description: Whether the latest cleanup failure state is active or recovered.
+        failureCount:
+          type: integer
+          description: Number of cleanup failures in the current active incident.
+        threshold:
+          type: integer
+          description: Failure count at which the bounded structured alert is emitted.
+        lastFailureAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastRecoveredAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - status
+        - failureCount
+        - threshold
+        - lastFailureAt
+        - lastRecoveredAt
 
     ErrorEnvelope:
       type: object

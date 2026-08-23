@@ -25,11 +25,14 @@ const PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD = 3;
 
 let cleanupFailureCount = 0;
 let cleanupFailureAlerted = false;
+let cleanupLastFailureAt: Date | null = null;
+let cleanupLastRecoveredAt: Date | null = null;
 
 type CleanupLog = Pick<Console, "warn" | "error">;
 
 function recordCleanupFailure(log: CleanupLog, failedCount = 1): void {
   cleanupFailureCount += failedCount;
+  cleanupLastFailureAt = new Date();
   if (
     !cleanupFailureAlerted &&
     cleanupFailureCount >= PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD
@@ -47,8 +50,29 @@ function recordCleanupFailure(log: CleanupLog, failedCount = 1): void {
 }
 
 function recordCleanupSuccess(): void {
+  if (cleanupFailureCount > 0) {
+    cleanupLastRecoveredAt = new Date();
+  }
   cleanupFailureCount = 0;
   cleanupFailureAlerted = false;
+}
+
+export type PendingUploadCleanupHealth = {
+  status: "active" | "recovered";
+  failureCount: number;
+  threshold: number;
+  lastFailureAt: Date | null;
+  lastRecoveredAt: Date | null;
+};
+
+export function getPendingUploadCleanupHealth(): PendingUploadCleanupHealth {
+  return {
+    status: cleanupFailureCount > 0 ? "active" : "recovered",
+    failureCount: cleanupFailureCount,
+    threshold: PENDING_UPLOAD_CLEANUP_ALERT_THRESHOLD,
+    lastFailureAt: cleanupLastFailureAt,
+    lastRecoveredAt: cleanupLastRecoveredAt,
+  };
 }
 
 /**

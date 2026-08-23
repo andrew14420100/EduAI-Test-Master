@@ -13,7 +13,14 @@ import * as zod from 'zod';
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
-  "status": zod.string()
+  "status": zod.string(),
+  "pendingUploadCleanup": zod.object({
+  "status": zod.enum(['active', 'recovered']).describe('Whether the latest cleanup failure state is active or recovered.'),
+  "failureCount": zod.number().int().describe('Number of cleanup failures in the current active incident.'),
+  "threshold": zod.number().int().describe('Failure count at which the bounded structured alert is emitted.'),
+  "lastFailureAt": zod.coerce.date().nullable(),
+  "lastRecoveredAt": zod.coerce.date().nullable()
+})
 })
 
 

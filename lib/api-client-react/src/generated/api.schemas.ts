@@ -5,8 +5,31 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * Whether the latest cleanup failure state is active or recovered.
+ */
+export type PendingUploadCleanupHealthStatus = typeof PendingUploadCleanupHealthStatus[keyof typeof PendingUploadCleanupHealthStatus];
+
+
+export const PendingUploadCleanupHealthStatus = {
+  active: 'active',
+  recovered: 'recovered',
+} as const;
+
+export interface PendingUploadCleanupHealth {
+  /** Whether the latest cleanup failure state is active or recovered. */
+  status: PendingUploadCleanupHealthStatus;
+  /** Number of cleanup failures in the current active incident. */
+  failureCount: number;
+  /** Failure count at which the bounded structured alert is emitted. */
+  threshold: number;
+  lastFailureAt: string | null;
+  lastRecoveredAt: string | null;
+}
+
 export interface HealthStatus {
   status: string;
+  pendingUploadCleanup: PendingUploadCleanupHealth;
 }
 
 export interface ErrorEnvelope {

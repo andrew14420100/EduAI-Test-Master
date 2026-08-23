@@ -240,13 +240,17 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
     import("./storage.ts"),
     import("./materials.ts"),
   ]);
-  const { cleanupExpiredPendingUploads } = await import("./storage.ts");
+  const [{ default: healthRouter }, { cleanupExpiredPendingUploads }] = await Promise.all([
+    import("./health.ts"),
+    import("./storage.ts"),
+  ]);
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
     (req as any).log = { warn() {}, error() {} };
     next();
   });
+  app.use("/api", healthRouter);
   app.use("/api", storageRouter);
   app.use("/api", materialsRouter);
   const server = createServer(app);
@@ -477,6 +481,10 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
   s3.setDeleteFailure(true);
   await cleanupExpiredPendingUploads(cleanupLog);
   assert.equal(memory.pending.has(cleanupData.objectPath), true);
+  const activeHealth = await request(server, "/api/healthz");
+  assert.equal(activeHealth.response.status, 200);
+  assert.equal((activeHealth.body as { pendingUploadCleanup: { status: string; failureCount: number } }).pendingUploadCleanup.status, "active");
+  assert.ok((activeHealth.body as { pendingUploadCleanup: { status: string; failureCount: number } }).pendingUploadCleanup.failureCount >= 1);
   assert.ok(cleanupWarnings.length > 0);
   const cleanupWarning = cleanupWarnings.find(([context]) =>
     (context as { objectPath?: string })?.objectPath === cleanupData.objectPath,
@@ -495,6 +503,14 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
 
   s3.setDeleteFailure(false);
   await cleanupExpiredPendingUploads();
+  const recoveredHealth = await request(server, "/api/healthz");
+  const recoveredCleanup = (recoveredHealth.body as {
+    pendingUploadCleanup: { status: string; failureCount: number; lastFailureAt: string | null; lastRecoveredAt: string | null };
+  }).pendingUploadCleanup;
+  assert.equal(recoveredCleanup.status, "recovered");
+  assert.equal(recoveredCleanup.failureCount, 0);
+  assert.ok(recoveredCleanup.lastFailureAt);
+  assert.ok(recoveredCleanup.lastRecoveredAt);
   assert.equal(memory.pending.has(cleanupData.objectPath), false);
   const abandonedObject = await fetch(cleanupData.uploadURL, { method: "HEAD" });
   assert.equal(abandonedObject.status, 404);
