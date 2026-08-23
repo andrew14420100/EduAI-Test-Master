@@ -52,7 +52,7 @@ router.post(
         return;
       }
 
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL(contentType);
       const objectPath =
         objectStorageService.normalizeObjectEntityPath(uploadURL);
 

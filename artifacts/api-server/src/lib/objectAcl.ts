@@ -87,7 +87,10 @@ export async function getObjectAclPolicy(
   objectFile: StoredObject,
 ): Promise<ObjectAclPolicy | null> {
   const [metadata] = await objectFile.getMetadata();
-  const aclPolicy = metadata?.metadata?.[ACL_POLICY_METADATA_KEY];
+  const aclPolicyEntry = Object.entries(metadata?.metadata ?? {}).find(
+    ([key]) => key.toLowerCase() === ACL_POLICY_METADATA_KEY.toLowerCase(),
+  );
+  const aclPolicy = aclPolicyEntry?.[1];
   if (!aclPolicy) {
     return null;
   }

@@ -7,4 +7,4 @@ When Expo Metro watches the repository root, exclude `.local/secondary_skills` f
 
 **Why:** Metro's fallback watcher can receive an `ENOENT` for a temporary directory that disappeared between discovery and watch setup, causing the Expo workflow to fail before opening its port.
 
-**How to apply:** Keep the exclusion in the root Metro configuration; do not remove pnpm symlink or package-export support that the mobile app needs.
+**How to apply:** Keep the exclusion in the root Metro configuration; do not remove pnpm symlink or package-export support that the mobile app needs. If a production bundle hits `ENOSPC`, stop concurrent Expo/Vite workflows while bundling and restart them afterward; the container watcher limit may not be changeable.

@@ -18,8 +18,6 @@ import {
   setObjectAclPolicy,
 } from "./objectAcl";
 
-const ACL_METADATA_KEY = "custom-aclpolicy";
-
 export type ObjectMetadata = {
   size?: number | string;
   contentType?: string;
@@ -202,7 +200,7 @@ export class ObjectStorageService {
     return new Response(webStream, { headers });
   }
 
-  async getObjectEntityUploadURL(): Promise<string> {
+  async getObjectEntityUploadURL(contentType: string): Promise<string> {
     const { config, client } = this.client();
     const privateDir = this.getPrivateObjectDir();
     const prefix = objectKeyFromPath(privateDir).replace(/\/+$/, "");
@@ -210,6 +208,7 @@ export class ObjectStorageService {
     return getSignedUrl(client, new PutObjectCommand({
       Bucket: config.bucket,
       Key: key,
+      ContentType: contentType,
     }), { expiresIn: 900 });
   }
 
@@ -252,5 +251,3 @@ export class ObjectStorageService {
     return canAccessObject({ userId, objectFile, requestedPermission: requestedPermission ?? ObjectPermission.READ });
   }
 }
-
-export { ACL_METADATA_KEY };
