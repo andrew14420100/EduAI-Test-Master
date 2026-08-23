@@ -14,6 +14,7 @@ config.watchFolders = [path.resolve(__dirname)];
 config.resolver.blockList = [
   /\/\.local\/secondary_skills(?:\/|$)/,
   /\/\.cache\/typescript(?:\/|$)/,
+  /\/node_modules\/\.pnpm\/.*_tmp_[^/]+(?:\/|$)/,
 ];
 
 module.exports = config;
