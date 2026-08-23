@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { seedLabExercisesIfEmpty } from "./lib/labSeed";
+import { schedulePendingUploadCleanup } from "./routes/storage";
 
 const rawPort = process.env["PORT"];
 
@@ -23,6 +24,8 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  schedulePendingUploadCleanup(logger);
 
   // Seed lab exercises in development if the table is empty (non-blocking)
   if (process.env["NODE_ENV"] !== "production") {

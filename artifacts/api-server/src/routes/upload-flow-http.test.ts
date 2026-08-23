@@ -130,8 +130,13 @@ function createMemoryDb(pendingUploadsTable: object, materialsTable: object) {
     delete(table: object) {
       return {
         where: async () => {
-          if (table === pendingUploadsTable) pending.clear();
-          return [];
+          if (table === pendingUploadsTable) {
+            const now = new Date();
+            for (const [objectPath, upload] of pending) {
+              if (upload.expiresAt <= now) pending.delete(objectPath);
+            }
+          }
+          return { rowCount: 0 };
         },
       };
     },
@@ -207,6 +212,7 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
     import("./storage.ts"),
     import("./materials.ts"),
   ]);
+  const { cleanupExpiredPendingUploads } = await import("./storage.ts");
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
@@ -396,4 +402,16 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
   });
   assert.equal(alteredTypeFinalize.response.status, 400);
   assert.equal(memory.pending.has(alteredTypeData.objectPath), true);
+
+  memory.pending.set("/objects/expired-abandoned", {
+    objectPath: "/objects/expired-abandoned",
+    expiresAt: new Date(Date.now() - 1),
+  });
+  memory.pending.set("/objects/active", {
+    objectPath: "/objects/active",
+    expiresAt: new Date(Date.now() + 60_000),
+  });
+  await cleanupExpiredPendingUploads();
+  assert.equal(memory.pending.has("/objects/expired-abandoned"), false);
+  assert.equal(memory.pending.has("/objects/active"), true);
 });

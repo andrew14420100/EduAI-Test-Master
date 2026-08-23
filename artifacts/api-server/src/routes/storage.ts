@@ -4,6 +4,7 @@ import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
+import { lte } from "drizzle-orm";
 import { ObjectPermission } from "../lib/objectAcl";
 import {
   ObjectNotFoundError,
@@ -18,6 +19,36 @@ const objectStorageService = new ObjectStorageService();
 
 // Presigned URL TTL in seconds (15 minutes)
 const UPLOAD_TTL_SEC = 900;
+const PENDING_UPLOAD_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
+
+/**
+ * Remove upload bookkeeping that can no longer be finalized.
+ *
+ * The expiry predicate is part of the DELETE itself, rather than a
+ * select-then-delete sequence, so an upload that is still active at cleanup
+ * time cannot be removed.
+ */
+export async function cleanupExpiredPendingUploads(): Promise<number> {
+  const result = await db
+    .delete(pendingUploadsTable)
+    .where(lte(pendingUploadsTable.expiresAt, new Date()));
+  return result.rowCount ?? 0;
+}
+
+export function schedulePendingUploadCleanup(
+  log: Pick<Console, "error"> = console,
+): NodeJS.Timeout {
+  const runCleanup = () => {
+    void cleanupExpiredPendingUploads().catch((error) => {
+      log.error("Pending upload cleanup failed", error);
+    });
+  };
+
+  runCleanup();
+  const interval = setInterval(runCleanup, PENDING_UPLOAD_CLEANUP_INTERVAL_MS);
+  interval.unref();
+  return interval;
+}
 
 /**
  * POST /storage/uploads/request-url
