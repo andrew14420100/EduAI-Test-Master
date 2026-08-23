@@ -2,7 +2,7 @@
   "expo": {
     "name": "EduAI Test Master",
     "slug": "eduai-test-master",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "eduai-test-master",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.eduai.testmaster",
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/images/icon.png"
