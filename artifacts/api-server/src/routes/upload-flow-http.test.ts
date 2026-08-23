@@ -32,6 +32,7 @@ async function body(req: import("node:http").IncomingMessage) {
 
 async function startS3() {
   const objects = new Map<string, StoredObject>();
+  let failDeletes = false;
   const server = createServer(async (req, res) => {
     const path = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
     const [, bucket, ...parts] = path.split("/");
@@ -70,6 +71,10 @@ async function startS3() {
       return;
     }
     if (req.method === "DELETE") {
+      if (failDeletes) {
+        json(res, 503, { error: "storage unavailable" });
+        return;
+      }
       objects.delete(key);
       res.writeHead(204);
       res.end();
@@ -104,7 +109,13 @@ async function startS3() {
   await once(server, "listening");
   const address = server.address();
   assert(address && typeof address === "object");
-  return { server, endpoint: `http://127.0.0.1:${address.port}` };
+  return {
+    server,
+    endpoint: `http://127.0.0.1:${address.port}`,
+    setDeleteFailure(value: boolean) {
+      failDeletes = value;
+    },
+  };
 }
 
 function createMemoryDb(pendingUploadsTable: object, materialsTable: object) {
@@ -454,7 +465,25 @@ test("upload lifecycle works over HTTP with simulated Clerk and database", async
   });
   assert.equal(cleanupPut.status, 200);
   memory.pending.get(cleanupData.objectPath).expiresAt = new Date(Date.now() - 1);
+  const cleanupWarnings: unknown[][] = [];
+  s3.setDeleteFailure(true);
+  await cleanupExpiredPendingUploads({
+    warn(...args: unknown[]) {
+      cleanupWarnings.push(args);
+    },
+    error() {},
+  });
+  assert.equal(memory.pending.has(cleanupData.objectPath), true);
+  assert.ok(cleanupWarnings.length > 0);
+  const cleanupWarning = cleanupWarnings.find(([context]) =>
+    (context as { objectPath?: string })?.objectPath === cleanupData.objectPath,
+  );
+  assert(cleanupWarning);
+  assert.equal(cleanupWarning[1], "Impossibile eliminare upload abbandonato");
+
+  s3.setDeleteFailure(false);
   await cleanupExpiredPendingUploads();
+  assert.equal(memory.pending.has(cleanupData.objectPath), false);
   const abandonedObject = await fetch(cleanupData.uploadURL, { method: "HEAD" });
   assert.equal(abandonedObject.status, 404);
 });
