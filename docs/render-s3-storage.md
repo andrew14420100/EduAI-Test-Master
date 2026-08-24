@@ -48,6 +48,11 @@ Le chiavi non devono essere inserite nel repository, nel file `.env` condiviso o
 nel codice. Dopo aver configurato il servizio, riavviare Render e verificare in
 ordine richiesta URL, upload binario, finalizzazione e analisi del materiale.
 
+Per il test dal preview web o da una build web, il bucket R2 deve inoltre
+permettere il preflight `OPTIONS` e il metodo `PUT` dall’origine dell’app,
+esponendo almeno `ETag` e `Content-Length`. Il caricamento nativo Android/iOS
+non usa il preflight del browser.
+
 ## Smoke test production
 
 Eseguire il test con un account di test autenticato e con file non sensibili.
