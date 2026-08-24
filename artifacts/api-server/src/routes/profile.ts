@@ -192,6 +192,54 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
 });
 
 /**
+ * PATCH /profile/username — explicit account username update.
+ * Kept separate from the idempotent Clerk profile bootstrap endpoint.
+ */
+router.patch("/profile/username", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthedRequest).clerkUserId;
+  const { username } = req.body as { username?: unknown };
+  const nextUsername = typeof username === "string" ? username.trim() : "";
+
+  if (!/^[A-Za-z0-9_]{3,20}$/.test(nextUsername)) {
+    res.status(400).json({
+      error: "Username non valido (usa 3–20 caratteri, lettere, numeri e underscore)",
+    });
+    return;
+  }
+
+  try {
+    const [owner] = await db
+      .select({ userId: profilesTable.userId })
+      .from(profilesTable)
+      .where(eq(profilesTable.username, nextUsername))
+      .limit(1);
+    if (owner && owner.userId !== userId) {
+      res.status(409).json({ error: "Username già in uso. Scegline uno diverso." });
+      return;
+    }
+
+    const [updated] = await db
+      .update(profilesTable)
+      .set({ username: nextUsername, updatedAt: new Date() })
+      .where(eq(profilesTable.userId, userId))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ error: "Profilo non trovato" });
+      return;
+    }
+    res.json(toPublicProfile(updated));
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    if (errorMessage.includes("profiles_username_unique")) {
+      res.status(409).json({ error: "Username già in uso. Scegline uno diverso." });
+      return;
+    }
+    req.log.error({ err }, "Errore aggiornamento username");
+    res.status(500).json({ error: "Impossibile aggiornare il nome utente" });
+  }
+});
+
+/**
  * PATCH /profile/level — set the user's Italian study-path string
  */
 router.patch(

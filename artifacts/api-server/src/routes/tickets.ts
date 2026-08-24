@@ -165,6 +165,13 @@ router.post("/tickets", requireAuth, async (req: Request, res: Response) => {
         .returning();
       return created!;
     });
+    void sendTicketPushNotifications(
+      ticket.userId,
+      ticket.id,
+      ticket.subject,
+      "È arrivata una nuova richiesta nell’assistenza.",
+      req,
+    );
     res.status(201).json((await ticketDetails([ticket]))[0]);
   } catch (err) {
     req.log.error({ err }, "Errore creazione ticket");
