@@ -165,7 +165,7 @@ router.post("/tickets", requireAuth, async (req: Request, res: Response) => {
         .returning();
       return created!;
     });
-    void sendTicketPushNotifications(
+    await sendTicketPushNotifications(
       ticket.userId,
       ticket.id,
       ticket.subject,
@@ -262,7 +262,7 @@ router.post("/admin/tickets/:ticketId/reply", requireAdminSession, async (req: R
       res.status(404).json({ error: "Ticket non trovato" });
       return;
     }
-    void sendTicketPushNotifications(
+    await sendTicketPushNotifications(
       ticket.userId,
       ticket.id,
       ticket.subject,
@@ -311,13 +311,20 @@ async function sendTicketPushNotifications(
       return;
     }
     const result = await response.json() as {
-      data?: Array<{ status?: string; details?: { error?: string } }>;
+      data?: Array<{ status?: string; message?: string; details?: { error?: string } }>;
     };
     const invalidTokens = tokens.filter((_, index) =>
       isInvalidPushTokenError(result.data?.[index]?.details?.error),
     );
     if (invalidTokens.length) {
       await db.delete(pushTokensTable).where(inArray(pushTokensTable.token, invalidTokens.map(({ token }) => token)));
+    }
+    const failed = (result.data ?? []).filter((item) => item.status === "error");
+    if (failed.length) {
+      req.log.warn(
+        { failedCount: failed.length, errors: failed.map((item) => item.details?.error ?? item.message ?? "unknown") },
+        "Expo ha rifiutato una o più notifiche ticket",
+      );
     }
   } catch (err) {
     req.log.warn({ err }, "Errore invio notifica push");

@@ -817,7 +817,10 @@ export function AppProvider({
                 headers: { 'Content-Type': file.contentType },
                 body: webBlob,
               });
-              if (!response.ok) throw new Error(`Caricamento di ${file.name} non riuscito.`);
+              if (!response.ok) {
+                const detail = await response.text().catch(() => '');
+                throw new Error(`Caricamento di ${file.name} non riuscito (${response.status})${detail ? `: ${detail.slice(0, 120)}` : '.'}`);
+              }
               onProgress(file.clientId, 87);
             } else {
               const task = FileSystem.createUploadTask(
@@ -839,7 +842,7 @@ export function AppProvider({
               );
               const response = await task.uploadAsync();
               if (!response || response.status < 200 || response.status >= 300) {
-                throw new Error(`Caricamento di ${file.name} non riuscito.`);
+                throw new Error(`Caricamento di ${file.name} non riuscito${response?.status ? ` (${response.status})` : ''}.`);
               }
             }
           onProgress(file.clientId, 88);

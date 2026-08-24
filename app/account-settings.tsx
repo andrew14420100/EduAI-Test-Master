@@ -104,8 +104,12 @@ export default function AccountSettingsScreen() {
       </Pressable>
       <Text style={[styles.eyebrow, { color: c.primary }]}>ACCOUNT</Text>
       <Text style={[styles.title, { color: c.foreground }]}>Impostazioni</Text>
-      <Text style={[styles.description, { color: c.mutedForeground }]}>Modifica ogni informazione separatamente. Il percorso di studio resta bloccato perché determina i contenuti dell’app.</Text>
-       <Text style={[styles.label, { color: c.foreground }]}>Nome utente</Text>
+      <Text style={[styles.description, { color: c.mutedForeground }]}>Modifica solo il dato che vuoi aggiornare. Il percorso di studio resta bloccato perché determina i contenuti dell’app.</Text>
+      <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
+       <View style={styles.cardHeader}>
+         <View style={[styles.cardIcon, { backgroundColor: c.secondary }]}><AppIcon name="profile" size={17} color={c.primary} /></View>
+         <View style={{ flex: 1 }}><Text style={[styles.cardTitle, { color: c.foreground }]}>Nome utente</Text><Text style={[styles.cardDescription, { color: c.mutedForeground }]}>Quello che vedono gli altri studenti</Text></View>
+       </View>
        <TextInput
          value={username}
          onChangeText={setUsername}
@@ -115,25 +119,39 @@ export default function AccountSettingsScreen() {
          maxLength={20}
          placeholder="es. mario_rossi"
          placeholderTextColor={c.mutedForeground}
-         style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]}
+          style={[styles.input, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]}
        />
        <Text style={[styles.helper, { color: c.mutedForeground }]}>3–20 caratteri · lettere, numeri e underscore</Text>
-       <Pressable disabled={busy} onPress={() => void saveUsername()} style={[styles.secondaryButton, { borderColor: c.primary, opacity: busy ? 0.6 : 1 }]}>
-         <Text style={[styles.secondaryButtonText, { color: c.primary }]}>Salva nome utente</Text>
+        <Pressable disabled={busy} onPress={() => void saveUsername()} style={[styles.button, { backgroundColor: c.primary, opacity: busy ? 0.6 : 1 }]}>
+          <Text style={[styles.buttonText, { color: c.primaryForeground }]}>Salva nome utente</Text>
        </Pressable>
-      <Text style={[styles.label, { color: c.foreground }]}>Nuova email</Text>
-       <TextInput value={email} onChangeText={setEmail} editable={!busy} keyboardType="email-address" autoCapitalize="none" style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
-       <Pressable disabled={busy} onPress={() => void saveEmail()} style={[styles.secondaryButton, { borderColor: c.primary, opacity: busy ? 0.6 : 1 }]}>
-         <Text style={[styles.secondaryButtonText, { color: c.primary }]}>Salva email</Text>
+       {usernameStatus ? <Text style={[styles.status, { color: c.mutedForeground }]}>{usernameStatus}</Text> : null}
+      </View>
+      <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
+       <View style={styles.cardHeader}>
+         <View style={[styles.cardIcon, { backgroundColor: c.secondary }]}><AppIcon name="mail" size={17} color={c.primary} /></View>
+         <View style={{ flex: 1 }}><Text style={[styles.cardTitle, { color: c.foreground }]}>Email</Text><Text style={[styles.cardDescription, { color: c.mutedForeground }]}>Riceverai un link per confermare la nuova email</Text></View>
+       </View>
+       <TextInput value={email} onChangeText={setEmail} editable={!busy} keyboardType="email-address" autoCapitalize="none" style={[styles.input, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]} />
+        <Pressable disabled={busy} onPress={() => void saveEmail()} style={[styles.button, { backgroundColor: c.primary, opacity: busy ? 0.6 : 1 }]}>
+          <Text style={[styles.buttonText, { color: c.primaryForeground }]}>Salva email</Text>
        </Pressable>
-      <Text style={[styles.label, { color: c.foreground }]}>Password attuale</Text>
+       {emailStatus ? <Text style={[styles.status, { color: c.mutedForeground }]}>{emailStatus}</Text> : null}
+      </View>
+      <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
+       <View style={styles.cardHeader}>
+         <View style={[styles.cardIcon, { backgroundColor: c.secondary }]}><AppIcon name="lock" size={17} color={c.primary} /></View>
+         <View style={{ flex: 1 }}><Text style={[styles.cardTitle, { color: c.foreground }]}>Password</Text><Text style={[styles.cardDescription, { color: c.mutedForeground }]}>Aggiornala con la password attuale</Text></View>
+       </View>
+       <Text style={[styles.label, { color: c.foreground }]}>Password attuale</Text>
        <TextInput value={currentPassword} onChangeText={setCurrentPassword} editable={!busy} secureTextEntry style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
       <Text style={[styles.label, { color: c.foreground }]}>Nuova password</Text>
-       <TextInput value={newPassword} onChangeText={setNewPassword} editable={!busy} secureTextEntry style={[styles.input, { color: c.foreground, backgroundColor: c.card, borderColor: c.border }]} />
-       <Pressable disabled={busy} onPress={() => void savePassword()} style={[styles.secondaryButton, { borderColor: c.primary, opacity: busy ? 0.6 : 1 }]}>
-         <Text style={[styles.secondaryButtonText, { color: c.primary }]}>{busy ? 'Salvataggio…' : 'Salva password'}</Text>
+        <TextInput value={newPassword} onChangeText={setNewPassword} editable={!busy} secureTextEntry style={[styles.input, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]} />
+        <Pressable disabled={busy} onPress={() => void savePassword()} style={[styles.button, { backgroundColor: c.primary, opacity: busy ? 0.6 : 1 }]}>
+          <Text style={[styles.buttonText, { color: c.primaryForeground }]}>{busy ? 'Salvataggio…' : 'Salva password'}</Text>
       </Pressable>
-      {status ? <Text style={[styles.status, { color: c.mutedForeground }]}>{status}</Text> : null}
+       {passwordStatus ? <Text style={[styles.status, { color: c.mutedForeground }]}>{passwordStatus}</Text> : null}
+      </View>
     </ScrollView>
   );
 }
@@ -150,8 +168,11 @@ const styles = StyleSheet.create({
   disabledInput: { opacity: 0.8 },
   button: { borderRadius: 16, padding: 15, alignItems: 'center', marginTop: 10 },
   buttonText: { fontFamily: 'Inter_700Bold', fontSize: 15 },
-  secondaryButton: { borderWidth: 1, borderRadius: 14, padding: 13, alignItems: 'center', marginTop: -3 },
-  secondaryButtonText: { fontFamily: 'Inter_700Bold', fontSize: 14 },
+  card: { borderWidth: 1, borderRadius: 20, padding: 16, gap: 10 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  cardIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
+  cardDescription: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17, marginTop: 2 },
   status: { fontFamily: 'Inter_500Medium', fontSize: 13, lineHeight: 19, marginTop: 4 },
   helper: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: -5 },
 });
