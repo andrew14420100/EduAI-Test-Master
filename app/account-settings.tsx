@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { useColors } from '@/hooks/useColors';
-import { getGetProfileQueryKey, upsertProfile } from '@workspace/api-client-react';
+import { customFetch, getGetProfileQueryKey } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useApp } from '@/context/AppContext';
 
@@ -19,25 +19,31 @@ export default function AccountSettingsScreen() {
   const [email, setEmail] = useState(account?.email ?? user?.primaryEmailAddress?.emailAddress ?? '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [status, setStatus] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState('');
+  const [emailStatus, setEmailStatus] = useState('');
+  const [passwordStatus, setPasswordStatus] = useState('');
   const [busy, setBusy] = useState(false);
 
   const saveUsername = async () => {
     if (!user || busy) return;
     setBusy(true);
-    setStatus('');
+    setUsernameStatus('');
     try {
       const nextUsername = username.trim();
       if (!/^[A-Za-z0-9_]{3,20}$/.test(nextUsername)) {
         setStatus('Username non valido: usa 3–20 caratteri, solo lettere, numeri e underscore.');
         return;
       }
-      const updated = await upsertProfile({ username: nextUsername, email: account?.email ?? user.primaryEmailAddress?.emailAddress });
+      const updated = await customFetch('/api/profile/username', {
+        method: 'PATCH',
+        responseType: 'json',
+        body: JSON.stringify({ username: nextUsername }),
+      });
       queryClient.setQueryData(getGetProfileQueryKey(), updated);
-      setStatus('Nome utente aggiornato.');
+      setUsernameStatus('Nome utente aggiornato.');
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      setStatus(/taken|already|occupat|unique/i.test(message) ? 'Username già occupato. Scegline uno diverso.' : (message || 'Impossibile aggiornare il nome utente.'));
+      setUsernameStatus(/taken|already|occupat|unique/i.test(message) ? 'Username già occupato. Scegline uno diverso.' : (message || 'Impossibile aggiornare il nome utente.'));
     } finally {
       setBusy(false);
     }
@@ -46,23 +52,23 @@ export default function AccountSettingsScreen() {
   const saveEmail = async () => {
     if (!user || busy) return;
     setBusy(true);
-    setStatus('');
+    setEmailStatus('');
     try {
       const nextEmail = email.trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
-        setStatus('Inserisci un indirizzo email valido.');
+        setEmailStatus('Inserisci un indirizzo email valido.');
         return;
       }
       if (nextEmail === user.primaryEmailAddress?.emailAddress?.toLowerCase()) {
-        setStatus('L’email è già aggiornata.');
+        setEmailStatus('L’email è già aggiornata.');
         return;
       }
       const address = await (user as unknown as { createEmailAddress: (args: { email: string }) => Promise<{ prepareVerification: (args: { strategy: string }) => Promise<unknown> }> })
         .createEmailAddress({ email: nextEmail });
       await address.prepareVerification({ strategy: 'email_link' });
-      setStatus('Controlla la nuova email e conferma il link. Diventerà attiva solo dopo la verifica.');
+      setEmailStatus('Controlla la nuova email e conferma il link. Diventerà attiva solo dopo la verifica.');
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Impossibile aggiornare l’email.');
+      setEmailStatus(error instanceof Error ? error.message : 'Impossibile aggiornare l’email.');
     } finally {
       setBusy(false);
     }
@@ -71,20 +77,20 @@ export default function AccountSettingsScreen() {
   const savePassword = async () => {
     if (!user || busy) return;
     setBusy(true);
-    setStatus('');
+    setPasswordStatus('');
     try {
       if (!currentPassword || !newPassword) {
-        setStatus('Inserisci la password attuale e quella nuova.');
+        setPasswordStatus('Inserisci la password attuale e quella nuova.');
         return;
       }
       await (user as unknown as { updatePassword: (args: { currentPassword: string; newPassword: string }) => Promise<unknown> })
         .updatePassword({ currentPassword, newPassword });
       setCurrentPassword('');
       setNewPassword('');
-      setStatus('Password aggiornata.');
+      setPasswordStatus('Password aggiornata.');
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      setStatus(message || 'Impossibile aggiornare la password.');
+      setPasswordStatus(message || 'Impossibile aggiornare la password.');
     } finally {
       setBusy(false);
     }
