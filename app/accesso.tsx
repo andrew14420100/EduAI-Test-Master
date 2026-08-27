@@ -44,6 +44,9 @@ export default function AccessScreen() {
   const { signUp, fetchStatus: signUpStatus } = useSignUp();
   const [mode, setMode] = useState<Mode>('registrazione');
   const [step, setStep] = useState<Step>('dati');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -59,6 +62,9 @@ export default function AccessScreen() {
     setStep('dati');
     setPassword('');
     setCode('');
+    setFirstName('');
+    setLastName('');
+    setBirthDate('');
     setModal(null);
   };
 
@@ -74,12 +80,25 @@ export default function AccessScreen() {
   const submit = async () => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanUsername = username.trim();
+    const cleanFirstName = firstName.trim();
+    const cleanLastName = lastName.trim();
+    const cleanBirthDate = birthDate.trim();
+    const validBirthDate = /^\d{4}-\d{2}-\d{2}$/.test(cleanBirthDate)
+      && !Number.isNaN(new Date(`${cleanBirthDate}T00:00:00.000Z`).getTime());
 
-    if (!cleanEmail || !password || (mode === 'registrazione' && cleanUsername.length < 2)) {
+    if (
+      !cleanEmail
+      || !password
+      || (mode === 'registrazione'
+        && (cleanUsername.length < 2
+          || cleanFirstName.length < 2
+          || cleanLastName.length < 2
+          || !validBirthDate))
+    ) {
       setModal({
         title: 'Controlla i dati',
         message: mode === 'registrazione'
-          ? 'Inserisci un nome utente di almeno 2 caratteri, un’email valida e una password.'
+          ? 'Inserisci nome, cognome, data di nascita (AAAA-MM-GG), nome utente, email e password.'
           : 'Inserisci email e password per continuare.',
       });
       return;
@@ -90,7 +109,14 @@ export default function AccessScreen() {
         const { error } = await signUp.password({
           emailAddress: cleanEmail,
           password,
-          unsafeMetadata: { eduaiUsername: cleanUsername },
+          firstName: cleanFirstName,
+          lastName: cleanLastName,
+          unsafeMetadata: {
+            eduaiUsername: cleanUsername,
+            eduaiFirstName: cleanFirstName,
+            eduaiLastName: cleanLastName,
+            eduaiBirthDate: cleanBirthDate,
+          },
           locale: 'it-IT',
         });
         if (error) throw error;
@@ -239,23 +265,76 @@ export default function AccessScreen() {
 
             <View style={styles.form}>
               {mode === 'registrazione' ? (
-                <View>
-                  <Text style={[styles.label, { color: c.foreground }]}>Nome utente</Text>
-                  <View style={[styles.inputWrap, { backgroundColor: c.card, borderColor: c.border }]}>
-                    <AppIcon name="profile" size={16} color={c.mutedForeground} />
-                    <TextInput
-                      testID="nome-utente"
-                      value={username}
-                      onChangeText={setUsername}
-                      placeholder="Come vuoi essere chiamato?"
-                      placeholderTextColor={c.mutedForeground}
-                      autoCapitalize="words"
-                      autoComplete="name"
-                      returnKeyType="next"
-                      style={[styles.input, { color: c.foreground }]}
-                    />
+                <>
+                  <View style={styles.twoColumns}>
+                    <View style={styles.column}>
+                      <Text style={[styles.label, { color: c.foreground }]}>Nome</Text>
+                      <View style={[styles.inputWrap, { backgroundColor: c.card, borderColor: c.border }]}>
+                        <TextInput
+                          testID="nome"
+                          value={firstName}
+                          onChangeText={setFirstName}
+                          placeholder="Mario"
+                          placeholderTextColor={c.mutedForeground}
+                          autoCapitalize="words"
+                          autoComplete="given-name"
+                          returnKeyType="next"
+                          style={[styles.input, { color: c.foreground }]}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.column}>
+                      <Text style={[styles.label, { color: c.foreground }]}>Cognome</Text>
+                      <View style={[styles.inputWrap, { backgroundColor: c.card, borderColor: c.border }]}>
+                        <TextInput
+                          testID="cognome"
+                          value={lastName}
+                          onChangeText={setLastName}
+                          placeholder="Rossi"
+                          placeholderTextColor={c.mutedForeground}
+                          autoCapitalize="words"
+                          autoComplete="family-name"
+                          returnKeyType="next"
+                          style={[styles.input, { color: c.foreground }]}
+                        />
+                      </View>
+                    </View>
                   </View>
-                </View>
+                  <View>
+                    <Text style={[styles.label, { color: c.foreground }]}>Data di nascita</Text>
+                    <View style={[styles.inputWrap, { backgroundColor: c.card, borderColor: c.border }]}>
+                      <AppIcon name="calendar" size={16} color={c.mutedForeground} />
+                      <TextInput
+                        testID="data-di-nascita"
+                        value={birthDate}
+                        onChangeText={setBirthDate}
+                        placeholder="AAAA-MM-GG"
+                        placeholderTextColor={c.mutedForeground}
+                        keyboardType="numbers-and-punctuation"
+                        autoComplete="birthdate-full"
+                        returnKeyType="next"
+                        style={[styles.input, { color: c.foreground }]}
+                      />
+                    </View>
+                  </View>
+                  <View>
+                    <Text style={[styles.label, { color: c.foreground }]}>Nome utente</Text>
+                    <View style={[styles.inputWrap, { backgroundColor: c.card, borderColor: c.border }]}>
+                      <AppIcon name="profile" size={16} color={c.mutedForeground} />
+                      <TextInput
+                        testID="nome-utente"
+                        value={username}
+                        onChangeText={setUsername}
+                        placeholder="Come vuoi essere chiamato?"
+                        placeholderTextColor={c.mutedForeground}
+                        autoCapitalize="none"
+                        autoComplete="username"
+                        returnKeyType="next"
+                        style={[styles.input, { color: c.foreground }]}
+                      />
+                    </View>
+                  </View>
+                </>
               ) : null}
 
               <View>
@@ -303,7 +382,7 @@ export default function AccessScreen() {
               </View>
             </View>
 
-            <PrimaryButton onPress={submit} disabled={loading} icon={mode === 'registrazione' ? 'graduation-cap' : 'arrow-up-right'}>
+            <PrimaryButton onPress={submit} disabled={loading} loading={loading} icon={mode === 'registrazione' ? 'graduation-cap' : 'arrow-up-right'}>
               {loading ? 'Attendi…' : mode === 'registrazione' ? 'Crea il mio account' : 'Accedi'}
             </PrimaryButton>
             {mode === 'registrazione' ? <View nativeID="clerk-captcha" /> : null}
@@ -329,7 +408,7 @@ export default function AccessScreen() {
                 />
               </View>
             </View>
-            <PrimaryButton onPress={step === 'verifica-accesso' ? verifySignIn : verifyEmail} disabled={loading} icon="circle-check">
+            <PrimaryButton onPress={step === 'verifica-accesso' ? verifySignIn : verifyEmail} disabled={loading} loading={loading} icon="circle-check">
               {loading ? 'Verifica in corso…' : step === 'verifica-accesso' ? 'Conferma accesso' : 'Verifica e continua'}
             </PrimaryButton>
             <Pressable testID="invia-nuovo-codice" onPress={step === 'verifica-accesso' ? resendSignInCode : resendCode} disabled={loading}>
@@ -371,6 +450,8 @@ const styles = StyleSheet.create({
   switchButton: { flex: 1, minHeight: 43, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   switchText: { fontFamily: 'Inter_700Bold', fontSize: 13 },
   form: { gap: 14, marginTop: 4 },
+  twoColumns: { flexDirection: 'row', gap: 10 },
+  column: { flex: 1 },
   verify: { gap: 16, marginTop: 10 },
   label: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginBottom: 7 },
   inputWrap: { minHeight: 54, borderWidth: 1, borderRadius: 16, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 11 },
