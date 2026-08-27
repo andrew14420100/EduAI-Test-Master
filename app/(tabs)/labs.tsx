@@ -107,7 +107,18 @@ export default function LabsScreen() {
   }
 
   if (labsLoading) {
-    return <CentralLoader message="Preparazione dei laboratori…" />;
+    return (
+      <View style={[styles.centerWrap, { backgroundColor: c.background, paddingTop: insets.top + 18, paddingBottom: insets.bottom + 100 }]}>
+        <View style={[styles.emptyIcon, { backgroundColor: c.accent }]}>
+          <AppIcon name="flask" size={28} color={c.accentForeground} />
+        </View>
+        <Text style={[styles.emptyTitle, { color: c.foreground }]}>I tuoi laboratori</Text>
+        <View style={[styles.loadingCard, { backgroundColor: c.card, borderColor: c.border }]}>
+          <ActivityIndicator size="small" color={c.primary} />
+          <Text style={[styles.emptyBody, { color: c.mutedForeground }]}>Caricamento degli esercizi in corso…</Text>
+        </View>
+      </View>
+    );
   }
 
   if (materials.length === 0 || (readyMaterials.length === 0 && labExercises.length === 0)) {
@@ -212,6 +223,7 @@ export default function LabsScreen() {
           <PrimaryButton
             onPress={() => { void handleSubmit(); }}
             disabled={!canSubmit || submitting}
+            loading={submitting}
             icon="circle-check"
           >
             {submitting ? 'Valutazione…' : 'Consegna risposta'}
