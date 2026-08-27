@@ -303,7 +303,7 @@ export default function AccessScreen() {
                   <View>
                     <Text style={[styles.label, { color: c.foreground }]}>Data di nascita</Text>
                     <View style={[styles.inputWrap, { backgroundColor: c.card, borderColor: c.border }]}>
-                      <AppIcon name="calendar" size={16} color={c.mutedForeground} />
+                      <AppIcon name="info" size={16} color={c.mutedForeground} />
                       <TextInput
                         testID="data-di-nascita"
                         value={birthDate}
