@@ -102,9 +102,12 @@ router.delete("/profile", requireAuth, async (req: Request, res: Response) => {
  */
 router.put("/profile", requireAuth, async (req: Request, res: Response) => {
   const userId = (req as AuthedRequest).clerkUserId;
-  const { username, email } = req.body as {
+  const { username, email, firstName, lastName, birthDate } = req.body as {
     username?: string;
     email?: string;
+    firstName?: string;
+    lastName?: string;
+    birthDate?: string;
   };
 
   if (!username || typeof username !== "string" || !/^[A-Za-z0-9_]{3,20}$/.test(username.trim())) {
@@ -126,7 +129,12 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
       const nextUsername = username.trim();
       const usernameChanged = nextUsername !== existing.username;
       const emailChanged = Boolean(email && email !== existing.email);
-      if (usernameChanged || emailChanged) {
+      const profileDetails = {
+        ...(existing.firstName ? {} : firstName?.trim() ? { firstName: firstName.trim() } : {}),
+        ...(existing.lastName ? {} : lastName?.trim() ? { lastName: lastName.trim() } : {}),
+        ...(existing.birthDate ? {} : birthDate?.trim() ? { birthDate: birthDate.trim() } : {}),
+      };
+      if (usernameChanged || emailChanged || Object.keys(profileDetails).length > 0) {
         if (usernameChanged) {
           const [usernameOwner] = await db
             .select({ userId: profilesTable.userId })
@@ -143,6 +151,7 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
           .set({
             ...(usernameChanged ? { username: nextUsername } : {}),
             ...(emailChanged ? { email } : {}),
+            ...profileDetails,
             updatedAt: new Date(),
           })
           .where(eq(profilesTable.userId, userId))
@@ -171,6 +180,9 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
           userId,
           username: profileUsername,
           email: email ?? "",
+          firstName: firstName?.trim() || null,
+          lastName: lastName?.trim() || null,
+          birthDate: birthDate?.trim() || null,
           level: null,
           wallet: 0,
           xp: 0,
@@ -188,6 +200,96 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
     }
     req.log.error({ err }, "Errore upsert profilo");
     res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
+/**
+ * PATCH /profile/onboarding — save the required learner profile and optional
+ * study preferences. The study path is immutable once it has been selected.
+ */
+router.patch("/profile/onboarding", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthedRequest).clerkUserId;
+  const body = req.body as {
+    firstName?: unknown;
+    lastName?: unknown;
+    birthDate?: unknown;
+    level?: unknown;
+    institutionType?: unknown;
+    institutionName?: unknown;
+    studyYear?: unknown;
+    studyAddress?: unknown;
+    learningGoals?: unknown;
+    studyInterests?: unknown;
+    examGoals?: unknown;
+  };
+  const clean = (value: unknown) => typeof value === "string" ? value.trim() : "";
+  const firstName = clean(body.firstName);
+  const lastName = clean(body.lastName);
+  const birthDate = clean(body.birthDate);
+  const level = clean(body.level);
+  const institutionType = clean(body.institutionType);
+  const institutionName = clean(body.institutionName);
+  const studyYear = clean(body.studyYear);
+  const studyAddress = clean(body.studyAddress);
+  const learningGoals = clean(body.learningGoals);
+  const studyInterests = clean(body.studyInterests);
+  const examGoals = clean(body.examGoals);
+  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(birthDate)
+    && !Number.isNaN(new Date(`${birthDate}T00:00:00.000Z`).getTime());
+
+  if (
+    firstName.length < 2 || firstName.length > 80
+    || lastName.length < 2 || lastName.length > 80
+    || !validDate
+    || !level
+    || !["scuola_superiore", "universita", "altro"].includes(institutionType)
+    || institutionName.length < 2 || institutionName.length > 160
+    || studyYear.length < 1 || studyYear.length > 80
+    || studyAddress.length < 2 || studyAddress.length > 160
+    || learningGoals.length > 500 || studyInterests.length > 500 || examGoals.length > 500
+  ) {
+    res.status(400).json({
+      error: "Completa nome, cognome, data di nascita, percorso, istituto, classe/anno e indirizzo di studi.",
+    });
+    return;
+  }
+
+  try {
+    const [existing] = await db
+      .select()
+      .from(profilesTable)
+      .where(eq(profilesTable.userId, userId));
+    if (!existing) {
+      res.status(404).json({ error: "Profilo non trovato" });
+      return;
+    }
+    if (existing.level && existing.level !== level) {
+      res.status(409).json({ error: "Il percorso di studio è già stato scelto e non può essere modificato." });
+      return;
+    }
+
+    const [updated] = await db
+      .update(profilesTable)
+      .set({
+        firstName,
+        lastName,
+        birthDate,
+        level: existing.level ?? level,
+        institutionType,
+        institutionName,
+        studyYear,
+        studyAddress,
+        learningGoals: learningGoals || null,
+        studyInterests: studyInterests || null,
+        examGoals: examGoals || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(profilesTable.userId, userId))
+      .returning();
+    res.json(toPublicProfile(updated ?? existing));
+  } catch (err) {
+    req.log.error({ err }, "Errore salvataggio onboarding");
+    res.status(500).json({ error: "Impossibile salvare il profilo di onboarding." });
   }
 });
 

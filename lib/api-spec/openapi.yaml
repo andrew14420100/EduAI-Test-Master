@@ -218,6 +218,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
 
+  /profile/onboarding:
+    patch:
+      operationId: completeOnboarding
+      tags: [profile]
+      summary: Save the learner onboarding profile
+      description: >
+        Saves personal, school and study-preference data. The study path is
+        immutable after the first successful onboarding.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteOnboardingRequest"
+      responses:
+        "200":
+          description: Onboarding profile saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Study path already locked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   /profile/labs-enabled:
     patch:
       operationId: setLabsEnabled
@@ -1379,10 +1419,42 @@ components:
           type: string
         username:
           type: string
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        birthDate:
+          type: string
+          format: date
+          nullable: true
         level:
           type: string
           nullable: true
           description: Full Italian study-path string (e.g. "Liceo Scientifico"). Null before onboarding.
+        institutionType:
+          type: string
+          nullable: true
+          enum: [scuola_superiore, universita, altro]
+        institutionName:
+          type: string
+          nullable: true
+        studyYear:
+          type: string
+          nullable: true
+        studyAddress:
+          type: string
+          nullable: true
+        learningGoals:
+          type: string
+          nullable: true
+        studyInterests:
+          type: string
+          nullable: true
+        examGoals:
+          type: string
+          nullable: true
         wallet:
           type: integer
         streak:
