@@ -711,7 +711,7 @@ export function AppProvider({
       setProfileSeed(null);
       setProfileSyncError(null);
       syncAttemptedForRef.current = null;
-      seenUnreadTicketIdsRef.current = null;
+       seenUnreadAdminMessageIdsRef.current = null;
     },
     completeOnboarding: async (nextLevel) => {
       try {
