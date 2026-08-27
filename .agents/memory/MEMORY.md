@@ -9,3 +9,4 @@
 - [Node test module mocks](node-test-module-mocks.md) — tsx requires invoking its ESM CLI through Node when enabling experimental module mocks.
 - [Abandoned upload cleanup](abandoned-upload-cleanup.md) — delete storage objects idempotently and retain pending rows when cleanup cannot remove the object.
 - [OpenAPI generated contract drift](openapi-generated-contract-drift.md) — targeted spec regeneration can remove legacy fields absent from the spec; review and preserve unrelated generated API changes.
+- [External Render diagnostics](external-render-diagnostics.md) — Replit deployment-log queries may be empty for Render services; use Render’s own runtime logs for generic production 500s.
