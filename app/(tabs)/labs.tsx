@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +11,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
-import { CentralLoader } from '@/components/CentralLoader';
 import { Pill, PrimaryButton, SectionTitle } from '@/components/Ui';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';

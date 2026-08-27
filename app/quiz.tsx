@@ -882,6 +882,7 @@ export default function QuizScreen() {
         <ProgressBar current={currentQ + 1} total={questions.length} color={c.primary} />
 
         <View style={[styles.questionCard, { backgroundColor: c.card, borderColor: c.border }]}>
+          <Text style={[styles.questionLabel, { color: c.primary }]}>DOMANDA {currentQ + 1}</Text>
           <Text style={[styles.questionText, { color: c.foreground }]}>{q.question}</Text>
         </View>
 
