@@ -196,12 +196,15 @@ export default function OnboardingScreen() {
             {lockedPath ? (
               <View style={[styles.locked, { backgroundColor: c.accent, borderColor: c.border }]}>
                 <AppIcon name="lock" size={15} color={c.accentForeground} />
-                <Text style={[styles.lockedText, { color: c.accentForeground }]}>{selectedLevel}</Text>
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text style={[styles.lockedText, { color: c.accentForeground }]}>{selectedLevel}</Text>
+                  <Text style={[styles.lockedHint, { color: c.accentForeground }]}>Il tuo percorso è stato salvato e non può essere modificato.</Text>
+                </View>
               </View>
             ) : levels.map((group) => (
               <View key={group.group} style={styles.choiceStack}>
                 <Text style={[styles.groupTitle, { color: c.mutedForeground }]}>{group.group}</Text>
-                {group.items.map((item) => <Choice key={item} label={item} selected={selectedLevel === item} onPress={() => setSelectedLevel(item)} c={c} />)}
+                {group.items.map((item) => <Choice key={item} label={item} selected={selectedLevel === item} onPress={() => setSelectedLevel(item)} c={c} disabled={Boolean(level)} />)}
               </View>
             ))}
           </View>
@@ -264,6 +267,7 @@ const styles = StyleSheet.create({
   groupTitle: { fontFamily: 'Inter_700Bold', textTransform: 'uppercase', letterSpacing: 1.1, fontSize: 10, marginTop: 4 },
   locked: { borderWidth: 1, borderRadius: 15, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
   lockedText: { flex: 1, fontFamily: 'Inter_700Bold', fontSize: 14 },
+  lockedHint: { fontFamily: 'Inter_500Medium', fontSize: 11, lineHeight: 16 },
   tip: { borderWidth: 1, borderRadius: 15, padding: 13, flexDirection: 'row', gap: 10, alignItems: 'center' },
   tipText: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 18 },
   validation: { fontFamily: 'Inter_600SemiBold', fontSize: 13, lineHeight: 19 },
