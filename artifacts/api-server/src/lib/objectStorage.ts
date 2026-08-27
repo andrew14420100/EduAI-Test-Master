@@ -40,10 +40,24 @@ function required(name: string): string {
 }
 
 function storageConfig() {
+  const bucket = required("S3_BUCKET");
+  const rawEndpoint = required("S3_ENDPOINT").replace(/\/+$/, "");
+  let endpoint = rawEndpoint;
+  try {
+    const parsed = new URL(rawEndpoint);
+    // Accept the common but incorrect `https://endpoint/bucket` input and
+    // normalize it to the provider root before AWS SDK signs the request.
+    if (parsed.pathname === `/${bucket}`) {
+      parsed.pathname = "";
+      endpoint = parsed.toString().replace(/\/+$/, "");
+    }
+  } catch {
+    throw new Error("S3_ENDPOINT deve essere un URL HTTPS valido");
+  }
   return {
-    endpoint: required("S3_ENDPOINT"),
+    endpoint,
     region: process.env.S3_REGION?.trim() || "auto",
-    bucket: required("S3_BUCKET"),
+    bucket,
     accessKeyId: required("S3_ACCESS_KEY_ID"),
     secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
   };
