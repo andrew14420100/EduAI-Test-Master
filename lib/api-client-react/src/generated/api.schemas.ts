@@ -53,11 +53,30 @@ export interface UploadUrlResponse {
   metadata?: UploadUrlRequest;
 }
 
+export type ProfileInstitutionType = typeof ProfileInstitutionType[keyof typeof ProfileInstitutionType] | null;
+
+
+export const ProfileInstitutionType = {
+  scuola_superiore: 'scuola_superiore',
+  universita: 'universita',
+  altro: 'altro',
+} as const;
+
 export interface Profile {
   userId: string;
   username: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  birthDate?: string | null;
   /** Full Italian study-path string (e.g. "Liceo Scientifico"). Null before onboarding. */
   level?: string | null;
+  institutionType?: ProfileInstitutionType;
+  institutionName?: string | null;
+  studyYear?: string | null;
+  studyAddress?: string | null;
+  learningGoals?: string | null;
+  studyInterests?: string | null;
+  examGoals?: string | null;
   wallet: number;
   streak: number;
   inviteCode: string;
@@ -81,6 +100,11 @@ export interface UpsertProfileRequest {
      */
   username: string;
   email?: string;
+  /** @maxLength 80 */
+  firstName?: string;
+  /** @maxLength 80 */
+  lastName?: string;
+  birthDate?: string;
 }
 
 export interface UpdateLevelRequest {
@@ -89,6 +113,56 @@ export interface UpdateLevelRequest {
      * @minLength 1
      */
   level: string;
+}
+
+export type CompleteOnboardingRequestInstitutionType = typeof CompleteOnboardingRequestInstitutionType[keyof typeof CompleteOnboardingRequestInstitutionType];
+
+
+export const CompleteOnboardingRequestInstitutionType = {
+  scuola_superiore: 'scuola_superiore',
+  universita: 'universita',
+  altro: 'altro',
+} as const;
+
+export interface CompleteOnboardingRequest {
+  /**
+     * @minLength 2
+     * @maxLength 80
+     */
+  firstName: string;
+  /**
+     * @minLength 2
+     * @maxLength 80
+     */
+  lastName: string;
+  birthDate: string;
+  /**
+     * Full Italian study-path string.
+     * @minLength 1
+     */
+  level: string;
+  institutionType: CompleteOnboardingRequestInstitutionType;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  institutionName: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  studyYear: string;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  studyAddress: string;
+  /** @maxLength 500 */
+  learningGoals?: string | null;
+  /** @maxLength 500 */
+  studyInterests?: string | null;
+  /** @maxLength 500 */
+  examGoals?: string | null;
 }
 
 /**

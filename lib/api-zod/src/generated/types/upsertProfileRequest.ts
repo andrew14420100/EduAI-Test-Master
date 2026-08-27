@@ -13,4 +13,9 @@ export interface UpsertProfileRequest {
      */
   username: string;
   email?: string;
+  /** @maxLength 80 */
+  firstName?: string;
+  /** @maxLength 80 */
+  lastName?: string;
+  birthDate?: Date;
 }

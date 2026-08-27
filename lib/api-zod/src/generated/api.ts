@@ -85,7 +85,17 @@ export const GetStorageObjectResponse = zod.unknown()
 export const GetProfileResponse = zod.object({
   "userId": zod.string(),
   "username": zod.string(),
+  "firstName": zod.string().nullish(),
+  "lastName": zod.string().nullish(),
+  "birthDate": zod.coerce.date().nullish(),
   "level": zod.string().nullish().describe('Full Italian study-path string (e.g. \"Liceo Scientifico\"). Null before onboarding.'),
+  "institutionType": zod.enum(['scuola_superiore', 'universita', 'altro']).nullish(),
+  "institutionName": zod.string().nullish(),
+  "studyYear": zod.string().nullish(),
+  "studyAddress": zod.string().nullish(),
+  "learningGoals": zod.string().nullish(),
+  "studyInterests": zod.string().nullish(),
+  "examGoals": zod.string().nullish(),
   "wallet": zod.number().int(),
   "streak": zod.number().int(),
   "inviteCode": zod.string(),
@@ -109,17 +119,100 @@ export const DeleteAccountResponse = zod.void()
 export const upsertProfileBodyUsernameMin = 2;
 export const upsertProfileBodyUsernameMax = 32;
 
+export const upsertProfileBodyFirstNameMax = 80;
+
+export const upsertProfileBodyLastNameMax = 80;
+
 
 
 export const UpsertProfileBody = zod.object({
   "username": zod.string().min(upsertProfileBodyUsernameMin).max(upsertProfileBodyUsernameMax),
-  "email": zod.string().email().optional()
+  "email": zod.string().email().optional(),
+  "firstName": zod.string().max(upsertProfileBodyFirstNameMax).optional(),
+  "lastName": zod.string().max(upsertProfileBodyLastNameMax).optional(),
+  "birthDate": zod.coerce.date().optional()
 })
 
 export const UpsertProfileResponse = zod.object({
   "userId": zod.string(),
   "username": zod.string(),
+  "firstName": zod.string().nullish(),
+  "lastName": zod.string().nullish(),
+  "birthDate": zod.coerce.date().nullish(),
   "level": zod.string().nullish().describe('Full Italian study-path string (e.g. \"Liceo Scientifico\"). Null before onboarding.'),
+  "institutionType": zod.enum(['scuola_superiore', 'universita', 'altro']).nullish(),
+  "institutionName": zod.string().nullish(),
+  "studyYear": zod.string().nullish(),
+  "studyAddress": zod.string().nullish(),
+  "learningGoals": zod.string().nullish(),
+  "studyInterests": zod.string().nullish(),
+  "examGoals": zod.string().nullish(),
+  "wallet": zod.number().int(),
+  "streak": zod.number().int(),
+  "inviteCode": zod.string(),
+  "avatarObjectPath": zod.string().nullish(),
+  "labsEnabled": zod.boolean().describe('Whether labs are enabled for this user (true by default for STEM paths).'),
+  "hasLabsByDefault": zod.boolean().optional().describe('Whether this study path has labs enabled by default.'),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * Saves personal, school and study-preference data. The study path is immutable after the first successful onboarding.
+ * @summary Save the learner onboarding profile
+ */
+export const completeOnboardingBodyFirstNameMin = 2;
+export const completeOnboardingBodyFirstNameMax = 80;
+
+export const completeOnboardingBodyLastNameMin = 2;
+export const completeOnboardingBodyLastNameMax = 80;
+
+
+export const completeOnboardingBodyInstitutionNameMin = 2;
+export const completeOnboardingBodyInstitutionNameMax = 160;
+
+export const completeOnboardingBodyStudyYearMax = 80;
+
+export const completeOnboardingBodyStudyAddressMin = 2;
+export const completeOnboardingBodyStudyAddressMax = 160;
+
+export const completeOnboardingBodyLearningGoalsMax = 500;
+
+export const completeOnboardingBodyStudyInterestsMax = 500;
+
+export const completeOnboardingBodyExamGoalsMax = 500;
+
+
+
+export const CompleteOnboardingBody = zod.object({
+  "firstName": zod.string().min(completeOnboardingBodyFirstNameMin).max(completeOnboardingBodyFirstNameMax),
+  "lastName": zod.string().min(completeOnboardingBodyLastNameMin).max(completeOnboardingBodyLastNameMax),
+  "birthDate": zod.coerce.date(),
+  "level": zod.string().min(1).describe('Full Italian study-path string.'),
+  "institutionType": zod.enum(['scuola_superiore', 'universita', 'altro']),
+  "institutionName": zod.string().min(completeOnboardingBodyInstitutionNameMin).max(completeOnboardingBodyInstitutionNameMax),
+  "studyYear": zod.string().min(1).max(completeOnboardingBodyStudyYearMax),
+  "studyAddress": zod.string().min(completeOnboardingBodyStudyAddressMin).max(completeOnboardingBodyStudyAddressMax),
+  "learningGoals": zod.string().max(completeOnboardingBodyLearningGoalsMax).nullish(),
+  "studyInterests": zod.string().max(completeOnboardingBodyStudyInterestsMax).nullish(),
+  "examGoals": zod.string().max(completeOnboardingBodyExamGoalsMax).nullish()
+})
+
+export const CompleteOnboardingResponse = zod.object({
+  "userId": zod.string(),
+  "username": zod.string(),
+  "firstName": zod.string().nullish(),
+  "lastName": zod.string().nullish(),
+  "birthDate": zod.coerce.date().nullish(),
+  "level": zod.string().nullish().describe('Full Italian study-path string (e.g. \"Liceo Scientifico\"). Null before onboarding.'),
+  "institutionType": zod.enum(['scuola_superiore', 'universita', 'altro']).nullish(),
+  "institutionName": zod.string().nullish(),
+  "studyYear": zod.string().nullish(),
+  "studyAddress": zod.string().nullish(),
+  "learningGoals": zod.string().nullish(),
+  "studyInterests": zod.string().nullish(),
+  "examGoals": zod.string().nullish(),
   "wallet": zod.number().int(),
   "streak": zod.number().int(),
   "inviteCode": zod.string(),
@@ -141,7 +234,17 @@ export const SetLabsEnabledBody = zod.object({
 export const SetLabsEnabledResponse = zod.object({
   "userId": zod.string(),
   "username": zod.string(),
+  "firstName": zod.string().nullish(),
+  "lastName": zod.string().nullish(),
+  "birthDate": zod.coerce.date().nullish(),
   "level": zod.string().nullish().describe('Full Italian study-path string (e.g. \"Liceo Scientifico\"). Null before onboarding.'),
+  "institutionType": zod.enum(['scuola_superiore', 'universita', 'altro']).nullish(),
+  "institutionName": zod.string().nullish(),
+  "studyYear": zod.string().nullish(),
+  "studyAddress": zod.string().nullish(),
+  "learningGoals": zod.string().nullish(),
+  "studyInterests": zod.string().nullish(),
+  "examGoals": zod.string().nullish(),
   "wallet": zod.number().int(),
   "streak": zod.number().int(),
   "inviteCode": zod.string(),
@@ -166,7 +269,17 @@ export const UpdateLevelBody = zod.object({
 export const UpdateLevelResponse = zod.object({
   "userId": zod.string(),
   "username": zod.string(),
+  "firstName": zod.string().nullish(),
+  "lastName": zod.string().nullish(),
+  "birthDate": zod.coerce.date().nullish(),
   "level": zod.string().nullish().describe('Full Italian study-path string (e.g. \"Liceo Scientifico\"). Null before onboarding.'),
+  "institutionType": zod.enum(['scuola_superiore', 'universita', 'altro']).nullish(),
+  "institutionName": zod.string().nullish(),
+  "studyYear": zod.string().nullish(),
+  "studyAddress": zod.string().nullish(),
+  "learningGoals": zod.string().nullish(),
+  "studyInterests": zod.string().nullish(),
+  "examGoals": zod.string().nullish(),
   "wallet": zod.number().int(),
   "streak": zod.number().int(),
   "inviteCode": zod.string(),

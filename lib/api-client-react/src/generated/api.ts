@@ -24,6 +24,7 @@ import type {
   AdminTicketReplyRequest,
   AdminUser,
   BuyShopItemRequest,
+  CompleteOnboardingRequest,
   CompleteQuizSessionRequest,
   CreateGroupRequest,
   CreateTicketRequest,
@@ -611,6 +612,78 @@ export const useUpsertProfile = <TError = ErrorType<ErrorEnvelope>,
         TContext
       > => {
       return useMutation(getUpsertProfileMutationOptions(options));
+    }
+
+export const getCompleteOnboardingUrl = () => {
+
+
+
+
+  return `/api/profile/onboarding`
+}
+
+/**
+ * Saves personal, school and study-preference data. The study path is immutable after the first successful onboarding.
+ * @summary Save the learner onboarding profile
+ */
+export const completeOnboarding = async (completeOnboardingRequest: CompleteOnboardingRequest, options?: Parameters<typeof customFetch>[1]): Promise<Profile> => {
+
+  return customFetch<Profile>(getCompleteOnboardingUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(completeOnboardingRequest)
+  }
+);}
+
+
+
+
+
+export const getCompleteOnboardingMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeOnboarding>>, TError,{data: BodyType<CompleteOnboardingRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeOnboarding>>, TError,{data: BodyType<CompleteOnboardingRequest>}, TContext> => {
+
+const mutationKey = ['completeOnboarding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeOnboarding>>, {data: BodyType<CompleteOnboardingRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  completeOnboarding(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteOnboardingMutationResult = NonNullable<Awaited<ReturnType<typeof completeOnboarding>>>
+    export type CompleteOnboardingMutationBody = BodyType<CompleteOnboardingRequest>
+    export type CompleteOnboardingMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Save the learner onboarding profile
+ */
+export const useCompleteOnboarding = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeOnboarding>>, TError,{data: BodyType<CompleteOnboardingRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeOnboarding>>,
+        TError,
+        {data: BodyType<CompleteOnboardingRequest>},
+        TContext
+      > => {
+      return useMutation(getCompleteOnboardingMutationOptions(options));
     }
 
 export const getSetLabsEnabledUrl = () => {

@@ -5,12 +5,23 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ProfileInstitutionType } from './profileInstitutionType';
 
 export interface Profile {
   userId: string;
   username: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  birthDate?: Date | null;
   /** Full Italian study-path string (e.g. "Liceo Scientifico"). Null before onboarding. */
   level?: string | null;
+  institutionType?: ProfileInstitutionType;
+  institutionName?: string | null;
+  studyYear?: string | null;
+  studyAddress?: string | null;
+  learningGoals?: string | null;
+  studyInterests?: string | null;
+  examGoals?: string | null;
   wallet: number;
   streak: number;
   inviteCode: string;

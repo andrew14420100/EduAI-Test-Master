@@ -73,6 +73,34 @@ export async function generateQuickExplanation(question: string, options: string
 
 const MAX_QUIZ_CONTEXT_CHARS = 480_000;
 
+export type LearnerContext = {
+  level?: string | null;
+  institutionType?: string | null;
+  institutionName?: string | null;
+  studyYear?: string | null;
+  studyAddress?: string | null;
+  learningGoals?: string | null;
+  studyInterests?: string | null;
+  examGoals?: string | null;
+};
+
+function learnerContextSummary(context?: LearnerContext): string {
+  if (!context) return "";
+  const fields = [
+    context.level && `Percorso: ${context.level}`,
+    context.institutionType && `Tipo di istituto: ${context.institutionType}`,
+    context.institutionName && `Istituto: ${context.institutionName}`,
+    context.studyYear && `Classe/anno: ${context.studyYear}`,
+    context.studyAddress && `Indirizzo di studi: ${context.studyAddress}`,
+    context.learningGoals && `Obiettivi di apprendimento: ${context.learningGoals}`,
+    context.studyInterests && `Interessi: ${context.studyInterests}`,
+    context.examGoals && `Obiettivi d'esame: ${context.examGoals}`,
+  ].filter(Boolean);
+  return fields.length > 0
+    ? `\n\nPROFILO DIDATTICO DELLO STUDENTE:\n${fields.join("\n")}\nUsa questi dati solo per calibrare difficoltà, esempi e priorità degli argomenti. Non citarli esplicitamente e non usare dati personali non didattici.`
+    : "";
+}
+
 type AiQuestionPayload = {
   question?: unknown;
   options?: unknown;
@@ -195,6 +223,7 @@ export async function generateExamQuestions(
   sources: SourceMaterial[],
   count: number,
   seedInput = "",
+  learnerContext?: LearnerContext,
 ): Promise<GeneratedQuestion[]> {
   const context = sourceContext(sources);
   if (!context.trim()) throw new Error("CONTENUTO_NON_DISPONIBILE");
@@ -229,7 +258,8 @@ export async function generateExamQuestions(
            "Non inventare fatti assenti dai materiali. Per ogni domanda indica il titolo esatto della fonte, " +
            "un estratto letterale di almeno 24 caratteri che dimostri la risposta e la difficoltà: base, medio o avanzato. " +
            "La difficoltà deve dipendere dalla complessità del contenuto: base per definizioni, medio per relazioni/applicazioni, " +
-           "avanzato per analisi, confronto, calcolo o deduzioni. Ogni richiesta è una variante indipendente: non riutilizzare la formulazione o l’ordine della variante precedente. Rispondi esclusivamente con JSON valido.",
+            "avanzato per analisi, confronto, calcolo o deduzioni. Ogni richiesta è una variante indipendente: non riutilizzare la formulazione o l’ordine della variante precedente. " +
+            "Adatta il registro e la difficoltà al profilo didattico, senza inventare prerequisiti o informazioni non presenti nei materiali. Rispondi esclusivamente con JSON valido.",
       },
       {
         role: "user",
@@ -241,7 +271,7 @@ export async function generateExamQuestions(
            "Per tutti gli altri quesiti usa quattro opzioni. Scegli casualmente l'ordine dei tre formati e alterna gli argomenti; " +
            "evita duplicati e non rivelare mai la risposta nella formulazione.\n" +
            'Per ogni elemento indica questionType ("scelta_multipla"|"completamento"|"vero_falso"). Restituisci soltanto {"questions":[{"question":"...","options":["..."],"correctIndex":0,"sourceTitle":"...","evidence":"...","difficulty":"base|medio|avanzato","questionType":"..."}]}.\n\n' +
-          `CONTENUTO DA STUDIARE:\n${context}`,
+           `CONTENUTO DA STUDIARE:\n${context}${learnerContextSummary(learnerContext)}`,
       },
     ],
     });
@@ -279,6 +309,7 @@ export async function generateFlashcardsWithAi(
   sources: SourceMaterial[],
   perMaterial: number,
   seedInput: string,
+  learnerContext?: LearnerContext,
 ): Promise<Flashcard[]> {
   const context = sourceContext(sources);
   if (!context.trim()) return [];
@@ -291,7 +322,8 @@ export async function generateFlashcardsWithAi(
           role: "system",
           content:
             "Sei un tutor italiano. Crea flashcard chiare e utili usando esclusivamente i materiali forniti. " +
-             "Non inventare informazioni. Ogni variante deve cambiare concetti, formulazioni o ordine rispetto alle precedenti. Il campo materialTitle deve essere esattamente uno dei titoli forniti. Rispondi solo JSON valido.",
+              "Non inventare informazioni. Ogni variante deve cambiare concetti, formulazioni o ordine rispetto alle precedenti. " +
+              "Adatta il livello degli esempi e la selezione ai dati didattici del profilo, senza citarlo. Il campo materialTitle deve essere esattamente uno dei titoli forniti. Rispondi solo JSON valido.",
         },
         {
           role: "user",
@@ -299,7 +331,7 @@ export async function generateFlashcardsWithAi(
              `Crea esattamente ${sources.length * perMaterial} flashcard, distribuite tra i materiali.\n` +
              `Codice variante: ${seedInput}. Cambia il focus della selezione senza citare il codice.\n` +
             'Formato: {"flashcards":[{"front":"domanda o concetto","back":"spiegazione","materialTitle":"titolo"}]}.\n' +
-            context,
+             context + learnerContextSummary(learnerContext),
         },
       ],
     });

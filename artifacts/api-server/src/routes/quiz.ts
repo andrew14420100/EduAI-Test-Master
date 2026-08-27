@@ -153,6 +153,20 @@ router.post(
         return;
       }
 
+       const [learnerProfile] = await db
+         .select({
+           level: profilesTable.level,
+           institutionType: profilesTable.institutionType,
+           institutionName: profilesTable.institutionName,
+           studyYear: profilesTable.studyYear,
+           studyAddress: profilesTable.studyAddress,
+           learningGoals: profilesTable.learningGoals,
+           studyInterests: profilesTable.studyInterests,
+           examGoals: profilesTable.examGoals,
+         })
+         .from(profilesTable)
+         .where(eq(profilesTable.userId, userId));
+
        // The generated key remains server-only. Questions are written from
        // scratch by the model after reading the extracted material, rather than
        // turning source sentences into fill-in-the-blank prompts.
@@ -162,6 +176,7 @@ router.post(
            ready.sources,
            totalQuestions,
             typeof variant === "string" ? variant.slice(0, 120) : `${Date.now()}-${randomUUID()}`,
+             learnerProfile,
          );
        } catch (error) {
          req.log.error({ err: error }, "Generazione IA delle domande non riuscita");
@@ -814,11 +829,26 @@ router.post(
         return;
       }
 
+       const [learnerProfile] = await db
+         .select({
+           level: profilesTable.level,
+           institutionType: profilesTable.institutionType,
+           institutionName: profilesTable.institutionName,
+           studyYear: profilesTable.studyYear,
+           studyAddress: profilesTable.studyAddress,
+           learningGoals: profilesTable.learningGoals,
+           studyInterests: profilesTable.studyInterests,
+           examGoals: profilesTable.examGoals,
+         })
+         .from(profilesTable)
+         .where(eq(profilesTable.userId, userId));
+
        const seed = uniqueIds.join(",") + "|" + userId;
       const flashcards = await generateFlashcardsWithAi(
         ready.sources,
         FLASHCARDS_PER_MATERIAL,
         `${seed}|${typeof (req.body as { variant?: unknown }).variant === "string" ? (req.body as { variant: string }).variant.slice(0, 120) : `${Date.now()}-${randomUUID()}`}`,
+         learnerProfile,
       );
 
       if (flashcards.length === 0) {
