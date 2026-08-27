@@ -1457,8 +1457,8 @@ components:
           nullable: true
         wallet:
           type: integer
-         xp:
-           type: integer
+        xp:
+          type: integer
         streak:
           type: integer
         inviteCode:
