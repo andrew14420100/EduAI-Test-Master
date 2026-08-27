@@ -51,13 +51,6 @@ function RootLayoutNav() {
   const { isLoaded, isSignedIn } = useAuth();
   const { level, profileNeedsOnboarding, ready, rewardEvent, completionAnimation, dismissRewardEvent } = useApp();
   const insets = useSafeAreaInsets();
-  const [navigating, setNavigating] = useState(false);
-
-  useEffect(() => {
-    setNavigating(true);
-    const timer = setTimeout(() => setNavigating(false), 350);
-    return () => clearTimeout(timer);
-  }, [segments.join('/')]);
 
   useEffect(() => {
     if (!isLoaded || !ready) return;
@@ -71,7 +64,7 @@ function RootLayoutNav() {
       return;
     }
     if (currentRoute === 'accesso') router.replace('/(tabs)');
-  }, [isLoaded, isSignedIn, level, ready, router, segments]);
+  }, [isLoaded, isSignedIn, level, profileNeedsOnboarding, ready, router, segments]);
 
   useEffect(() => {
     if (!isSignedIn || Platform.OS === 'web') return;
