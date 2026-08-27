@@ -1423,6 +1423,15 @@ components:
         email:
           type: string
           format: email
+        firstName:
+          type: string
+          maxLength: 80
+        lastName:
+          type: string
+          maxLength: 80
+        birthDate:
+          type: string
+          format: date
 
     UpdateLevelRequest:
       type: object
@@ -1432,6 +1441,53 @@ components:
           type: string
           minLength: 1
           description: Full Italian study-path string (e.g. "Liceo Scientifico").
+
+    CompleteOnboardingRequest:
+      type: object
+      required: [firstName, lastName, birthDate, level, institutionType, institutionName, studyYear, studyAddress]
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 80
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 80
+        birthDate:
+          type: string
+          format: date
+        level:
+          type: string
+          minLength: 1
+          description: Full Italian study-path string.
+        institutionType:
+          type: string
+          enum: [scuola_superiore, universita, altro]
+        institutionName:
+          type: string
+          minLength: 2
+          maxLength: 160
+        studyYear:
+          type: string
+          minLength: 1
+          maxLength: 80
+        studyAddress:
+          type: string
+          minLength: 2
+          maxLength: 160
+        learningGoals:
+          type: string
+          maxLength: 500
+          nullable: true
+        studyInterests:
+          type: string
+          maxLength: 500
+          nullable: true
+        examGoals:
+          type: string
+          maxLength: 500
+          nullable: true
 
     Material:
       type: object
