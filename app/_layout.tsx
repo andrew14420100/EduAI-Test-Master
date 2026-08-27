@@ -90,15 +90,18 @@ function RootLayoutNav() {
       }
       if ((await Notifications.getPermissionsAsync()).granted) {
         try {
-          const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+           const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
           const token = (await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined)).data;
           await customFetch('/api/push-tokens', {
             method: 'POST',
             responseType: 'json',
             body: JSON.stringify({ token, platform: Platform.OS }),
           });
-        } catch {
-          // Push registration is best-effort; local notifications remain available.
+         } catch (error) {
+           // Keep the app usable when notification permissions or Expo push
+           // registration are unavailable, but leave a useful diagnostic in
+           // development logs instead of silently hiding a production issue.
+           if (__DEV__) console.warn('Registrazione notifiche push non riuscita', error);
         }
       }
     })();

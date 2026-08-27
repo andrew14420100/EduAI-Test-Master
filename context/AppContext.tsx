@@ -442,19 +442,25 @@ export function AppProvider({
   const useInviteMutation = useUseInviteCode();
   const submitLabAttemptMutation = useSubmitLabAttempt();
   const setLabsEnabledMutation = useSetLabsEnabled();
-  const seenUnreadTicketIdsRef = useRef<Set<string> | null>(null);
+  const seenUnreadAdminMessageIdsRef = useRef<Set<string> | null>(null);
 
   useEffect(() => {
-    const unreadIds = new Set((ticketsQuery.data ?? []).filter((ticket) => ticket.unread).map((ticket) => ticket.id));
-    if (seenUnreadTicketIdsRef.current === null) {
-      seenUnreadTicketIdsRef.current = unreadIds;
-      if (unreadIds.size > 0) {
+    const unreadAdminMessageIds = new Set(
+      (ticketsQuery.data ?? []).flatMap((ticket) => (ticket.unread
+        ? (ticket.messages ?? [])
+          .filter((message) => message.authorRole === 'admin' && (!ticket.readAt || new Date(message.createdAt) > new Date(ticket.readAt)))
+          .map((message) => message.id)
+        : [])),
+    );
+    if (seenUnreadAdminMessageIdsRef.current === null) {
+      seenUnreadAdminMessageIdsRef.current = unreadAdminMessageIds;
+      if (unreadAdminMessageIds.size > 0) {
         triggerReward('assistenza', 'Nuova risposta dall’assistenza', 'Apri il profilo per leggere la risposta al tuo ticket.');
       }
       return;
     }
-    const hasNewReply = [...unreadIds].some((id) => !seenUnreadTicketIdsRef.current?.has(id));
-    seenUnreadTicketIdsRef.current = unreadIds;
+    const hasNewReply = [...unreadAdminMessageIds].some((id) => !seenUnreadAdminMessageIdsRef.current?.has(id));
+    seenUnreadAdminMessageIdsRef.current = unreadAdminMessageIds;
     if (hasNewReply) {
       triggerReward('assistenza', 'Nuova risposta dall’assistenza', 'Apri il profilo per leggere la risposta al tuo ticket.');
     }
@@ -463,7 +469,7 @@ export function AppProvider({
   useEffect(() => {
     if (!isSignedIn || !user) {
       syncAttemptedForRef.current = null;
-      seenUnreadTicketIdsRef.current = null;
+      seenUnreadAdminMessageIdsRef.current = null;
       setProfileSeed(null);
       setProfileSyncing(false);
       setProfileSyncError(null);
