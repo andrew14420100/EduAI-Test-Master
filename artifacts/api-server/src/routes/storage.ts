@@ -288,7 +288,10 @@ router.post(
         }),
       );
     } catch (error) {
-      req.log.error({ err: error }, "Errore generazione URL upload");
+      req.log.error(
+        { err: error, stage: "presigned_url" },
+        "Errore generazione URL upload",
+      );
       res.status(500).json({ error: "Impossibile generare URL di upload" });
     }
   },

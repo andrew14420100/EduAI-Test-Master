@@ -548,7 +548,7 @@ router.post("/materials", requireAuth, async (req: Request, res: Response) => {
     }
     res.status(201).json(toPublicMaterial(material!));
   } catch (err) {
-    req.log.error({ err }, "Errore creazione materiale");
+    req.log.error({ err, stage: "finalizzazione_upload" }, "Errore creazione materiale");
     res.status(500).json({ error: "Errore interno del server" });
   }
 });

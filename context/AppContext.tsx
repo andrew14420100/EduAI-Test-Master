@@ -280,6 +280,34 @@ function messageFromError(error: unknown) {
   return candidate?.data?.error ?? candidate?.message ?? 'Operazione non riuscita. Riprova.';
 }
 
+type UploadStep = 'preparazione' | 'trasferimento' | 'finalizzazione';
+
+function uploadStepError(step: UploadStep, fileName: string, error: unknown): Error {
+  const detail = messageFromError(error);
+
+  const isNetworkError = error instanceof TypeError
+    || /failed to fetch|network request failed|network error/i.test(detail);
+  if (isNetworkError) {
+    if (step === 'trasferimento') {
+      return new Error(
+        `Trasferimento di ${fileName} verso lo storage non riuscito. `
+        + 'Controlla la connessione e il CORS del bucket, quindi riprova.',
+      );
+    }
+    return new Error(
+      `${step === 'preparazione' ? 'Preparazione' : 'Salvataggio'} di ${fileName} non riuscito. `
+      + 'Il server API non è raggiungibile: controlla la connessione e riprova.',
+    );
+  }
+
+  const labels: Record<UploadStep, string> = {
+    preparazione: `Preparazione dell'upload di ${fileName} non riuscita`,
+    trasferimento: `Trasferimento di ${fileName} verso lo storage non riuscito`,
+    finalizzazione: `Salvataggio del materiale ${fileName} non riuscito`,
+  };
+  return new Error(`${labels[step]}: ${detail}`);
+}
+
 function kindFromContentType(contentType: string): MaterialKind {
   if (contentType.startsWith('image/')) return 'immagine';
   if (contentType.startsWith('video/')) return 'video';
@@ -803,9 +831,17 @@ export function AppProvider({
               detectedSize = webBlob.size;
             } else {
               const info = await FileSystem.getInfoAsync(file.uri);
-              detectedSize = info.exists ? info.size : 0;
+              if (info.exists && typeof info.size === 'number') {
+                detectedSize = info.size;
+              }
             }
-            const size = Math.max(file.size ?? detectedSize, 1);
+            // The picker metadata can be stale (especially on web). The size
+            // sent to the API must describe the bytes that will actually be
+            // sent, otherwise finalization correctly rejects the upload.
+            const size = detectedSize;
+            if (!Number.isFinite(size) || size <= 0) {
+              throw new Error(`Non è possibile determinare una dimensione valida per ${file.name}.`);
+            }
             if (
               (file.contentType.startsWith('audio/') || file.contentType.startsWith('video/'))
               && size > MAX_MEDIA_UPLOAD_BYTES
@@ -813,54 +849,69 @@ export function AppProvider({
               throw new Error(`${file.name} supera il limite di 250 MB previsto per audio e video.`);
             }
             onProgress(file.clientId, 24);
-          const upload = await requestUploadMutation.mutateAsync({
-            data: { name: file.name, size, contentType: file.contentType },
-          });
-          onProgress(file.clientId, 42);
-            if (Platform.OS === 'web') {
-              const response = await fetch(upload.uploadURL, {
-                method: 'PUT',
-                headers: { 'Content-Type': file.contentType },
-                body: webBlob,
+            let upload: Awaited<ReturnType<typeof requestUploadMutation.mutateAsync>>;
+            try {
+              upload = await requestUploadMutation.mutateAsync({
+                data: { name: file.name, size, contentType: file.contentType },
               });
-              if (!response.ok) {
-                const detail = await response.text().catch(() => '');
-                throw new Error(`Caricamento di ${file.name} non riuscito (${response.status})${detail ? `: ${detail.slice(0, 120)}` : '.'}`);
+            } catch (error) {
+              throw uploadStepError('preparazione', file.name, error);
+            }
+            onProgress(file.clientId, 42);
+            try {
+              if (Platform.OS === 'web') {
+                const response = await fetch(upload.uploadURL, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': file.contentType },
+                  body: webBlob,
+                });
+                if (!response.ok) {
+                  const detail = await response.text().catch(() => '');
+                  throw new Error(
+                    `HTTP ${response.status}${detail ? `: ${detail.slice(0, 120)}` : ''}`,
+                  );
+                }
+              } else {
+                const task = FileSystem.createUploadTask(
+                  upload.uploadURL,
+                  file.uri,
+                  {
+                    httpMethod: 'PUT',
+                    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+                    headers: { 'Content-Type': file.contentType },
+                  },
+                  ({ totalBytesSent, totalBytesExpectedToSend }) => {
+                    if (totalBytesExpectedToSend > 0) {
+                      onProgress(
+                        file.clientId,
+                        Math.min(87, 42 + Math.round((totalBytesSent / totalBytesExpectedToSend) * 45)),
+                      );
+                    }
+                  },
+                );
+                const response = await task.uploadAsync();
+                if (!response || response.status < 200 || response.status >= 300) {
+                  throw new Error(`HTTP ${response?.status ?? 'senza risposta'}`);
+                }
               }
               onProgress(file.clientId, 87);
-            } else {
-              const task = FileSystem.createUploadTask(
-                upload.uploadURL,
-                file.uri,
-                {
-                  httpMethod: 'PUT',
-                  uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-                  headers: { 'Content-Type': file.contentType },
-                },
-                ({ totalBytesSent, totalBytesExpectedToSend }) => {
-                  if (totalBytesExpectedToSend > 0) {
-                    onProgress(
-                      file.clientId,
-                      Math.min(87, 42 + Math.round((totalBytesSent / totalBytesExpectedToSend) * 45)),
-                    );
-                  }
-                },
-              );
-              const response = await task.uploadAsync();
-              if (!response || response.status < 200 || response.status >= 300) {
-                throw new Error(`Caricamento di ${file.name} non riuscito${response?.status ? ` (${response.status})` : ''}.`);
-              }
+            } catch (error) {
+              throw uploadStepError('trasferimento', file.name, error);
             }
-          onProgress(file.clientId, 88);
-          await finalizeMaterialMutation.mutateAsync({
-            data: {
-              contentType: file.contentType,
-              objectPath: upload.objectPath,
-              size,
-              groupId: group.id,
-            },
-          });
-          onProgress(file.clientId, 100);
+            onProgress(file.clientId, 88);
+            try {
+              await finalizeMaterialMutation.mutateAsync({
+                data: {
+                  contentType: file.contentType,
+                  objectPath: upload.objectPath,
+                  size,
+                  groupId: group.id,
+                },
+              });
+            } catch (error) {
+              throw uploadStepError('finalizzazione', file.name, error);
+            }
+            onProgress(file.clientId, 100);
           } catch (error) {
             onProgress(file.clientId, -1);
             throw error;

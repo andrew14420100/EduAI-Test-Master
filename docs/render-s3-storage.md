@@ -22,6 +22,7 @@ Variabile opzionale:
 | Variabile | Default |
 | --- | --- |
 | `S3_FORCE_PATH_STYLE` | `true`; impostare `false` solo se il provider richiede URL virtual-hosted |
+| `CORS_ALLOWED_ORIGINS` | nessuna origine aggiuntiva; elenco separato da virgole delle origini web autorizzate |
 
 Per mantenere i percorsi già salvati nel database, configurare anche:
 
@@ -47,6 +48,22 @@ autenticato dell’API e dai controlli ACL applicativi.
 Le chiavi non devono essere inserite nel repository, nel file `.env` condiviso o
 nel codice. Dopo aver configurato il servizio, riavviare Render e verificare in
 ordine richiesta URL, upload binario, finalizzazione e analisi del materiale.
+
+## Diagnostica dei tre passaggi
+
+L’app mostra il passaggio preciso che fallisce e non mostra mai l’URL firmato:
+
+| Messaggio nell’app | Passaggio da controllare | Controlli |
+| --- | --- | --- |
+| `Preparazione ...` | API `POST /storage/uploads/request-url` | autenticazione Clerk, `CORS_ALLOWED_ORIGINS` per il web, variabili S3 su Render, permessi di firma e database |
+| `Trasferimento ... verso lo storage` | `PUT` verso l’URL firmato | CORS R2 (`OPTIONS` e `PUT` dall’origine dell’app), HTTPS, `Content-Type` e permesso di scrittura |
+| `Salvataggio del materiale ...` | API `POST /materials` | URL non scaduto, oggetto presente, `Content-Length`/`Content-Type` coerenti, gruppo appartenente all’utente |
+
+Un errore di rete o CORS durante il `PUT` viene indicato come trasferimento verso
+lo storage; un errore HTTP della finalizzazione mantiene invece il messaggio
+restituito dall’API. Nei log del backend le richieste sono marcate con gli stage
+`presigned_url` e `finalizzazione_upload`; non loggare mai `uploadURL`, token o
+variabili S3.
 
 Per il test dal preview web o da una build web, il bucket R2 deve inoltre
 permettere il preflight `OPTIONS` e il metodo `PUT` dall’origine dell’app,

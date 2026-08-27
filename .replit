@@ -42,8 +42,8 @@ artifactId = "artifacts/eduai-test-master"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter @workspace/eduai-test-master run dev"
-cwd = "./artifacts/eduai-test-master"
+args = "pnpm run dev"
+cwd = "./"
 waitForPort = 25427
 ensurePreviewReachable = "/status"
 router = "expo-domain"
