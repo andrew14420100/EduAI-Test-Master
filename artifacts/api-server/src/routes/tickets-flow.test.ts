@@ -31,7 +31,7 @@ test("ticket flow keeps the initial request and admin reply in the user's histor
   assert.match(route, /isInvalidPushTokenError/);
   assert.match(route, /DeviceNotRegistered/);
   assert.match(route, /PushTokenNotRegistered/);
-  assert.match(route, /void sendTicketPushNotifications/);
+  assert.match(route, /await sendTicketPushNotifications/);
   assert.match(layout, /getExpoPushTokenAsync/);
   assert.match(layout, /body: JSON\.stringify\(\{ token, platform: Platform\.OS \}\)/);
   assert.match(layout, /pathname: '\/\(tabs\)\/profile'/);

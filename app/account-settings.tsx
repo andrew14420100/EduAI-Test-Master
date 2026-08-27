@@ -31,7 +31,7 @@ export default function AccountSettingsScreen() {
     try {
       const nextUsername = username.trim();
       if (!/^[A-Za-z0-9_]{3,20}$/.test(nextUsername)) {
-        setStatus('Username non valido: usa 3–20 caratteri, solo lettere, numeri e underscore.');
+        setUsernameStatus('Username non valido: usa 3–20 caratteri, solo lettere, numeri e underscore.');
         return;
       }
       const updated = await customFetch('/api/profile/username', {
@@ -129,7 +129,7 @@ export default function AccountSettingsScreen() {
       </View>
       <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
        <View style={styles.cardHeader}>
-         <View style={[styles.cardIcon, { backgroundColor: c.secondary }]}><AppIcon name="mail" size={17} color={c.primary} /></View>
+          <View style={[styles.cardIcon, { backgroundColor: c.secondary }]}><AppIcon name="email" size={17} color={c.primary} /></View>
          <View style={{ flex: 1 }}><Text style={[styles.cardTitle, { color: c.foreground }]}>Email</Text><Text style={[styles.cardDescription, { color: c.mutedForeground }]}>Riceverai un link per confermare la nuova email</Text></View>
        </View>
        <TextInput value={email} onChangeText={setEmail} editable={!busy} keyboardType="email-address" autoCapitalize="none" style={[styles.input, { color: c.foreground, backgroundColor: c.background, borderColor: c.border }]} />
