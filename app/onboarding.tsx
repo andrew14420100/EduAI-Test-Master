@@ -98,7 +98,6 @@ export default function OnboardingScreen() {
 
   const stepTitles = ['Partiamo da te', 'Il tuo percorso', 'Come vuoi studiare?'];
   const progress = useMemo(() => `${step + 1} di 3`, [step]);
-  const lockedPath = Boolean(level);
 
   const next = () => {
     setValidationMessage(null);
@@ -193,11 +192,12 @@ export default function OnboardingScreen() {
               <View style={styles.column}><TextField label="Indirizzo di studi" value={studyAddress} onChangeText={setStudyAddress} placeholder="Es. Scientifico" c={c} required /></View>
             </View>
             <Text style={[styles.label, { color: c.foreground }]}>Percorso di studio *</Text>
-            {lockedPath ? (
+            {level ? (
               <View style={[styles.locked, { backgroundColor: c.accent, borderColor: c.border }]}>
                 <AppIcon name="lock" size={15} color={c.accentForeground} />
                 <View style={{ flex: 1, gap: 3 }}>
                   <Text style={[styles.lockedText, { color: c.accentForeground }]}>{selectedLevel}</Text>
+                  <Text style={[styles.lockedHint, { color: c.accentForeground }]}>Percorso bloccato dopo la prima scelta.</Text>
                   <Text style={[styles.lockedHint, { color: c.accentForeground }]}>Il tuo percorso è stato salvato e non può essere modificato.</Text>
                 </View>
               </View>
