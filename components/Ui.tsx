@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppIcon, AppIconName } from '@/components/AppIcon';
 import { useColors } from '@/hooks/useColors';
 
@@ -17,12 +17,12 @@ export function IconButton({ name, onPress, label }: { name: AppIconName; onPres
   );
 }
 
-export function PrimaryButton({ children, onPress, disabled = false, icon = 'arrow-up-right' }: { children: ReactNode; onPress: () => void; disabled?: boolean; icon?: AppIconName }) {
+export function PrimaryButton({ children, onPress, disabled = false, icon = 'arrow-up-right', loading = false }: { children: ReactNode; onPress: () => void; disabled?: boolean; icon?: AppIconName; loading?: boolean }) {
   const c = useColors();
   return (
     <Pressable accessibilityRole="button" testID="primary-button" onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.primary, { backgroundColor: c.primary, opacity: disabled ? 0.45 : pressed ? 0.76 : 1 }]}>
       <Text style={[styles.primaryText, { color: c.primaryForeground }]}>{children}</Text>
-      <AppIcon name={icon} size={17} color={c.primaryForeground} />
+      {loading ? <ActivityIndicator size="small" color={c.primaryForeground} /> : <AppIcon name={icon} size={17} color={c.primaryForeground} />}
     </Pressable>
   );
 }

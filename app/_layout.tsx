@@ -21,7 +21,6 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppIcon } from '@/components/AppIcon';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { customFetch, setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
-import { CentralLoader } from '@/components/CentralLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_VERSION } from '@/constants/app';
 
@@ -50,7 +49,7 @@ function RootLayoutNav() {
   const router = useRouter();
   const segments = useSegments();
   const { isLoaded, isSignedIn } = useAuth();
-  const { level, ready, refreshing, rewardEvent, completionAnimation, dismissRewardEvent } = useApp();
+  const { level, profileNeedsOnboarding, ready, rewardEvent, completionAnimation, dismissRewardEvent } = useApp();
   const insets = useSafeAreaInsets();
   const [navigating, setNavigating] = useState(false);
 
@@ -67,7 +66,7 @@ function RootLayoutNav() {
       if (currentRoute !== 'accesso') router.replace('/accesso');
       return;
     }
-    if (!level) {
+    if (profileNeedsOnboarding) {
       if (currentRoute !== 'onboarding') router.replace('/onboarding');
       return;
     }
@@ -135,14 +134,6 @@ function RootLayoutNav() {
     });
   }, [rewardEvent]);
 
-  if (!isLoaded || !ready) {
-    return (
-      <View style={styles.root}>
-        <CentralLoader message={!isLoaded ? 'Connessione in corso…' : 'Preparazione del tuo spazio…'} />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.root}>
       <Stack screenOptions={{ headerShown: false }}>
@@ -152,7 +143,6 @@ function RootLayoutNav() {
         <Stack.Screen name="admin" options={{ presentation: 'modal' }} />
         <Stack.Screen name="accesso" options={{ animation: 'fade' }} />
       </Stack>
-      {(navigating || refreshing) ? <CentralLoader message={refreshing ? 'Aggiornamento in corso…' : 'Preparazione schermata…'} /> : null}
       {rewardEvent ? (
         <RewardToast
           key={rewardEvent.id}
