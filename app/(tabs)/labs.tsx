@@ -523,6 +523,7 @@ const styles = StyleSheet.create({
   historyScore: { fontFamily: 'Inter_700Bold', fontSize: 13 },
   // Empty / enable state
   centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30, gap: 16 },
+  loadingCard: { width: '100%', borderWidth: 1, borderRadius: 16, padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   emptyIcon: { width: 68, height: 68, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, textAlign: 'center' },
   emptyBody: { fontFamily: 'Inter_500Medium', fontSize: 15, lineHeight: 22, textAlign: 'center' },
