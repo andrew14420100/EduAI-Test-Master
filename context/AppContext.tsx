@@ -41,6 +41,7 @@ import {
   useStartRecoverySession,
   useUpdateLevel,
   useUpsertProfile,
+  useCompleteOnboarding,
   useUseInviteCode,
   useUseLightTheme,
   customFetch,
@@ -151,6 +152,9 @@ const MAX_PARALLEL_UPLOADS = 2;
 
 type AppState = {
   level: Level | null;
+  learnerProfile: Profile | null;
+  onboardingComplete: boolean;
+  profileNeedsOnboarding: boolean;
   ready: boolean;
   account: Account | null;
   isAuthenticated: boolean;
@@ -180,7 +184,19 @@ type AppState = {
   inviteCode: string;
   refreshing: boolean;
   logout: () => Promise<void>;
-  completeOnboarding: (level: Level) => Promise<ActionResult>;
+  completeOnboarding: (data: {
+    firstName: string;
+    lastName: string;
+    birthDate: string;
+    level: Level;
+    institutionType: 'scuola_superiore' | 'universita' | 'altro';
+    institutionName: string;
+    studyYear: string;
+    studyAddress: string;
+    learningGoals?: string;
+    studyInterests?: string;
+    examGoals?: string;
+  }) => Promise<ActionResult>;
   startQuizSession: (materialIds: string[], totalQuestions: 10 | 20 | 30, variant?: string) => Promise<{ ok: true; session: StartQuizResult } | { ok: false; message: string }>;
   startRecoverySession: () => Promise<{ ok: true; session: StartQuizResult } | { ok: false; message: string }>;
   completeQuizSession: (sessionId: string, answers: (number | null)[], idempotencyKey: string) => Promise<{ ok: true; attempt: CompleteQuizResult } | { ok: false; message: string }>;
@@ -452,6 +468,7 @@ export function AppProvider({
   });
 
   const updateLevelMutation = useUpdateLevel();
+  const completeOnboardingMutation = useCompleteOnboarding();
   const requestUploadMutation = useRequestUploadUrl();
   const retryMaterialAnalysisMutation = useRetryMaterialAnalysis();
   const finalizeMaterialMutation = useFinalizeMaterial();
@@ -522,10 +539,20 @@ export function AppProvider({
     setProfileSyncError(null);
     const email = user.primaryEmailAddress?.emailAddress ?? undefined;
     const preferredUsername = accountName(user);
+    const metadata = user.unsafeMetadata as Record<string, unknown> | undefined;
+    const metadataText = (key: string) => typeof metadata?.[key] === 'string' ? String(metadata[key]).trim() : undefined;
 
     const sync = async () => {
       try {
-        const synced = await upsertProfile.mutateAsync({ data: { username: preferredUsername, email } });
+        const synced = await upsertProfile.mutateAsync({
+          data: {
+            username: preferredUsername,
+            email,
+            firstName: user.firstName?.trim() || metadataText('eduaiFirstName'),
+            lastName: user.lastName?.trim() || metadataText('eduaiLastName'),
+            birthDate: metadataText('eduaiBirthDate'),
+          },
+        });
         setProfileSeed(synced);
         setProfileSyncError(null);
         queryClient.setQueryData(getGetProfileQueryKey(), synced);
@@ -668,6 +695,28 @@ export function AppProvider({
 
   const value = useMemo<AppState>(() => ({
     level: profile?.level ?? null,
+    learnerProfile: profile ?? null,
+    onboardingComplete: Boolean(
+      profile?.firstName
+      && profile?.lastName
+      && profile?.birthDate
+      && profile?.level
+      && profile?.institutionType
+      && profile?.institutionName
+      && profile?.studyYear
+      && profile?.studyAddress,
+    ),
+    profileNeedsOnboarding: Boolean(
+      profile
+      && (!profile.firstName
+        || !profile.lastName
+        || !profile.birthDate
+        || !profile.level
+        || !profile.institutionType
+        || !profile.institutionName
+        || !profile.studyYear
+        || !profile.studyAddress),
+    ),
     // Ready once auth is loaded and either signed-out, profile present, or the
     // profile sync has errored (so the UI can render a recoverable error state
     // rather than a perpetual loading screen).
@@ -705,34 +754,9 @@ export function AppProvider({
     leaderboard: leaderboardQuery.data ?? [],
     friends: inviteQuery.data?.friends ?? [],
     inviteCode: inviteQuery.data?.inviteCode ?? profile?.inviteCode ?? '',
-    refreshing: profileQuery.isFetching
-      || materialsQuery.isFetching
-      || groupsQuery.isFetching
-      || quizzesQuery.isFetching
-      || inventoryQuery.isFetching
-      || ticketsQuery.isFetching
-      || leaderboardQuery.isFetching
-      || inviteQuery.isFetching
-       || labExercisesQuery.isFetching
-       || updateLevelMutation.isPending
-       || requestUploadMutation.isPending
-       || retryMaterialAnalysisMutation.isPending
-       || finalizeMaterialMutation.isPending
-       || createGroupMutation.isPending
-       || deleteMaterialMutation.isPending
-       || startQuizSessionMutation.isPending
-       || completeQuizSessionMutation.isPending
-       || generateFlashcardsMutation.isPending
-       || startRecoverySessionMutation.isPending
-       || quickExplanationMutation.isPending
-       || buyItemMutation.isPending
-       || equipItemMutation.isPending
-       || useLightThemeMutation.isPending
-       || createTicketMutation.isPending
-       || markTicketReadMutation.isPending
-       || useInviteMutation.isPending
-       || submitLabAttemptMutation.isPending
-       || setLabsEnabledMutation.isPending,
+    // Kept for compatibility with older screens; loading is intentionally local
+    // so a background fetch never blocks tab navigation.
+    refreshing: false,
     logout: async () => {
       await signOut();
       queryClient.clear();
@@ -741,9 +765,9 @@ export function AppProvider({
       syncAttemptedForRef.current = null;
        seenUnreadAdminMessageIdsRef.current = null;
     },
-    completeOnboarding: async (nextLevel) => {
+    completeOnboarding: async (data) => {
       try {
-        const updated = await updateLevelMutation.mutateAsync({ data: { level: nextLevel } });
+        const updated = await completeOnboardingMutation.mutateAsync({ data });
         setProfileSeed(updated);
         queryClient.setQueryData(getGetProfileQueryKey(), updated);
          await Promise.all([
@@ -755,7 +779,7 @@ export function AppProvider({
            leaderboardQuery.refetch(),
            inviteQuery.refetch(),
          ]);
-        triggerReward('livello', 'Percorso salvato', 'Il tuo percorso è pronto: puoi iniziare a studiare.');
+         triggerReward('livello', 'Profilo completato', 'Il tuo spazio di studio è pronto: puoi iniziare a studiare.');
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
@@ -1131,6 +1155,7 @@ export function AppProvider({
   }), [
     buyItemMutation,
     completeQuizSessionMutation,
+    completeOnboardingMutation,
     createGroupMutation,
     createTicketMutation,
     markTicketReadMutation,
