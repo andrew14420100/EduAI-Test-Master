@@ -21,7 +21,7 @@ Variabile opzionale:
 
 | Variabile | Default |
 | --- | --- |
-| `S3_FORCE_PATH_STYLE` | `true`; impostare `false` solo se il provider richiede URL virtual-hosted |
+| `S3_FORCE_PATH_STYLE` | `false`; impostare `true` solo se il provider richiede URL path-style |
 | `CORS_ALLOWED_ORIGINS` | nessuna origine aggiuntiva; elenco separato da virgole delle origini web autorizzate |
 
 Per mantenere i percorsi già salvati nel database, configurare anche:
@@ -44,6 +44,12 @@ autenticato dell’API e dai controlli ACL applicativi.
 - CORS che permetta `PUT` dall’app mobile/web verso l’endpoint firmato;
 - nessun accesso anonimo in lettura al prefisso `eduai-private`;
 - limite di dimensione coerente con il limite applicativo di 250 MB per audio e video.
+
+Per Cloudflare R2 usare l’endpoint radice
+`https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, `S3_REGION=auto` e lasciare
+`S3_FORCE_PATH_STYLE` non impostata (oppure impostarla a `false`). Non inserire
+il nome del bucket nell’endpoint: viene aggiunto dall’AWS SDK nello stile
+virtual-hosted previsto da R2.
 
 Le chiavi non devono essere inserite nel repository, nel file `.env` condiviso o
 nel codice. Dopo aver configurato il servizio, riavviare Render e verificare in

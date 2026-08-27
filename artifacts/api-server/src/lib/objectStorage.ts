@@ -53,7 +53,9 @@ function createClient(config: ReturnType<typeof storageConfig>) {
   return new S3Client({
     endpoint: config.endpoint,
     region: config.region,
-    forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== "false",
+    // Cloudflare R2 expects its canonical virtual-hosted endpoint by default.
+    // Other S3-compatible providers can opt into path-style URLs explicitly.
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
     credentials: {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,

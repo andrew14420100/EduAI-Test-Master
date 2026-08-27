@@ -25,6 +25,7 @@ const FAKE_STORAGE_ENV = {
   S3_SECRET_ACCESS_KEY: "smoke-secret-key",
   S3_REGION: "smoke-region",
   S3_BUCKET: "smoke-bucket",
+  S3_FORCE_PATH_STYLE: "true",
   PRIVATE_OBJECT_DIR: "/objects/private",
   PUBLIC_OBJECT_SEARCH_PATHS: "/objects/public",
 };
