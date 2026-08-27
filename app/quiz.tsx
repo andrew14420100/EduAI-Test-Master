@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +11,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
-import { CentralLoader } from '@/components/CentralLoader';
 import { IconButton, PrimaryButton } from '@/components/Ui';
 import { useApp } from '@/context/AppContext';
 import type { StartQuizResult, StudyFlashcard } from '@/context/AppContext';
@@ -431,7 +431,26 @@ export default function QuizScreen() {
 
   // FLASHCARD LOADING PHASE
   if (phase === 'flashcardLoad') {
-    return <CentralLoader message="Preparazione flashcard…" />;
+    return (
+      <ScrollView
+        style={{ backgroundColor: c.background }}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 28 }]}
+      >
+        <View style={styles.top}><IconButton name="close" label="Chiudi" onPress={close} /></View>
+        <View style={[styles.iconLarge, { backgroundColor: c.accent }]}>
+          <AppIcon name="flashcards" size={26} color={c.accentForeground} />
+        </View>
+        <Text style={[styles.kicker, { color: c.primary }]}>FLASHCARD</Text>
+        <Text style={[styles.heading, { color: c.foreground }]}>Prepariamo il tuo ripasso</Text>
+        <View style={[styles.loadingCard, { backgroundColor: c.card, borderColor: c.border }]}>
+          <ActivityIndicator size="small" color={c.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.setupCardTitle, { color: c.foreground }]}>Analisi dei materiali in corso</Text>
+            <Text style={[styles.body, { color: c.mutedForeground }]}>Le flashcard stanno prendendo forma. Puoi attendere qui senza bloccare il resto dell’app.</Text>
+          </View>
+        </View>
+      </ScrollView>
+    );
   }
 
   // FLASHCARD ERROR PHASE
@@ -600,7 +619,28 @@ export default function QuizScreen() {
 
   // LOADING PHASE
   if (phase === 'loading') {
-    return <CentralLoader message={mode === 'recovery' ? 'Preparazione del ripasso…' : 'Generazione domande…'} />;
+    return (
+      <ScrollView
+        style={{ backgroundColor: c.background }}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 28 }]}
+      >
+        <View style={styles.top}><IconButton name="close" label="Chiudi" onPress={goLibrary} /></View>
+        <View style={[styles.iconLarge, { backgroundColor: c.accent }]}>
+          <AppIcon name={mode === 'recovery' ? 'book-open' : 'question'} size={26} color={c.accentForeground} />
+        </View>
+        <Text style={[styles.kicker, { color: c.primary }]}>{mode === 'recovery' ? 'RECUPERO ERRORI' : 'VERIFICA'}</Text>
+        <Text style={[styles.heading, { color: c.foreground }]}>
+          {mode === 'recovery' ? 'Prepariamo il tuo ripasso' : 'Costruiamo la verifica'}
+        </Text>
+        <View style={[styles.loadingCard, { backgroundColor: c.card, borderColor: c.border }]}>
+          <ActivityIndicator size="small" color={c.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.setupCardTitle, { color: c.foreground }]}>Generazione in corso</Text>
+            <Text style={[styles.body, { color: c.mutedForeground }]}>Stiamo organizzando domande e contenuti dai tuoi materiali.</Text>
+          </View>
+        </View>
+      </ScrollView>
+    );
   }
 
   if (phase === 'recoveryError') {
@@ -1084,6 +1124,7 @@ const styles = StyleSheet.create({
   counter: { fontFamily: 'Inter_500Medium', fontSize: 13 },
 
   loadingContainer: { flex: 1, paddingHorizontal: 20, gap: 16, alignItems: 'center', justifyContent: 'center' },
+  loadingCard: { borderWidth: 1, borderRadius: 18, padding: 17, flexDirection: 'row', gap: 13, alignItems: 'flex-start' },
 
   // Icon variants
   iconSmall: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
@@ -1155,7 +1196,8 @@ const styles = StyleSheet.create({
   timerText: { fontFamily: 'Inter_700Bold', fontSize: 14, letterSpacing: 0.5 },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   progressLabel: { fontFamily: 'Inter_500Medium', fontSize: 12 },
-  questionCard: { borderWidth: 1, borderRadius: 20, padding: 22 },
+  questionCard: { borderWidth: 1, borderRadius: 20, padding: 22, gap: 9 },
+  questionLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5 },
   questionText: { fontFamily: 'Inter_700Bold', fontSize: 17, lineHeight: 26 },
   optionsList: { gap: 10 },
   answerChip: {
