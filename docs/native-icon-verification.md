@@ -33,13 +33,34 @@ iOS necessari per applicare le sei scelte.
 
 Dopo l'aggiunta degli artefatti nativi, eseguire su una build installabile:
 
-1. Android: `assembleDebug`, installazione su emulatore e dispositivo reale,
-   applicazione di tutte le cinque alternative, reset allo standard, chiusura
-   forzata e riapertura.
-2. iOS: build da macOS/Xcode, verifica di tutte le sei scelte tramite
-   `setAlternateIconName`, reset allo standard, chiusura e riapertura.
-3. Dopo ogni riapertura, confrontare l'icona visualizzata con l'elemento
-   `icona_futura` equipaggiato nell'inventario server.
+La matrice seguente è il criterio di accettazione da eseguire su ciascun
+emulatore/simulatore e almeno un dispositivo reale. La prova di rifiuto può
+essere ottenuta con un bridge nativo di debug che restituisce un errore una
+volta per lo scenario; non va simulata modificando l'inventario direttamente.
 
-Le differenze tra simulatore/emulatore e dispositivo reale restano da
-registrare dopo l'esecuzione: questa macchina non consente di osservarle.
+| Piattaforma | Flusso | Rifiuto da verificare | Risultato atteso |
+| --- | --- | --- | --- |
+| Android | acquisto di una nuova icona | rifiuto del bridge dopo la risposta positiva dell'acquisto | l'acquisto resta nella collezione, l'icona precedente resta visibile e una sola `icona_futura` è equipaggiata |
+| Android | equipaggiamento di un'icona già posseduta | rifiuto del bridge dopo l'equipaggiamento server | l'inventario torna all'icona precedente, che resta visibile; il messaggio italiano offre `Riprova` |
+| Android | reset con `Icona standard originale` | rifiuto del bridge durante il ritorno a `standard` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata |
+| iOS | acquisto di una nuova icona | rifiuto della chiamata `setAlternateIconName` | stessi risultati di Android |
+| iOS | equipaggiamento di un'icona già posseduta | rifiuto della chiamata `setAlternateIconName` | stessi risultati di Android |
+| iOS | reset con `Icona standard originale` | rifiuto della chiamata con nome alternativo `nil` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata |
+
+Per ogni riga, dopo il rifiuto:
+
+1. controllare che il messaggio localizzato spieghi il problema e mostri
+   `Riprova`;
+2. premere `Riprova` dopo aver riabilitato il bridge e verificare che il nuovo
+   tentativo riesca;
+3. chiudere forzatamente e riaprire l'app;
+4. confrontare l'icona mostrata nel launcher con l'elemento `icona_futura`
+   equipaggiato nell'inventario server;
+5. verificare che non risultino mai due icone personalizzate equipaggiate.
+
+Questa macchina non consente di spuntare la matrice: non dispone di Java per
+compilare Android, di `adb`/emulatore o di macOS/Xcode per compilare e
+installare iOS. Le prove automatiche sostitutive sono invece tutte superate e
+coprono i tre rollback, l'inventario serializzato, il messaggio localizzato e
+la disponibilità del retry. Le differenze tra simulatore/emulatore e
+dispositivo reale vanno registrate quando sarà disponibile un host nativo.
