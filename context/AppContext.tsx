@@ -292,7 +292,20 @@ const shopCatalog: Omit<ShopItem, 'owned' | 'equipped' | 'ownedItemId'>[] = [
 ];
 
 function messageFromError(error: unknown) {
-  const candidate = error as { data?: { error?: string }; message?: string } | null;
+  const candidate = error as {
+    data?: { error?: string };
+    message?: string;
+    method?: string;
+    status?: number;
+    url?: string;
+  } | null;
+  if (
+    candidate?.status === 404
+    && candidate.method === 'PATCH'
+    && candidate.url?.includes('/api/profile/onboarding')
+  ) {
+    return 'Il servizio del profilo non è aggiornato. Chiudi e riapri l’app, quindi riprova. I dati inseriti sono stati conservati.';
+  }
   return candidate?.data?.error ?? candidate?.message ?? 'Operazione non riuscita. Riprova.';
 }
 
@@ -706,16 +719,17 @@ export function AppProvider({
       && profile?.studyYear
       && profile?.studyAddress,
     ),
-    profileNeedsOnboarding: Boolean(
-      profile
-      && (!profile.firstName
+     profileNeedsOnboarding: Boolean(
+       (profile
+        && (!profile.firstName
         || !profile.lastName
         || !profile.birthDate
         || !profile.level
         || !profile.institutionType
         || !profile.institutionName
         || !profile.studyYear
-        || !profile.studyAddress),
+         || !profile.studyAddress))
+       || (isSignedIn && !profile && profileSyncError),
     ),
     // Ready once auth is loaded and either signed-out, profile present, or the
     // profile sync has errored (so the UI can render a recoverable error state

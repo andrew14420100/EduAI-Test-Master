@@ -49,7 +49,7 @@ function RootLayoutNav() {
   const router = useRouter();
   const segments = useSegments();
   const { isLoaded, isSignedIn } = useAuth();
-  const { level, profileNeedsOnboarding, ready, rewardEvent, completionAnimation, dismissRewardEvent } = useApp();
+  const { level, learnerProfile, profileNeedsOnboarding, ready, rewardEvent, completionAnimation, dismissRewardEvent } = useApp();
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -64,7 +64,7 @@ function RootLayoutNav() {
       return;
     }
     if (currentRoute === 'accesso') router.replace('/(tabs)');
-  }, [isLoaded, isSignedIn, level, profileNeedsOnboarding, ready, router, segments]);
+  }, [isLoaded, isSignedIn, learnerProfile, level, profileNeedsOnboarding, ready, router, segments]);
 
   useEffect(() => {
     if (!isSignedIn || Platform.OS === 'web') return;
