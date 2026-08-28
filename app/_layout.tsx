@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -26,14 +26,20 @@ import { APP_VERSION } from '@/constants/app';
 import { useColors } from '@/hooks/useColors';
 
 SplashScreen.preventAutoHideAsync();
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+const notificationsSupported =
+  Platform.OS !== 'web' &&
+  Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+
+if (notificationsSupported) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 const queryClient = new QueryClient();
 const buildExtra = (Constants.expoConfig?.extra ?? {}) as {
   apiDomain?: string;
@@ -68,7 +74,7 @@ function RootLayoutNav() {
   }, [isLoaded, isSignedIn, learnerProfile, level, profileNeedsOnboarding, ready, router, segments]);
 
   useEffect(() => {
-    if (!isSignedIn || Platform.OS === 'web') return;
+    if (!isSignedIn || !notificationsSupported) return;
     void (async () => {
       const current = await Notifications.getPermissionsAsync();
       if (!current.granted && current.canAskAgain) {
@@ -101,7 +107,7 @@ function RootLayoutNav() {
   }, [isSignedIn]);
 
   useEffect(() => {
-    if (!isSignedIn || Platform.OS === 'web') return;
+    if (!isSignedIn || !notificationsSupported) return;
     const openTicketFromNotification = (response: Notifications.NotificationResponse) => {
       const data = response.notification.request.content.data as { type?: string; ticketId?: string } | undefined;
       if (data?.type === 'ticket-reply' && data.ticketId) {
@@ -116,7 +122,7 @@ function RootLayoutNav() {
   }, [isSignedIn, router]);
 
   useEffect(() => {
-    if (!rewardEvent || rewardEvent.kind !== 'assistenza' || Platform.OS === 'web') return;
+    if (!rewardEvent || rewardEvent.kind !== 'assistenza' || !notificationsSupported) return;
     void Notifications.scheduleNotificationAsync({
       content: {
         title: 'EduAI Test Master',
