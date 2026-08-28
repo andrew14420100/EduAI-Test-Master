@@ -7,9 +7,9 @@ Data verifica: 28 agosto 2026
 La verifica installabile richiesta da questa task non è eseguibile nell'ambiente
 corrente. Il catalogo applicativo e quello server risultano allineati sulle
 cinque alternative (`app_icon_midnight`, `app_icon_neon`,
-`app_icon_scholar`, `app_icon_aurora`, `app_icon_legend`) più l'icona standard,
-ma il progetto nativo non contiene ancora gli artefatti necessari per applicare
-le scelte.
+`app_icon_scholar`, `app_icon_aurora`, `app_icon_legend`) più l'icona standard.
+Il progetto nativo ora contiene i bridge, gli alias Android e gli asset catalog
+iOS necessari per applicare le sei scelte.
 
 ## Controlli eseguiti
 
@@ -18,11 +18,11 @@ le scelte.
 - `./android/gradlew assembleDebug`: non avviato; l'host non dispone di Java,
   quindi Gradle termina prima della compilazione.
 - `./android/gradlew --version`: stesso blocco per Java assente.
-- Android: non sono presenti `AppIconManager`, alias `activity-alias` o risorse
-  mipmap per le cinque icone alternative; il manifest dichiara soltanto
-  `@mipmap/ic_launcher`.
-- iOS: `AppIcon.appiconset` contiene soltanto l'icona standard; non risultano
-  `CFBundleAlternateIcons`, set alternativi o implementazione
+- Android: `AppIconManager` è registrato nel package React Native; il manifest
+  dichiara l'alias standard attivo e cinque alias alternativi disattivati, con
+  risorse mipmap in tutte le densità.
+- iOS: `AppIcon.appiconset` resta l'icona standard; sono presenti cinque set
+  alternativi 1024×1024, `CFBundleAlternateIcons` e l'implementazione
   `setAlternateIconName`.
 - L'host è Linux e non dispone di Xcode/macOS; non è stato possibile compilare
   né installare una build iOS.

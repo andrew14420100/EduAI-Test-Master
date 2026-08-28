@@ -18,6 +18,56 @@
     <string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+    <key>CFBundleIcons</key>
+    <dict>
+      <key>CFBundlePrimaryIcon</key>
+      <dict>
+        <key>CFBundleIconFiles</key>
+        <array>
+          <string>AppIcon</string>
+        </array>
+        <key>CFBundleIconName</key>
+        <string>AppIcon</string>
+      </dict>
+      <key>CFBundleAlternateIcons</key>
+      <dict>
+        <key>midnight</key>
+        <dict>
+          <key>CFBundleIconFiles</key>
+          <array><string>AppIcon-midnight</string></array>
+          <key>CFBundleIconName</key>
+          <string>AppIcon-midnight</string>
+        </dict>
+        <key>neon</key>
+        <dict>
+          <key>CFBundleIconFiles</key>
+          <array><string>AppIcon-neon</string></array>
+          <key>CFBundleIconName</key>
+          <string>AppIcon-neon</string>
+        </dict>
+        <key>scholar</key>
+        <dict>
+          <key>CFBundleIconFiles</key>
+          <array><string>AppIcon-scholar</string></array>
+          <key>CFBundleIconName</key>
+          <string>AppIcon-scholar</string>
+        </dict>
+        <key>aurora</key>
+        <dict>
+          <key>CFBundleIconFiles</key>
+          <array><string>AppIcon-aurora</string></array>
+          <key>CFBundleIconName</key>
+          <string>AppIcon-aurora</string>
+        </dict>
+        <key>legend</key>
+        <dict>
+          <key>CFBundleIconFiles</key>
+          <array><string>AppIcon-legend</string></array>
+          <key>CFBundleIconName</key>
+          <string>AppIcon-legend</string>
+        </dict>
+      </dict>
+    </dict>
     <key>CFBundleShortVersionString</key>
     <string>1.0.0</string>
     <key>CFBundleSignature</key>
