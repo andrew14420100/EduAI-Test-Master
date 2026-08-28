@@ -33,24 +33,16 @@ PORT = "8080"
 
 [[workflows.workflow]]
 name = "artifacts/eduai-test-master: expo"
-author = "agent"
 mode = "sequential"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = ""
 
 [workflows.workflow.metadata]
 outputType = "webview"
 artifactId = "artifacts/eduai-test-master"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm run dev"
-cwd = "./"
-waitForPort = 25427
-ensurePreviewReachable = "/status"
-router = "expo-domain"
-
-[workflows.workflow.tasks.env]
-PORT = "25427"
-BASE_PATH = "/"
 
 [[workflows.workflow]]
 name = "artifacts/mockup-sandbox: Component Preview Server"
@@ -73,6 +65,26 @@ router = "path"
 [workflows.workflow.tasks.env]
 PORT = "8081"
 BASE_PATH = "/__mockup"
+
+[[workflows.workflow]]
+name = "expo"
+author = "agent"
+mode = "sequential"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+artifactId = "artifacts/eduai-test-master"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run dev"
+waitForPort = 25427
+ensurePreviewReachable = "/status"
+router = "expo-domain"
+
+[workflows.workflow.tasks.env]
+PORT = "25427"
+BASE_PATH = "/"
 
 [agent]
 stack = "PNPM_WORKSPACE"
