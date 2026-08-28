@@ -20,6 +20,7 @@ import {
 import { requireAuth, type AuthedRequest } from "../middlewares/requireAuth";
 import { generateInviteCode } from "../lib/inviteCode";
 import { hasLabsByDefault } from "../lib/labPath";
+import { ACHIEVEMENT_BADGES, awardAchievementBadges } from "../lib/gamification";
 
 const router: IRouter = Router();
 
@@ -118,6 +119,8 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
   }
 
   try {
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
     const [existing] = await db
       .select()
       .from(profilesTable)
@@ -134,7 +137,13 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
         ...(existing.lastName ? {} : lastName?.trim() ? { lastName: lastName.trim() } : {}),
         ...(existing.birthDate ? {} : birthDate?.trim() ? { birthDate: birthDate.trim() } : {}),
       };
-      if (usernameChanged || emailChanged || Object.keys(profileDetails).length > 0) {
+      const activityChanged = existing.lastActiveDate !== today;
+      const nextStreak = !existing.lastActiveDate
+        ? Math.max(1, existing.streak)
+        : existing.lastActiveDate === yesterday
+          ? existing.streak + 1
+          : 1;
+      if (usernameChanged || emailChanged || Object.keys(profileDetails).length > 0 || activityChanged) {
         if (usernameChanged) {
           const [usernameOwner] = await db
             .select({ userId: profilesTable.userId })
@@ -152,11 +161,20 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
             ...(usernameChanged ? { username: nextUsername } : {}),
             ...(emailChanged ? { email } : {}),
             ...profileDetails,
+            ...(activityChanged ? { streak: nextStreak, lastActiveDate: today } : {}),
             updatedAt: new Date(),
           })
           .where(eq(profilesTable.userId, userId))
           .returning();
-        res.json(toPublicProfile(updated ?? existing));
+        const current = updated ?? existing;
+        if (activityChanged && nextStreak >= 3) {
+          await db.transaction((tx) => awardAchievementBadges(tx, userId, [
+            ...(nextStreak >= 3 ? [ACHIEVEMENT_BADGES.streak3] : []),
+            ...(nextStreak >= 7 ? [ACHIEVEMENT_BADGES.streak7] : []),
+            ...(nextStreak >= 30 ? [ACHIEVEMENT_BADGES.streak30] : []),
+          ]));
+        }
+        res.json(toPublicProfile(current));
       } else {
         res.json(toPublicProfile(existing));
       }
@@ -186,7 +204,8 @@ router.put("/profile", requireAuth, async (req: Request, res: Response) => {
           level: null,
           wallet: 0,
           xp: 0,
-          streak: 0,
+          streak: 1,
+          lastActiveDate: today,
           inviteCode,
         })
         .returning();

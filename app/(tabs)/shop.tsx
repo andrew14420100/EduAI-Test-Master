@@ -59,13 +59,6 @@ const CATEGORIES: {
     description: 'Appaiono sotto al tuo nome nel profilo. Equipaggiarne uno alla volta.',
     icon: 'tag',
   },
-  {
-    itemType: 'distintivo',
-    eyebrow: 'TRAGUARDI',
-    title: 'Distintivi',
-    description: 'Testimoniano i tuoi risultati. Rimangono nella collezione per sempre.',
-    icon: 'award',
-  },
 ];
 
 const EQUIPPABLE_TYPES: ShopItem['itemType'][] = ['tema', 'animazione', 'animazione_completamento', 'animazione_livello', 'animazione_streak', 'animazione_upload', 'animazione_risposta', 'animazione_sblocco', 'animazione_interfaccia', 'stile_carta', 'cornice_avatar', 'decorazione_profilo', 'titolo', 'icona_futura'];
@@ -118,12 +111,12 @@ function levelFromWallet(wallet: number): number {
 export default function ShopScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { wallet, xp, level, theme, shop, buyItem, equipItem, useLightTheme } = useApp();
+  const { wallet, xp, level, theme, shop, buyItem, equipItem, useLightTheme, useStandardIcon, appIconId, gamificationLevel, gamificationGrade } = useApp();
   const [message, setMessage] = useState<{ title: string; message: string; success: boolean } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<ShopItem['itemType']>('icona_futura');
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
-  const experienceLevel = Math.min(50, Math.floor(xp / 100) + 1);
+  const experienceLevel = gamificationLevel;
   const xpInLevel = xp % 100;
   const activeThemeItem = shop.find((item) => item.itemType === 'tema' && item.equipped);
   const activeThemeTitle = activeThemeItem?.title ?? (theme === 'light' ? 'Tema chiaro attivo' : 'Personalizzazione attiva');
@@ -206,8 +199,8 @@ export default function ShopScreen() {
             <Text style={[styles.walletText, { color: c.accentForeground }]}>{wallet}</Text>
           </View>
         </View>
-        <Pressable onPress={() => setMessage({ title: `Esperienza · Livello ${experienceLevel}`, message: `${xpInLevel}/100 XP nel livello attuale (${xpInLevel}%).\n\nGuida XP\nQuiz: +20 XP\nLaboratorio: +50 XP\nStreak: +15 XP`, success: true })} style={[styles.xpBar, { backgroundColor: c.card, borderColor: c.border }]}>
-          <View style={styles.xpHeader}><Text style={[styles.small, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {experienceLevel}</Text><Text style={[styles.small, { color: c.primary }]}>{xp} XP</Text></View>
+        <Pressable onPress={() => setMessage({ title: `Esperienza · Livello ${experienceLevel}`, message: `${xpInLevel}/100 XP nel livello attuale (${xpInLevel}%).\n\nGrado: ${gamificationGrade}\nQuiz e laboratori fanno avanzare la tua progressione.`, success: true })} style={[styles.xpBar, { backgroundColor: c.card, borderColor: c.border }]}>
+          <View style={styles.xpHeader}><Text style={[styles.small, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {experienceLevel} · {gamificationGrade}</Text><Text style={[styles.small, { color: c.primary }]}>{xp} XP</Text></View>
           <View style={[styles.track, { backgroundColor: c.secondary }]}><View style={[styles.fill, { backgroundColor: c.primary, width: `${Math.min(100, xp % 100)}%` }]} /></View>
         </Pressable>
         <Text style={[styles.intro, { color: c.mutedForeground }]}>
@@ -251,6 +244,29 @@ export default function ShopScreen() {
             </Pressable>
           ) : null}
         </View>
+
+        {selectedCategory === 'icona_futura' ? (
+          <Pressable
+            testID="icona-standard"
+            disabled={Boolean(busyId) || appIconId === null}
+            onPress={async () => {
+              setBusyId('standard-icon');
+              const result = await useStandardIcon();
+              setBusyId(null);
+              setMessage(result.ok
+                ? { title: 'Icona standard attiva', message: 'Hai ripristinato l’icona originale di EduAI Test Master.', success: true }
+                : { title: 'Icona non aggiornata', message: result.message, success: false });
+            }}
+            style={[styles.standardIconCard, { backgroundColor: c.card, borderColor: c.border, opacity: busyId ? 0.55 : 1 }]}
+          >
+            <Image source={require('@/assets/images/icon.png')} style={styles.standardIcon} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.itemTitle, { color: c.foreground }]}>Icona standard originale</Text>
+              <Text style={[styles.itemSubtitle, { color: c.mutedForeground }]}>Sempre disponibile · annulla l’icona personalizzata</Text>
+            </View>
+            {appIconId === null ? <AppIcon name="circle-check" size={18} color={c.primary} /> : null}
+          </Pressable>
+        ) : null}
 
         {/* Category picker: one horizontal row, one category visible at a time */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryPicker}>
@@ -479,6 +495,9 @@ const styles = StyleSheet.create({
   itemIcon: { width: 43, height: 43, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   shopLogo: { width: 43, height: 43, borderRadius: 14 },
   itemTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, marginBottom: 2 },
+  itemSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
+  standardIconCard: { borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  standardIcon: { width: 43, height: 43, borderRadius: 14 },
   rarity: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.1, marginBottom: 2 },
   small: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
   price: { flexDirection: 'row', alignItems: 'center', gap: 4 },

@@ -19,6 +19,9 @@ export const profilesTable = pgTable("profiles", {
   wallet: integer("wallet").notNull().default(0),
   xp: integer("xp").notNull().default(0),
   streak: integer("streak").notNull().default(0),
+  // ISO calendar date of the last authenticated activity. It makes daily
+  // streak updates idempotent across repeated bootstrap calls.
+  lastActiveDate: text("last_active_date"),
   inviteCode: text("invite_code").notNull().unique(), // stable 6-char code
   avatarObjectPath: text("avatar_object_path"),
   // Labs: true for STEM/technical paths by default, false for humanities.

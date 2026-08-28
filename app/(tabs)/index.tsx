@@ -27,6 +27,8 @@ export default function HomeScreen() {
     inviteCode,
     recoveryCount,
     useInvite,
+    gamificationLevel,
+    gamificationGrade,
   } = useApp();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [rankingTab, setRankingTab] = useState<RankingTab>('globale');
@@ -44,7 +46,7 @@ export default function HomeScreen() {
     }
     router.push({ pathname: '/quiz', params: { mode: 'recovery', title: 'Recupero Errori' } });
   };
-  const experienceLevel = Math.min(50, Math.floor(xp / 100) + 1);
+  const experienceLevel = gamificationLevel;
   const xpInLevel = xp % 100;
 
   const shareCode = async () => {
@@ -107,7 +109,7 @@ export default function HomeScreen() {
           <View style={[styles.stat, { backgroundColor: c.card }]}><Text style={[styles.statValue, { color: c.foreground }]}>{quizzes.length}</Text><Text style={[styles.statLabel, { color: c.mutedForeground }]}>verifiche</Text></View>
         </View>
         <Pressable onPress={() => setNotice({ title: `Livello ${experienceLevel}`, message: `${xpInLevel}/100 XP nel livello attuale (${xpInLevel}%).\\n\\nGuadagna XP completando quiz e laboratori e mantenendo la tua serie giornaliera.`, icon: 'award' })} style={[styles.xpCard, { backgroundColor: c.card, borderColor: c.border }]}>
-          <View style={styles.xpHeader}><Text style={[styles.statLabel, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {experienceLevel}</Text><Text style={[styles.statLabel, { color: c.primary }]}>{xp} XP</Text></View>
+          <View style={styles.xpHeader}><Text style={[styles.statLabel, { color: c.mutedForeground }]}>ESPERIENZA · LIVELLO {experienceLevel} · {gamificationGrade}</Text><Text style={[styles.statLabel, { color: c.primary }]}>{xp} XP</Text></View>
           <View style={[styles.track, { backgroundColor: c.secondary }]}><View style={[styles.fill, { backgroundColor: c.primary, width: `${Math.min(100, xp % 100)}%` }]} /></View>
         </Pressable>
 

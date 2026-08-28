@@ -52,14 +52,6 @@ const SHOP_CATALOG: Record<string, CatalogEntry> = {
   title_maestro:    { itemType: "titolo",    price: 130 },
   title_leggenda:   { itemType: "titolo",    price: 200 },
   title_professore: { itemType: "titolo",    price: 160 },
-  // Distintivi
-  badge_first_pass:   { itemType: "distintivo", price: 10  },
-  badge_streak7:      { itemType: "distintivo", price: 40  },
-  badge_100:          { itemType: "distintivo", price: 60  },
-  badge_error_hunter: { itemType: "distintivo", price: 80  },
-  badge_speed:        { itemType: "distintivo", price: 100 },
-  badge_library:      { itemType: "distintivo", price: 120 },
-  badge_grandmaster:  { itemType: "distintivo", price: 250 },
   // Loghi profilo, disponibili immediatamente come personalizzazione equipaggiabile
   app_icon_midnight: { itemType: "icona_futura", price: 110 },
   app_icon_neon:     { itemType: "icona_futura", price: 140 },
@@ -81,6 +73,33 @@ async function lockUserThemeSelection(
     sql`SELECT pg_advisory_xact_lock(hashtext(${userId}))`,
   );
 }
+
+/**
+ * POST /shop/icons/use-standard — restore the original launcher icon.
+ * The standard icon is free and never creates an inventory row.
+ */
+router.post(
+  "/shop/icons/use-standard",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthedRequest).clerkUserId;
+    try {
+      await db
+        .update(ownedShopItemsTable)
+        .set({ equipped: false })
+        .where(
+          and(
+            eq(ownedShopItemsTable.userId, userId),
+            eq(ownedShopItemsTable.itemType, "icona_futura"),
+          ),
+        );
+      res.status(204).end();
+    } catch (err) {
+      req.log.error({ err }, "Errore ripristino icona standard");
+      res.status(500).json({ error: "Impossibile ripristinare l’icona standard" });
+    }
+  },
+);
 
 /**
  * GET /shop/inventory — get owned/equipped items for current user

@@ -93,6 +93,9 @@ export default function QuizScreen() {
     wallet,
     shop,
     completionAnimation,
+    gamificationLevel,
+    gamificationGrade,
+    badges,
     startQuizSession,
     startRecoverySession,
     completeQuizSession,
@@ -1076,6 +1079,12 @@ export default function QuizScreen() {
           {passed ? 'SUPERATO' : 'NON SUPERATO'}
         </Text>
         <Text style={[styles.heading, { color: c.foreground }]}>{quizTitle}</Text>
+        <View style={[styles.noticeBanner, { backgroundColor: c.accent, borderColor: c.border }]}>
+          <AppIcon name="award" size={17} color={c.accentForeground} />
+          <Text style={[styles.noticeText, { color: c.accentForeground }]}>
+            Livello {gamificationLevel} · {gamificationGrade}{badges.length ? ` · ${badges.length} distintivi ottenuti` : ''}
+          </Text>
+        </View>
 
         {/* Percentage circle */}
         <View style={[styles.scoreBadge, { backgroundColor: c.card, borderColor: passed ? c.primary : c.destructive }]}>

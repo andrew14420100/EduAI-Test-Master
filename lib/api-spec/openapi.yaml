@@ -911,6 +911,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
 
+  /shop/icons/use-standard:
+    post:
+      operationId: useStandardAppIcon
+      tags: [shop]
+      summary: Restore the original launcher icon
+      responses:
+        "204":
+          description: The standard icon is active
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   /labs/exercises:
     get:
       operationId: listLabExercises

@@ -65,6 +65,13 @@ import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 import { ThemeProvider, type AppTheme } from '@/context/ThemeContext';
+import {
+  GAMIFICATION_BADGES,
+  gamificationGradeFromXp,
+  gamificationLevelFromXp,
+  type GamificationBadge,
+} from '@/constants/progression';
+import { setNativeAppIcon, type NativeAppIconId } from '@/lib/nativeAppIcon';
 
 const configuredApiDomain = process.env.EXPO_PUBLIC_API_URL
   || process.env.EXPO_PUBLIC_DOMAIN
@@ -173,6 +180,11 @@ type AppState = {
   materials: Material[];
   studyGroups: StudyGroup[];
   shop: ShopItem[];
+  badges: GamificationBadge[];
+  gamificationLevel: number;
+  gamificationGrade: string;
+  appIconId: string | null;
+  useStandardIcon: () => Promise<ActionResult>;
   completionAnimation: string | null;
   rewardEvent: RewardEvent | null;
   dismissRewardEvent: () => void;
@@ -276,15 +288,6 @@ const shopCatalog: Omit<ShopItem, 'owned' | 'equipped' | 'ownedItemId'>[] = [
   { id: 'title_professore', title: '"Il Professore"',      subtitle: 'Titolo profilo · equipaggiabile',  cost: 160, icon: 'tag',        itemType: 'titolo' },
 
   // ── DISTINTIVI SIGNIFICATIVI (pochi, guadagnati con impegno) ────────────────
-  { id: 'badge_first_pass',  title: 'Prima verifica superata', subtitle: 'Distintivo · guadagnato una volta', cost: 10,  icon: 'award',  itemType: 'distintivo' },
-  { id: 'badge_streak7',     title: 'Settimana perfetta',      subtitle: 'Distintivo · 7 giorni di studio',   cost: 40,  icon: 'flame',  itemType: 'distintivo' },
-  { id: 'badge_100',         title: 'Cento percento',          subtitle: 'Distintivo · verifica al 100%',     cost: 60,  icon: 'star',   itemType: 'distintivo' },
-  { id: 'badge_error_hunter',title: 'Cacciatore di errori',    subtitle: 'Distintivo · 50 recuperi completati', cost: 80, icon: 'shield', itemType: 'distintivo' },
-  { id: 'badge_speed',       title: 'Lampo del sapere',        subtitle: 'Distintivo · verifica in meno di 3 min', cost: 100, icon: 'zap', itemType: 'distintivo' },
-  { id: 'badge_library',     title: 'Biblioteca viva',         subtitle: 'Distintivo · 20 materiali caricati', cost: 120, icon: 'layers', itemType: 'distintivo' },
-  { id: 'badge_grandmaster', title: 'Gran Maestro',            subtitle: 'Distintivo · 500 domande corrette', cost: 250, icon: 'star',   itemType: 'distintivo' },
-
-  // ── ICONE FUTURA (launcher, prossimo aggiornamento) ──────────────────────────
   { id: 'app_icon_midnight', title: 'Icona Mezzanotte', subtitle: 'Simbolo profilo e accento · equipaggiabile', cost: 110, icon: 'moon',       itemType: 'icona_futura' },
   { id: 'app_icon_neon',     title: 'Icona Neon',       subtitle: 'Simbolo profilo e accento · equipaggiabile', cost: 140, icon: 'zap',        itemType: 'icona_futura' },
   { id: 'app_icon_scholar',  title: 'Icona Studioso',   subtitle: 'Simbolo profilo e accento · equipaggiabile', cost: 170, icon: 'award',      itemType: 'icona_futura' },
@@ -645,6 +648,16 @@ export function AppProvider({
       ownedItemId: owned?.id,
     };
   }), [inventoryQuery.data]);
+  const badges = useMemo(() => {
+    const ownedBadges = inventoryQuery.data?.filter((item) => item.itemType === 'distintivo') ?? [];
+    return ownedBadges
+      .map((item) => GAMIFICATION_BADGES.find((badge) => badge.id === item.itemId))
+      .filter((badge): badge is GamificationBadge => Boolean(badge));
+  }, [inventoryQuery.data]);
+  const equippedAppIcon = inventoryQuery.data?.find((item) => item.itemType === 'icona_futura' && item.equipped);
+  const appIconId = equippedAppIcon?.itemId ?? null;
+  const gamificationLevel = gamificationLevelFromXp(profile?.xp ?? 0);
+  const gamificationGrade = gamificationGradeFromXp(profile?.xp ?? 0);
   const completionAnimation = shop.find((item) => item.itemType.startsWith('animazione') && item.equipped)?.id ?? null;
   const serverTheme: AppTheme =
     (shop.find((item) => item.itemType === 'tema' && item.equipped)?.id as AppTheme | undefined)
@@ -697,6 +710,13 @@ export function AppProvider({
     setStoredTheme(serverTheme);
     void AsyncStorage.setItem(`eduai:theme:${user.id}`, serverTheme);
   }, [inventoryQuery.data, serverTheme, user?.id]);
+
+  useEffect(() => {
+    if (!isSignedIn || !inventoryQuery.data) return;
+    void setNativeAppIcon((appIconId ?? 'standard') as NativeAppIconId).catch((error) => {
+      if (__DEV__) console.warn('Icona launcher nativa non aggiornata', error);
+    });
+  }, [appIconId, inventoryQuery.data, isSignedIn]);
 
   useEffect(() => {
     const analysisInProgress = (materialsQuery.data ?? []).some(
@@ -752,7 +772,23 @@ export function AppProvider({
     // Ready once auth is loaded and either signed-out, profile present, or the
     // profile sync has errored (so the UI can render a recoverable error state
     // rather than a perpetual loading screen).
-    ready: Boolean(isLoaded && (!isSignedIn || profile || profileSyncError)),
+    ready: Boolean(
+      isLoaded && (
+        !isSignedIn
+        || profileSyncError
+        || (
+          profile
+          && materialsQuery.isSuccess
+          && inventoryQuery.isSuccess
+          && groupsQuery.isSuccess
+          && quizzesQuery.isSuccess
+          && recoveryQuery.isSuccess
+          && inviteQuery.isSuccess
+          && leaderboardQuery.isSuccess
+          && ticketsQuery.isSuccess
+        )
+      ),
+    ),
     account: profile ? {
       username: profile.username,
       email: user?.primaryEmailAddress?.emailAddress ?? '',
@@ -778,6 +814,10 @@ export function AppProvider({
     materials,
     studyGroups,
     shop,
+    badges,
+    gamificationLevel,
+    gamificationGrade,
+    appIconId,
     completionAnimation,
     rewardEvent,
     dismissRewardEvent: () => setRewardEvent(null),
@@ -1036,6 +1076,9 @@ export function AppProvider({
           data: { itemId: item.id },
         });
         await Promise.all([inventoryQuery.refetch(), profileQuery.refetch()]);
+        if (item.itemType === 'icona_futura') {
+          await setNativeAppIcon(item.id as NativeAppIconId);
+        }
         triggerReward('negozio', 'Premio sbloccato', 'Il nuovo oggetto è nella tua collezione.', item.id);
         return { ok: true };
       } catch (error) {
@@ -1053,6 +1096,9 @@ export function AppProvider({
           await AsyncStorage.setItem(`eduai:theme:${user.id}`, nextTheme);
           if (Platform.OS === 'web') globalThis.localStorage?.setItem('eduai:last-theme', nextTheme);
         }
+        if (item.itemType === 'icona_futura') {
+          await setNativeAppIcon(item.id as NativeAppIconId);
+        }
         await inventoryQuery.refetch();
         triggerReward('negozio', 'Oggetto equipaggiato', 'Il tuo nuovo effetto è attivo in tutta l’app.', item.id);
         return { ok: true };
@@ -1066,6 +1112,19 @@ export function AppProvider({
         setStoredTheme('light');
         if (user?.id) await AsyncStorage.setItem(`eduai:theme:${user.id}`, 'light');
         if (Platform.OS === 'web') globalThis.localStorage?.setItem('eduai:last-theme', 'light');
+        await inventoryQuery.refetch();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: messageFromError(error) };
+      }
+    },
+    useStandardIcon: async () => {
+      try {
+        await customFetch('/api/shop/icons/use-standard', {
+          method: 'POST',
+          responseType: 'auto',
+        });
+        await setNativeAppIcon('standard');
         await inventoryQuery.refetch();
         return { ok: true };
       } catch (error) {
@@ -1186,6 +1245,7 @@ export function AppProvider({
     },
   }), [
     buyItemMutation,
+    badges,
     completeQuizSessionMutation,
     completeOnboardingMutation,
     createGroupMutation,
@@ -1196,11 +1256,14 @@ export function AppProvider({
     equipItemMutation,
     finalizeMaterialMutation,
     generateFlashcardsMutation,
+    gamificationGrade,
+    gamificationLevel,
     groupsQuery,
     inventoryQuery,
     inviteQuery,
     isLoaded,
     isSignedIn,
+    appIconId,
     labAttemptsQuery,
     labExercisesQuery,
     leaderboardQuery,

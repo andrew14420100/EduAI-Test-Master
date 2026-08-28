@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { createHash, randomUUID } from "crypto";
-import { eq, sql, and, inArray, lt } from "drizzle-orm";
+import { eq, sql, and, inArray, lt, count } from "drizzle-orm";
 import {
   db,
   quizAttemptsTable,
@@ -19,6 +19,7 @@ import {
   type SourceMaterial,
 } from "../lib/contentStudy";
 import { generateExamQuestions, generateFlashcardsWithAi, generateQuickExplanation } from "../lib/studyAi";
+import { awardAchievementBadges, badgeIdsForProgress } from "../lib/gamification";
 
 const router: IRouter = Router();
 
@@ -386,6 +387,25 @@ router.post(
           totalQuestions: session.totalQuestions,
           earnedCoins,
         });
+
+        const [{ completedQuizCount }] = await tx
+          .select({ completedQuizCount: count() })
+          .from(quizAttemptsTable)
+          .where(eq(quizAttemptsTable.userId, userId));
+        const [progressProfile] = await tx
+          .select({ streak: profilesTable.streak })
+          .from(profilesTable)
+          .where(eq(profilesTable.userId, userId));
+        await awardAchievementBadges(
+          tx,
+          userId,
+          badgeIdsForProgress({
+            streak: progressProfile?.streak ?? 0,
+            score,
+            totalQuestions: session.totalQuestions,
+            completedQuizCount: Number(completedQuizCount),
+          }),
+        );
 
         if (missedStandardQuestions.length > 0) {
           for (const question of missedStandardQuestions) {

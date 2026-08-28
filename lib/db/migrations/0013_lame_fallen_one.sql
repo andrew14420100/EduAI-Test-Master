@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN "last_active_date" text;

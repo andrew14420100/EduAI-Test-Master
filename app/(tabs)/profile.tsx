@@ -51,6 +51,9 @@ export default function ProfileScreen() {
     hasLabsByDefault,
     enableLabs,
     soundEnabled,
+    badges,
+    gamificationLevel,
+    gamificationGrade,
     setSoundEnabled,
   } = useApp();
   const isAdmin = account?.email?.toLowerCase() === 'andcolaz13@gmail.com';
@@ -69,7 +72,6 @@ export default function ProfileScreen() {
   const equippedAnimation = shop.find((item) => item.itemType.startsWith('animazione') && item.equipped);
   const equippedProfileIcon = shop.find((item) => item.itemType === 'icona_futura' && item.equipped);
   const equippedProfileLogo = equippedProfileIcon ? SHOP_LOGO_SOURCES[equippedProfileIcon.id] : undefined;
-  const badges = shop.filter((item) => item.itemType === 'distintivo' && item.owned);
   const profilePulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -222,6 +224,14 @@ export default function ProfileScreen() {
         </View>
 
         <SectionTitle eyebrow="I tuoi dati" title="Riepilogo" />
+        <View style={[styles.levelCard, { backgroundColor: c.accent, borderColor: c.border }]}>
+          <AppIcon name="award" size={20} color={c.accentForeground} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.small, { color: c.accentForeground }]}>PROGRESSIONE</Text>
+            <Text style={[styles.levelTitle, { color: c.foreground }]}>Livello {gamificationLevel} · {gamificationGrade}</Text>
+            <Text style={[styles.small, { color: c.mutedForeground }]}>I distintivi si ottengono studiando, non si acquistano.</Text>
+          </View>
+        </View>
         <View style={styles.metrics}>
           <View style={[styles.metric, { backgroundColor: c.card, borderColor: statsDecoration ? c.primary : 'transparent', borderWidth: statsDecoration ? 2 : 0 }]}><Text style={[styles.metricValue, { color: c.primary }]}>{wallet}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>punti</Text></View>
           <View style={[styles.metric, { backgroundColor: c.card, borderColor: statsDecoration ? c.primary : 'transparent', borderWidth: statsDecoration ? 2 : 0 }]}><Text style={[styles.metricValue, { color: c.foreground }]}>{xp}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>XP</Text></View>
@@ -240,7 +250,7 @@ export default function ProfileScreen() {
           )) : (
             <View style={styles.emptyBadges}>
               <AppIcon name="award" size={17} color={c.mutedForeground} />
-              <Text style={[styles.small, { color: c.mutedForeground }]}>Sblocca un distintivo nel negozio per iniziare la collezione.</Text>
+              <Text style={[styles.small, { color: c.mutedForeground }]}>Completa quiz e mantieni la tua serie per ottenere distintivi.</Text>
             </View>
           )}
         </View>
@@ -468,6 +478,8 @@ const styles = StyleSheet.create({
   badgeItem: { width: '30%', minWidth: 82, alignItems: 'center', gap: 6 },
   badgeIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, lineHeight: 13, textAlign: 'center' },
+  levelCard: { borderWidth: 1, borderRadius: 17, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  levelTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, marginTop: 2, marginBottom: 3 },
   emptyBadges: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   preference: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, borderBottomWidth: 1 },
   prefIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },

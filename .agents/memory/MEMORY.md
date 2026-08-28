@@ -11,3 +11,4 @@
 - [OpenAPI generated contract drift](openapi-generated-contract-drift.md) — targeted spec regeneration can remove legacy fields absent from the spec; review and preserve unrelated generated API changes.
 - [External Render diagnostics](external-render-diagnostics.md) — Replit deployment-log queries may be empty for Render services; use Render’s own runtime logs for generic production 500s.
 - [Workflow preflight directories](workflow-preflight-directories.md) — managed restarts can fail before launch when temporary secondary-skill directories disappear; validate with direct build/typecheck instead.
+- [Native launcher icon boundary](native-launcher-icon-boundary.md) — Expo Go/web need a no-op bridge; real launcher switching belongs to checked-in Android aliases and iOS alternate icon sets.
