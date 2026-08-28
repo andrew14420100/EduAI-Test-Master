@@ -89,3 +89,6 @@ channel = "stable-25_05"
 
 [userenv.shared]
 EXPO_PUBLIC_API_URL = "https://eduai-test-master-backend.onrender.com"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-d27a1861-cb19-4765-bee5-5706e1893ee9"
