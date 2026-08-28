@@ -60,7 +60,7 @@ const SHOP_CATALOG: Record<string, CatalogEntry> = {
   badge_speed:        { itemType: "distintivo", price: 100 },
   badge_library:      { itemType: "distintivo", price: 120 },
   badge_grandmaster:  { itemType: "distintivo", price: 250 },
-  // Icone future (launcher)
+  // Loghi profilo, disponibili immediatamente come personalizzazione equipaggiabile
   app_icon_midnight: { itemType: "icona_futura", price: 110 },
   app_icon_neon:     { itemType: "icona_futura", price: 140 },
   app_icon_scholar:  { itemType: "icona_futura", price: 170 },
@@ -182,7 +182,8 @@ router.post("/shop/buy", requireAuth, async (req: Request, res: Response) => {
         throw err;
       }
 
-      // Insert ownership record
+      // Insert ownership record. Profile logos become active immediately so the
+      // selection survives a refresh without requiring a future app update.
       const [newItem] = await tx
         .insert(ownedShopItemsTable)
         .values({
@@ -190,7 +191,7 @@ router.post("/shop/buy", requireAuth, async (req: Request, res: Response) => {
           userId,
           itemId,
           itemType,
-          equipped: false,
+          equipped: itemType === "icona_futura",
         })
         .returning();
 

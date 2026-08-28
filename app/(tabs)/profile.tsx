@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Animated, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
 import { Pill, ScreenEntryLoader, SectionTitle } from '@/components/Ui';
+import { SHOP_LOGO_SOURCES } from '@/constants/shopLogos';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -67,6 +68,7 @@ export default function ProfileScreen() {
   const equippedTitle = shop.find((item) => item.itemType === 'titolo' && item.equipped);
   const equippedAnimation = shop.find((item) => item.itemType.startsWith('animazione') && item.equipped);
   const equippedProfileIcon = shop.find((item) => item.itemType === 'icona_futura' && item.equipped);
+  const equippedProfileLogo = equippedProfileIcon ? SHOP_LOGO_SOURCES[equippedProfileIcon.id] : undefined;
   const badges = shop.filter((item) => item.itemType === 'distintivo' && item.owned);
   const profilePulse = useRef(new Animated.Value(0)).current;
 
@@ -182,7 +184,13 @@ export default function ProfileScreen() {
             shadowOpacity: avatarFrame?.id === 'avatar_glow_frame' ? profilePulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.9] }) : 0,
             shadowRadius: avatarFrame?.id === 'avatar_glow_frame' ? 12 : 0,
             elevation: avatarFrame ? 5 : 0,
-          }]}><AppIcon name={profileIconFor(equippedProfileIcon?.id)} size={25} color={c.primaryForeground} /></Animated.View>
+          }]}>
+            {equippedProfileLogo ? (
+              <Image source={equippedProfileLogo} style={styles.avatarLogo} resizeMode="cover" />
+            ) : (
+              <AppIcon name={profileIconFor(equippedProfileIcon?.id)} size={25} color={c.primaryForeground} />
+            )}
+          </Animated.View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.name, { color: c.foreground }]}>{account?.username ?? 'Il tuo profilo'}</Text>
             {equippedTitle ? <Text style={[styles.equippedTitle, { color: c.primary }]}>{equippedTitle.title.replaceAll('"', '')}</Text> : null}
@@ -440,6 +448,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, gap: 18 },
   profileTop: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   avatar: { width: 62, height: 62, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  avatarLogo: { width: 62, height: 62, borderRadius: 21 },
   name: { fontFamily: 'Inter_700Bold', fontSize: 21 },
   equippedTitle: { fontFamily: 'Inter_700Bold', fontSize: 12, marginTop: 3 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 3 },

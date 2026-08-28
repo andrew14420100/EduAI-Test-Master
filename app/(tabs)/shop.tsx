@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
 import { Pill, ScreenEntryLoader, SectionTitle } from '@/components/Ui';
+import { SHOP_LOGO_SOURCES } from '@/constants/shopLogos';
 import { useApp, type ShopItem } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -365,7 +366,11 @@ function ShopItemRow({
     >
        <Animated.View pointerEvents="none" style={[styles.rarityOrb, { backgroundColor: rarityAccent, transform: [{ rotate: spinValue }] }]} />
       <View style={[styles.itemIcon, { backgroundColor: item.equipped ? c.primary : c.secondary }]}>
-        <AppIcon name={item.icon as AppIconName} size={18} color={item.equipped ? c.primaryForeground : c.foreground} />
+        {SHOP_LOGO_SOURCES[item.id] ? (
+          <Image source={SHOP_LOGO_SOURCES[item.id]} style={styles.shopLogo} resizeMode="cover" />
+        ) : (
+          <AppIcon name={item.icon as AppIconName} size={18} color={item.equipped ? c.primaryForeground : c.foreground} />
+        )}
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.itemTitle, { color: c.foreground }]}>{item.title}</Text>
@@ -409,13 +414,18 @@ function ShopPreview({ item, c }: { item: ShopItem; c: any }) {
   const isBadge = item.itemType === 'distintivo';
   const isAnimation = item.itemType.startsWith('animazione');
   const previewAccent = isTheme || isAnimation ? c.primary : c.accentForeground;
+  const logoSource = SHOP_LOGO_SOURCES[item.id];
   return (
     <View style={[styles.preview, { backgroundColor: c.secondary, borderColor: c.border }]}>
       <Text style={[styles.previewLabel, { color: c.mutedForeground }]}>ANTEPRIMA</Text>
       <View style={[styles.previewCanvas, { backgroundColor: isTheme ? c.background : c.card, borderColor: isCard || isFrame ? c.primary : c.border }]}>
         <Animated.View style={[styles.previewOrb, { backgroundColor: previewAccent, opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] }) }]} />
         <View style={[styles.previewIcon, { backgroundColor: isBadge ? c.accent : c.primary }]}>
-          <AppIcon name={item.icon as AppIconName} size={18} color={isBadge ? c.accentForeground : c.primaryForeground} />
+          {logoSource ? (
+            <Image source={logoSource} style={styles.previewLogo} resizeMode="cover" />
+          ) : (
+            <AppIcon name={item.icon as AppIconName} size={18} color={isBadge ? c.accentForeground : c.primaryForeground} />
+          )}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.previewTitle, { color: c.foreground }]} numberOfLines={1}>{item.title.replaceAll('"', '')}</Text>
@@ -467,6 +477,7 @@ const styles = StyleSheet.create({
   item: { borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8, overflow: 'hidden' },
   rarityOrb: { position: 'absolute', top: -1, right: 16, width: 52, height: 3, borderRadius: 2 },
   itemIcon: { width: 43, height: 43, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  shopLogo: { width: 43, height: 43, borderRadius: 14 },
   itemTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, marginBottom: 2 },
   rarity: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.1, marginBottom: 2 },
   small: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
@@ -477,6 +488,7 @@ const styles = StyleSheet.create({
   previewCanvas: { minHeight: 72, borderWidth: 1, borderRadius: 13, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 9, overflow: 'hidden' },
   previewOrb: { position: 'absolute', width: 90, height: 90, borderRadius: 45, right: -22, top: -32 },
   previewIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  previewLogo: { width: 38, height: 38, borderRadius: 12 },
   previewTitle: { fontFamily: 'Inter_700Bold', fontSize: 12 },
   previewBody: { fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: 3 },
 });
