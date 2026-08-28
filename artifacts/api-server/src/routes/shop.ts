@@ -84,15 +84,18 @@ router.post(
   async (req: Request, res: Response) => {
     const userId = (req as AuthedRequest).clerkUserId;
     try {
-      await db
-        .update(ownedShopItemsTable)
-        .set({ equipped: false })
-        .where(
-          and(
-            eq(ownedShopItemsTable.userId, userId),
-            eq(ownedShopItemsTable.itemType, "icona_futura"),
-          ),
-        );
+      await db.transaction(async (tx) => {
+        await lockUserThemeSelection(tx, userId);
+        await tx
+          .update(ownedShopItemsTable)
+          .set({ equipped: false })
+          .where(
+            and(
+              eq(ownedShopItemsTable.userId, userId),
+              eq(ownedShopItemsTable.itemType, "icona_futura"),
+            ),
+          );
+      });
       res.status(204).end();
     } catch (err) {
       req.log.error({ err }, "Errore ripristino icona standard");
@@ -203,6 +206,18 @@ router.post("/shop/buy", requireAuth, async (req: Request, res: Response) => {
 
       // Insert ownership record. Profile logos become active immediately so the
       // selection survives a refresh without requiring a future app update.
+      if (itemType === "icona_futura") {
+        await lockUserThemeSelection(tx, userId);
+        await tx
+          .update(ownedShopItemsTable)
+          .set({ equipped: false })
+          .where(
+            and(
+              eq(ownedShopItemsTable.userId, userId),
+              eq(ownedShopItemsTable.itemType, "icona_futura"),
+            ),
+          );
+      }
       const [newItem] = await tx
         .insert(ownedShopItemsTable)
         .values({

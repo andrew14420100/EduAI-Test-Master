@@ -71,7 +71,7 @@ import {
   gamificationLevelFromXp,
   type GamificationBadge,
 } from '@/constants/progression';
-import { setNativeAppIcon, type NativeAppIconId } from '@/lib/nativeAppIcon';
+import { NativeAppIconError, setNativeAppIcon, type NativeAppIconId } from '@/lib/nativeAppIcon';
 
 const configuredApiDomain = process.env.EXPO_PUBLIC_API_URL
   || process.env.EXPO_PUBLIC_DOMAIN
@@ -147,6 +147,13 @@ export type StudyFlashcard = Flashcard;
 
 type ActionResult = { ok: true } | { ok: false; message: string };
 type UploadProgress = (clientId: string, progress: number) => void;
+type IconSnapshot = {
+  iconId: NativeAppIconId;
+  ownedItemId?: string;
+};
+type NativeIconApplyResult =
+  | { ok: true }
+  | { ok: false; error: unknown; message: string };
 export type RewardEvent = {
   id: number;
   kind: 'accesso' | 'livello' | 'livello_successivo' | 'amico' | 'verifica' | 'flashcard' | 'laboratorio' | 'negozio' | 'ricompensa' | 'assistenza';
@@ -184,6 +191,8 @@ type AppState = {
   gamificationLevel: number;
   gamificationGrade: string;
   appIconId: string | null;
+  nativeIconError: string | null;
+  retryNativeIcon: () => Promise<ActionResult>;
   useStandardIcon: () => Promise<ActionResult>;
   completionAnimation: string | null;
   rewardEvent: RewardEvent | null;
@@ -423,6 +432,8 @@ export function AppProvider({
   const [storedTheme, setStoredTheme] = useState<AppTheme | null>(initialStoredTheme);
   const [soundEnabled, setSoundEnabledState] = useState(true);
   const [rewardEvent, setRewardEvent] = useState<RewardEvent | null>(null);
+  const [nativeIconError, setNativeIconError] = useState<string | null>(null);
+  const nativeIconTargetRef = useRef<NativeAppIconId | null>(null);
   const rewardEventIdRef = useRef(0);
   const triggerReward = (
     kind: RewardEvent['kind'],
@@ -664,6 +675,86 @@ export function AppProvider({
     ?? 'light';
   const theme: AppTheme = storedTheme ?? serverTheme;
 
+  const nativeIconReason = (error: unknown): string => {
+    const code = error instanceof NativeAppIconError ? error.code : undefined;
+    if (code === 'E_ALTERNATE_ICONS_UNAVAILABLE') {
+      return 'Questo dispositivo non supporta le icone personalizzate.';
+    }
+    if (code === 'E_INVALID_ICON') {
+      return 'Questa icona non è disponibile in questa versione dell’app.';
+    }
+    return 'Il sistema operativo non ha accettato il cambio icona.';
+  };
+
+  const nativeIconLabel = (iconId: NativeAppIconId): string => (
+    iconId === 'standard' ? 'l’icona standard' : 'l’icona selezionata'
+  );
+
+  const applyNativeIcon = async (iconId: NativeAppIconId): Promise<NativeIconApplyResult> => {
+    try {
+      await setNativeAppIcon(iconId);
+      nativeIconTargetRef.current = iconId;
+      setNativeIconError(null);
+      return { ok: true };
+    } catch (error) {
+      nativeIconTargetRef.current = null;
+      const message = `${nativeIconReason(error)} Puoi riprovare oppure usare “Icona standard originale”.`;
+      setNativeIconError(message);
+      return { ok: false, error, message };
+    }
+  };
+
+  const restoreIconSelection = async (previous: IconSnapshot): Promise<{ ok: true } | { ok: false; error: unknown }> => {
+    let rollbackError: unknown = null;
+    try {
+      if (previous.iconId === 'standard') {
+        await customFetch('/api/shop/icons/use-standard', {
+          method: 'POST',
+          responseType: 'auto',
+        });
+      } else if (previous.ownedItemId) {
+        await equipItemMutation.mutateAsync({ data: { ownedItemId: previous.ownedItemId } });
+      } else {
+        throw new Error('Impossibile identificare l’icona precedente.');
+      }
+    } catch (error) {
+      rollbackError = error;
+    }
+
+    try {
+      await setNativeAppIcon(previous.iconId);
+      nativeIconTargetRef.current = previous.iconId;
+    } catch (error) {
+      rollbackError ??= error;
+      nativeIconTargetRef.current = null;
+    }
+
+    try {
+      await Promise.all([inventoryQuery.refetch(), profileQuery.refetch()]);
+    } catch (error) {
+      rollbackError ??= error;
+    }
+
+    return rollbackError ? { ok: false, error: rollbackError } : { ok: true };
+  };
+
+  const nativeIconRecoveryMessage = (
+    operation: 'acquisto' | 'equipaggiamento' | 'ripristino',
+    requestedIcon: NativeAppIconId,
+    nativeError: unknown,
+    rollback: { ok: true } | { ok: false; error: unknown },
+  ): string => {
+    const operationMessage = operation === 'acquisto'
+      ? 'L’acquisto è stato conservato nella tua collezione e non devi pagarlo di nuovo.'
+      : operation === 'equipaggiamento'
+        ? 'L’oggetto resta nella tua collezione e l’equipaggiamento precedente è stato mantenuto.'
+        : 'L’icona personalizzata precedente è stata mantenuta.';
+    const rollbackMessage = rollback.ok
+      ? operationMessage
+      : `${operationMessage} Il ripristino automatico non è riuscito del tutto: aggiorna il negozio e usa “Icona standard originale”, quindi riprova.`;
+    return `Non è stato possibile applicare ${nativeIconLabel(requestedIcon)}. ${nativeIconReason(nativeError)} ${rollbackMessage}`;
+  };
+
   useEffect(() => {
     if (!isLoaded) return;
     if (!user?.id) {
@@ -712,10 +803,15 @@ export function AppProvider({
   }, [inventoryQuery.data, serverTheme, user?.id]);
 
   useEffect(() => {
-    if (!isSignedIn || !inventoryQuery.data) return;
-    void setNativeAppIcon((appIconId ?? 'standard') as NativeAppIconId).catch((error) => {
-      if (__DEV__) console.warn('Icona launcher nativa non aggiornata', error);
-    });
+    if (!isSignedIn) {
+      nativeIconTargetRef.current = null;
+      setNativeIconError(null);
+      return;
+    }
+    if (!inventoryQuery.data) return;
+    const target = (appIconId ?? 'standard') as NativeAppIconId;
+    if (nativeIconTargetRef.current === target) return;
+    void applyNativeIcon(target);
   }, [appIconId, inventoryQuery.data, isSignedIn]);
 
   useEffect(() => {
@@ -818,6 +914,11 @@ export function AppProvider({
     gamificationLevel,
     gamificationGrade,
     appIconId,
+    nativeIconError,
+    retryNativeIcon: async () => {
+      const result = await applyNativeIcon((appIconId ?? 'standard') as NativeAppIconId);
+      return result.ok ? { ok: true } : { ok: false, message: result.message };
+    },
     completionAnimation,
     rewardEvent,
     dismissRewardEvent: () => setRewardEvent(null),
@@ -1071,14 +1172,25 @@ export function AppProvider({
       // Only send itemId — server resolves price and type from its catalog
       const item = shopCatalog.find((candidate) => candidate.id === id);
       if (!item) return { ok: false, message: 'Oggetto non trovato.' };
+      const previousIcon: IconSnapshot = {
+        iconId: (appIconId ?? 'standard') as NativeAppIconId,
+        ownedItemId: shop.find((candidate) => candidate.id === appIconId)?.ownedItemId,
+      };
       try {
         await buyItemMutation.mutateAsync({
           data: { itemId: item.id },
         });
-        await Promise.all([inventoryQuery.refetch(), profileQuery.refetch()]);
         if (item.itemType === 'icona_futura') {
-          await setNativeAppIcon(item.id as NativeAppIconId);
+          const nativeResult = await applyNativeIcon(item.id as NativeAppIconId);
+          if (!nativeResult.ok) {
+            const rollback = await restoreIconSelection(previousIcon);
+            return {
+              ok: false,
+              message: nativeIconRecoveryMessage('acquisto', item.id as NativeAppIconId, nativeResult.error, rollback),
+            };
+          }
         }
+        await Promise.all([inventoryQuery.refetch(), profileQuery.refetch()]);
         triggerReward('negozio', 'Premio sbloccato', 'Il nuovo oggetto è nella tua collezione.', item.id);
         return { ok: true };
       } catch (error) {
@@ -1088,6 +1200,10 @@ export function AppProvider({
     equipItem: async (id) => {
       const item = shop.find((candidate) => candidate.id === id);
       if (!item?.ownedItemId) return { ok: false, message: 'Prima devi sbloccare questo oggetto.' };
+      const previousIcon: IconSnapshot = {
+        iconId: (appIconId ?? 'standard') as NativeAppIconId,
+        ownedItemId: shop.find((candidate) => candidate.id === appIconId)?.ownedItemId,
+      };
       try {
         await equipItemMutation.mutateAsync({ data: { ownedItemId: item.ownedItemId } });
         if (item.itemType === 'tema' && user?.id) {
@@ -1097,7 +1213,14 @@ export function AppProvider({
           if (Platform.OS === 'web') globalThis.localStorage?.setItem('eduai:last-theme', nextTheme);
         }
         if (item.itemType === 'icona_futura') {
-          await setNativeAppIcon(item.id as NativeAppIconId);
+          const nativeResult = await applyNativeIcon(item.id as NativeAppIconId);
+          if (!nativeResult.ok) {
+            const rollback = await restoreIconSelection(previousIcon);
+            return {
+              ok: false,
+              message: nativeIconRecoveryMessage('equipaggiamento', item.id as NativeAppIconId, nativeResult.error, rollback),
+            };
+          }
         }
         await inventoryQuery.refetch();
         triggerReward('negozio', 'Oggetto equipaggiato', 'Il tuo nuovo effetto è attivo in tutta l’app.', item.id);
@@ -1119,12 +1242,23 @@ export function AppProvider({
       }
     },
     useStandardIcon: async () => {
+      const previousIcon: IconSnapshot = {
+        iconId: (appIconId ?? 'standard') as NativeAppIconId,
+        ownedItemId: shop.find((candidate) => candidate.id === appIconId)?.ownedItemId,
+      };
       try {
         await customFetch('/api/shop/icons/use-standard', {
           method: 'POST',
           responseType: 'auto',
         });
-        await setNativeAppIcon('standard');
+        const nativeResult = await applyNativeIcon('standard');
+        if (!nativeResult.ok) {
+          const rollback = await restoreIconSelection(previousIcon);
+          return {
+            ok: false,
+            message: nativeIconRecoveryMessage('ripristino', 'standard', nativeResult.error, rollback),
+          };
+        }
         await inventoryQuery.refetch();
         return { ok: true };
       } catch (error) {
@@ -1264,6 +1398,7 @@ export function AppProvider({
     isLoaded,
     isSignedIn,
     appIconId,
+    nativeIconError,
     labAttemptsQuery,
     labExercisesQuery,
     leaderboardQuery,

@@ -111,7 +111,22 @@ function levelFromWallet(wallet: number): number {
 export default function ShopScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { wallet, xp, level, theme, shop, buyItem, equipItem, useLightTheme, useStandardIcon, appIconId, gamificationLevel, gamificationGrade } = useApp();
+  const {
+    wallet,
+    xp,
+    level,
+    theme,
+    shop,
+    buyItem,
+    equipItem,
+    useLightTheme,
+    useStandardIcon,
+    appIconId,
+    nativeIconError,
+    retryNativeIcon,
+    gamificationLevel,
+    gamificationGrade,
+  } = useApp();
   const [message, setMessage] = useState<{ title: string; message: string; success: boolean } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<ShopItem['itemType']>('icona_futura');
@@ -137,7 +152,11 @@ export default function ShopScreen() {
         setBusyId(null);
         setMessage(result.ok
           ? { title: 'Equipaggiato', message: `${title} è ora attivo.`, success: true }
-          : { title: 'Operazione non riuscita', message: result.message, success: false });
+          : {
+              title: selected?.itemType === 'icona_futura' ? 'Icona non applicata' : 'Operazione non riuscita',
+              message: result.message,
+              success: false,
+            });
         return;
       }
       return;
@@ -157,7 +176,11 @@ export default function ShopScreen() {
     setBusyId(null);
     setMessage(result.ok
       ? { title: 'Sbloccato!', message: `${title} è stato aggiunto alla tua collezione.`, success: true }
-      : { title: 'Acquisto non riuscito', message: result.message, success: false });
+      : {
+          title: selected?.itemType === 'icona_futura' ? 'Icona non applicata' : 'Acquisto non riuscito',
+          message: result.message,
+          success: false,
+        });
   };
 
   const darkTheme = shop.find((item) => item.id === 'dark');
@@ -246,26 +269,54 @@ export default function ShopScreen() {
         </View>
 
         {selectedCategory === 'icona_futura' ? (
-          <Pressable
-            testID="icona-standard"
-            disabled={Boolean(busyId) || appIconId === null}
-            onPress={async () => {
-              setBusyId('standard-icon');
-              const result = await useStandardIcon();
-              setBusyId(null);
-              setMessage(result.ok
-                ? { title: 'Icona standard attiva', message: 'Hai ripristinato l’icona originale di EduAI Test Master.', success: true }
-                : { title: 'Icona non aggiornata', message: result.message, success: false });
-            }}
-            style={[styles.standardIconCard, { backgroundColor: c.card, borderColor: c.border, opacity: busyId ? 0.55 : 1 }]}
-          >
-            <Image source={require('@/assets/images/icon.png')} style={styles.standardIcon} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.itemTitle, { color: c.foreground }]}>Icona standard originale</Text>
-              <Text style={[styles.itemSubtitle, { color: c.mutedForeground }]}>Sempre disponibile · annulla l’icona personalizzata</Text>
-            </View>
-            {appIconId === null ? <AppIcon name="circle-check" size={18} color={c.primary} /> : null}
-          </Pressable>
+          <>
+            {nativeIconError ? (
+              <View testID="recupero-icona" style={[styles.iconRecovery, { backgroundColor: c.card, borderColor: c.accent }]}>
+                <View style={[styles.iconRecoveryMark, { backgroundColor: c.accent }]}>
+                  <AppIcon name="warning" size={16} color={c.accentForeground} />
+                </View>
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text style={[styles.itemTitle, { color: c.foreground }]}>Icona non applicata</Text>
+                  <Text style={[styles.itemSubtitle, { color: c.mutedForeground }]}>{nativeIconError}</Text>
+                </View>
+                <Pressable
+                  testID="riprova-icona"
+                  disabled={Boolean(busyId)}
+                  onPress={async () => {
+                    setBusyId('native-icon-retry');
+                    const result = await retryNativeIcon();
+                    setBusyId(null);
+                    setMessage(result.ok
+                      ? { title: 'Icona aggiornata', message: 'L’icona selezionata è ora attiva.', success: true }
+                      : { title: 'Icona ancora non applicata', message: result.message, success: false });
+                  }}
+                  style={({ pressed }) => [styles.retryIconButton, { backgroundColor: c.primary, opacity: busyId ? 0.5 : pressed ? 0.75 : 1 }]}
+                >
+                  {busyId === 'native-icon-retry' ? <ActivityIndicator size="small" color={c.primaryForeground} /> : <Text style={[styles.retryIconText, { color: c.primaryForeground }]}>Riprova</Text>}
+                </Pressable>
+              </View>
+            ) : null}
+            <Pressable
+              testID="icona-standard"
+              disabled={Boolean(busyId) || appIconId === null}
+              onPress={async () => {
+                setBusyId('standard-icon');
+                const result = await useStandardIcon();
+                setBusyId(null);
+                setMessage(result.ok
+                  ? { title: 'Icona standard attiva', message: 'Hai ripristinato l’icona originale di EduAI Test Master.', success: true }
+                  : { title: 'Icona non aggiornata', message: result.message, success: false });
+              }}
+              style={[styles.standardIconCard, { backgroundColor: c.card, borderColor: c.border, opacity: busyId ? 0.55 : 1 }]}
+            >
+              <Image source={require('@/assets/images/icon.png')} style={styles.standardIcon} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.itemTitle, { color: c.foreground }]}>Icona standard originale</Text>
+                <Text style={[styles.itemSubtitle, { color: c.mutedForeground }]}>Sempre disponibile · annulla l’icona personalizzata</Text>
+              </View>
+              {appIconId === null ? <AppIcon name="circle-check" size={18} color={c.primary} /> : null}
+            </Pressable>
+          </>
         ) : null}
 
         {/* Category picker: one horizontal row, one category visible at a time */}
@@ -497,6 +548,10 @@ const styles = StyleSheet.create({
   itemTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, marginBottom: 2 },
   itemSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
   standardIconCard: { borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  iconRecovery: { borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  iconRecoveryMark: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  retryIconButton: { borderRadius: 11, paddingHorizontal: 11, paddingVertical: 9, minWidth: 61, alignItems: 'center' },
+  retryIconText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
   standardIcon: { width: 43, height: 43, borderRadius: 14 },
   rarity: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.1, marginBottom: 2 },
   small: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },

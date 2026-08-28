@@ -8,6 +8,25 @@ export type NativeAppIconId =
   | 'app_icon_aurora'
   | 'app_icon_legend';
 
+type NativeAppIconBridgeError = {
+  code?: unknown;
+  message?: unknown;
+};
+
+export class NativeAppIconError extends Error {
+  readonly code: string | undefined;
+  readonly iconId: NativeAppIconId;
+
+  constructor(iconId: NativeAppIconId, error: unknown) {
+    const bridgeError = error as NativeAppIconBridgeError | null;
+    const message = typeof bridgeError?.message === 'string' ? bridgeError.message : undefined;
+    super(message ?? 'Native launcher icon update failed.');
+    this.name = 'NativeAppIconError';
+    this.code = typeof bridgeError?.code === 'string' ? bridgeError.code : undefined;
+    this.iconId = iconId;
+  }
+}
+
 const nativeManager = NativeModules.AppIconManager as
   | { setIcon: (iconId: NativeAppIconId) => Promise<void> }
   | undefined;
@@ -18,5 +37,9 @@ const nativeManager = NativeModules.AppIconManager as
  */
 export async function setNativeAppIcon(iconId: NativeAppIconId) {
   if (Platform.OS === 'web' || !nativeManager) return;
-  await nativeManager.setIcon(iconId);
+  try {
+    await nativeManager.setIcon(iconId);
+  } catch (error) {
+    throw new NativeAppIconError(iconId, error);
+  }
 }
