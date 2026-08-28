@@ -21,6 +21,9 @@ iOS necessari per applicare le sei scelte.
 - `./android/gradlew assembleDebug`: bloccato prima della compilazione; l'host
   non dispone di Java (`JAVA_HOME` non impostato e comando `java` assente).
 - `./android/gradlew --version`: stesso blocco per Java assente.
+- `eas whoami`: bloccato perché questo workspace non è autenticato a EAS; non è
+  quindi disponibile nemmeno una build cloud da installare durante questa
+  sessione.
 - Android: `AppIconManager` è registrato nel package React Native; il manifest
   dichiara l'alias standard attivo e cinque alias alternativi disattivati, con
   risorse mipmap in tutte le densità.
@@ -49,6 +52,21 @@ volta per lo scenario; non va simulata modificando l'inventario direttamente.
 | iOS | acquisto di una nuova icona | rifiuto della chiamata `setAlternateIconName` | stessi risultati di Android | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
 | iOS | equipaggiamento di un'icona già posseduta | rifiuto della chiamata `setAlternateIconName` | stessi risultati di Android | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
 | iOS | reset con `Icona standard originale` | rifiuto della chiamata con nome alternativo `nil` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
+
+### Evidenza per host installabile
+
+Le celle `N/E` significano “non eseguito”: non rappresentano un esito
+negativo del prodotto, ma l'assenza dell'host nativo richiesto. Questa matrice
+separa esplicitamente simulatore/emulatore e dispositivo reale, così ogni
+installazione futura può essere registrata senza sostituire l'evidenza
+automatica con una prova indiretta.
+
+| Piattaforma | Host | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + inventario server |
+| --- | --- | --- | --- | --- | --- |
+| Android | Emulatore | N/E — Java/ADB/emulatore assenti | N/E — Java/ADB/emulatore assenti | N/E — Java/ADB/emulatore assenti | N/E — nessuna build installata |
+| Android | Dispositivo reale | N/E — Java/ADB assenti | N/E — Java/ADB assenti | N/E — Java/ADB assenti | N/E — nessuna build installata |
+| iOS | Simulatore | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — nessuna build installata |
+| iOS | Dispositivo reale | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — nessuna build installata |
 
 Per ogni riga, dopo il rifiuto:
 
