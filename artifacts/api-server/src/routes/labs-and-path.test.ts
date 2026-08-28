@@ -154,6 +154,24 @@ test("onboarding locks the selected path in the client", () => {
   );
 });
 
+test("onboarding keeps the draft and retries the same save after an API failure", () => {
+  assert.match(
+    onboardingSource,
+    /AsyncStorage\.setItem\(draftKey, JSON\.stringify\(draft\)\)/,
+    "the form must persist the current draft locally",
+  );
+  assert.match(
+    onboardingSource,
+    /label: 'Riprova'[\s\S]*void save\(\)/,
+    "the error action must retry the onboarding save",
+  );
+  assert.match(
+    onboardingSource,
+    /if \(result\.ok\)[\s\S]*?router\.replace\('\/\(tabs\)'/,
+    "the app must navigate only after the server confirms the save",
+  );
+});
+
 test("humanities paths stay opt-in while STEM paths keep labs by default", () => {
   assert.equal(hasLabsByDefault("Liceo Classico"), false);
   assert.equal(hasLabsByDefault("Liceo Scientifico"), true);
