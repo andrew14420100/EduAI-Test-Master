@@ -12,7 +12,14 @@ expo-env.d.ts
 # Native
 ios/
 android/
+# The native projects are checked in because launcher bridges and assets are
+# part of the installable app, not generated-only build output.
+!ios/
+!ios/**
+!android/
+!android/**
 *.orig.*
+*.keystore
 *.jks
 *.p8
 *.p12

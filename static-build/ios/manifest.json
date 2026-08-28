@@ -1,0 +1,127 @@
+{
+  "id": "9d194a2a-866c-45f0-9497-db8c8d1cf13c",
+  "createdAt": "2026-08-28T16:38:44.936Z",
+  "runtimeVersion": "exposdk:54.0.0",
+  "launchAsset": {
+    "key": "bundle-1787935124936-6964",
+    "contentType": "application/javascript",
+    "url": "https://d3f911c4-65c0-4974-a87e-4b529a43f26d-00-5762ic8pkwbr.archer.replit.dev/1787935124936-6964/_expo/static/js/ios/bundle.js"
+  },
+  "assets": [],
+  "metadata": {},
+  "extra": {
+    "eas": {
+      "projectId": "29a57756-a3be-490c-ba3e-410d2ea15f7c"
+    },
+    "expoClient": {
+      "name": "EduAI Test Master",
+      "slug": "eduai-test-master",
+      "version": "1.3.0",
+      "orientation": "portrait",
+      "icon": "./assets/images/icon.png",
+      "scheme": "eduai-test-master",
+      "userInterfaceStyle": "light",
+      "newArchEnabled": true,
+      "splash": {
+        "image": "./assets/images/icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#08111F",
+        "imageUrl": "http://127.0.0.1:8081/assets/./assets/images/icon.png"
+      },
+      "ios": {
+        "supportsTablet": false
+      },
+      "android": {
+        "package": "com.eduai.testmaster",
+        "versionCode": 5
+      },
+      "web": {
+        "favicon": "./assets/images/icon.png"
+      },
+      "plugins": [
+        [
+          "expo-router",
+          {
+            "origin": "https://replit.com/"
+          }
+        ],
+        "expo-font",
+        "expo-web-browser",
+        "expo-secure-store",
+        "expo-notifications",
+        [
+          "expo-build-properties",
+          {
+            "android": {
+              "packagingOptions": {
+                "exclude": [
+                  "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+                ]
+              }
+            }
+          }
+        ]
+      ],
+      "experiments": {
+        "typedRoutes": true,
+        "reactCompiler": true
+      },
+      "extra": {
+        "apiDomain": "https://eduai-test-master-backend.onrender.com",
+        "clerkPublishableKey": "pk_test_dHJ1c3RlZC1xdWV0emFsLTk4NjMuY2xlcmsuYWNjb3VudHMuZGV2JA",
+        "clerkProxyUrl": "",
+        "eas": {
+          "projectId": "29a57756-a3be-490c-ba3e-410d2ea15f7c"
+        },
+        "router": {
+          "origin": "https://replit.com/"
+        }
+      },
+      "_internal": {
+        "isDebug": false,
+        "projectRoot": "/home/runner/workspace",
+        "dynamicConfigPath": {},
+        "staticConfigPath": "/home/runner/workspace/app.json",
+        "packageJsonPath": "/home/runner/workspace/package.json",
+        "pluginHistory": {
+          "expo-font": {
+            "name": "expo-font",
+            "version": "14.0.12"
+          },
+          "expo-web-browser": {
+            "name": "expo-web-browser",
+            "version": "15.0.11"
+          },
+          "expo-secure-store": {
+            "name": "expo-secure-store",
+            "version": "15.0.8"
+          },
+          "expo-notifications": {
+            "name": "expo-notifications",
+            "version": "0.32.17"
+          }
+        }
+      },
+      "sdkVersion": "54.0.0",
+      "platforms": [
+        "ios",
+        "android",
+        "web"
+      ],
+      "iconUrl": "http://127.0.0.1:8081/assets/./assets/images/icon.png",
+      "hostUri": "d3f911c4-65c0-4974-a87e-4b529a43f26d-00-5762ic8pkwbr.archer.replit.dev/ios"
+    },
+    "expoGo": {
+      "debuggerHost": "d3f911c4-65c0-4974-a87e-4b529a43f26d-00-5762ic8pkwbr.archer.replit.dev/ios",
+      "developer": {
+        "tool": "expo-cli",
+        "projectRoot": "/home/runner/workspace"
+      },
+      "packagerOpts": {
+        "dev": false
+      },
+      "mainModuleName": "node_modules/.pnpm/expo-router@6.0.24_f186cdb29606f6898eec77ee10d8e4fb/node_modules/expo-router/entry"
+    },
+    "scopeKey": "@anonymous/eduai-test-master-1c91088d-0f2a-474f-aaad-0172c9c31c81"
+  }
+}
