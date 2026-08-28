@@ -9,6 +9,7 @@
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:native-icons": "node scripts/verify-native-icon-mapping.mjs",
+    "test:icon-recovery": "cd scripts && node --experimental-test-module-mocks ./node_modules/tsx/dist/cli.mjs --test ../scripts/native-icon-recovery.test.ts",
     "check:react-versions": "node scripts/check-react-versions.mjs",
     "test:theme-restart": "node scripts/theme-restart.mjs",
     "android": "expo run:android",

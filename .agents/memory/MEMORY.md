@@ -13,3 +13,4 @@
 - [Workflow preflight directories](workflow-preflight-directories.md) — managed restarts can fail before launch when temporary secondary-skill directories disappear; validate with direct build/typecheck instead.
 - [Replit Expo preview domain](replit-expo-preview-domain.md) — the preview proxy can say “Backend Not Configured” while Metro and the remote API are healthy; verify them separately.
 - [Native launcher icon boundary](native-launcher-icon-boundary.md) — Expo Go/web need a no-op bridge; real launcher switching belongs to checked-in Android aliases and iOS alternate icon sets.
+- [Native icon recovery tests](native-icon-recovery-tests.md) — isolate rollback orchestration so bridge rejection can be simulated across purchase, equip, and reset flows.

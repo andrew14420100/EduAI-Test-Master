@@ -71,7 +71,13 @@ import {
   gamificationLevelFromXp,
   type GamificationBadge,
 } from '@/constants/progression';
-import { NativeAppIconError, setNativeAppIcon, type NativeAppIconId } from '@/lib/nativeAppIcon';
+import { setNativeAppIcon, type NativeAppIconId } from '@/lib/nativeAppIcon';
+import {
+  nativeIconErrorMessage,
+  nativeIconRecoveryMessage,
+  restoreNativeIconSelection,
+  type IconSelectionSnapshot,
+} from '@/lib/nativeIconRecovery';
 
 const configuredApiDomain = process.env.EXPO_PUBLIC_API_URL
   || process.env.EXPO_PUBLIC_DOMAIN
@@ -147,10 +153,6 @@ export type StudyFlashcard = Flashcard;
 
 type ActionResult = { ok: true } | { ok: false; message: string };
 type UploadProgress = (clientId: string, progress: number) => void;
-type IconSnapshot = {
-  iconId: NativeAppIconId;
-  ownedItemId?: string;
-};
 type NativeIconApplyResult =
   | { ok: true }
   | { ok: false; error: unknown; message: string };
@@ -675,21 +677,6 @@ export function AppProvider({
     ?? 'light';
   const theme: AppTheme = storedTheme ?? serverTheme;
 
-  const nativeIconReason = (error: unknown): string => {
-    const code = error instanceof NativeAppIconError ? error.code : undefined;
-    if (code === 'E_ALTERNATE_ICONS_UNAVAILABLE') {
-      return 'Questo dispositivo non supporta le icone personalizzate.';
-    }
-    if (code === 'E_INVALID_ICON') {
-      return 'Questa icona non è disponibile in questa versione dell’app.';
-    }
-    return 'Il sistema operativo non ha accettato il cambio icona.';
-  };
-
-  const nativeIconLabel = (iconId: NativeAppIconId): string => (
-    iconId === 'standard' ? 'l’icona standard' : 'l’icona selezionata'
-  );
-
   const applyNativeIcon = async (iconId: NativeAppIconId): Promise<NativeIconApplyResult> => {
     try {
       await setNativeAppIcon(iconId);
@@ -698,61 +685,37 @@ export function AppProvider({
       return { ok: true };
     } catch (error) {
       nativeIconTargetRef.current = null;
-      const message = `${nativeIconReason(error)} Puoi riprovare oppure usare “Icona standard originale”.`;
+      const message = `${nativeIconErrorMessage(error)} Puoi riprovare oppure usare “Icona standard originale”.`;
       setNativeIconError(message);
       return { ok: false, error, message };
     }
   };
 
-  const restoreIconSelection = async (previous: IconSnapshot): Promise<{ ok: true } | { ok: false; error: unknown }> => {
-    let rollbackError: unknown = null;
-    try {
-      if (previous.iconId === 'standard') {
-        await customFetch('/api/shop/icons/use-standard', {
-          method: 'POST',
-          responseType: 'auto',
-        });
-      } else if (previous.ownedItemId) {
-        await equipItemMutation.mutateAsync({ data: { ownedItemId: previous.ownedItemId } });
-      } else {
-        throw new Error('Impossibile identificare l’icona precedente.');
-      }
-    } catch (error) {
-      rollbackError = error;
-    }
-
-    try {
-      await setNativeAppIcon(previous.iconId);
-      nativeIconTargetRef.current = previous.iconId;
-    } catch (error) {
-      rollbackError ??= error;
-      nativeIconTargetRef.current = null;
-    }
-
-    try {
-      await Promise.all([inventoryQuery.refetch(), profileQuery.refetch()]);
-    } catch (error) {
-      rollbackError ??= error;
-    }
-
-    return rollbackError ? { ok: false, error: rollbackError } : { ok: true };
-  };
-
-  const nativeIconRecoveryMessage = (
-    operation: 'acquisto' | 'equipaggiamento' | 'ripristino',
-    requestedIcon: NativeAppIconId,
-    nativeError: unknown,
-    rollback: { ok: true } | { ok: false; error: unknown },
-  ): string => {
-    const operationMessage = operation === 'acquisto'
-      ? 'L’acquisto è stato conservato nella tua collezione e non devi pagarlo di nuovo.'
-      : operation === 'equipaggiamento'
-        ? 'L’oggetto resta nella tua collezione e l’equipaggiamento precedente è stato mantenuto.'
-        : 'L’icona personalizzata precedente è stata mantenuta.';
-    const rollbackMessage = rollback.ok
-      ? operationMessage
-      : `${operationMessage} Il ripristino automatico non è riuscito del tutto: aggiorna il negozio e usa “Icona standard originale”, quindi riprova.`;
-    return `Non è stato possibile applicare ${nativeIconLabel(requestedIcon)}. ${nativeIconReason(nativeError)} ${rollbackMessage}`;
+  const restoreIconSelection = async (previous: IconSelectionSnapshot): Promise<{ ok: true } | { ok: false; error: unknown }> => {
+    return restoreNativeIconSelection(previous, {
+      restoreServerSelection: async () => {
+        if (previous.iconId === 'standard') {
+          await customFetch('/api/shop/icons/use-standard', {
+            method: 'POST',
+            responseType: 'auto',
+          });
+        } else if (previous.ownedItemId) {
+          await equipItemMutation.mutateAsync({ data: { ownedItemId: previous.ownedItemId } });
+        } else {
+          throw new Error('Impossibile identificare l’icona precedente.');
+        }
+      },
+      applyNativeIcon: setNativeAppIcon,
+      refresh: async () => {
+        await Promise.all([inventoryQuery.refetch(), profileQuery.refetch()]);
+      },
+      onNativeIconRestored: (iconId) => {
+        nativeIconTargetRef.current = iconId;
+      },
+      onNativeIconRestoreFailed: () => {
+        nativeIconTargetRef.current = null;
+      },
+    });
   };
 
   useEffect(() => {
@@ -1172,7 +1135,7 @@ export function AppProvider({
       // Only send itemId — server resolves price and type from its catalog
       const item = shopCatalog.find((candidate) => candidate.id === id);
       if (!item) return { ok: false, message: 'Oggetto non trovato.' };
-      const previousIcon: IconSnapshot = {
+      const previousIcon: IconSelectionSnapshot = {
         iconId: (appIconId ?? 'standard') as NativeAppIconId,
         ownedItemId: shop.find((candidate) => candidate.id === appIconId)?.ownedItemId,
       };
@@ -1200,7 +1163,7 @@ export function AppProvider({
     equipItem: async (id) => {
       const item = shop.find((candidate) => candidate.id === id);
       if (!item?.ownedItemId) return { ok: false, message: 'Prima devi sbloccare questo oggetto.' };
-      const previousIcon: IconSnapshot = {
+      const previousIcon: IconSelectionSnapshot = {
         iconId: (appIconId ?? 'standard') as NativeAppIconId,
         ownedItemId: shop.find((candidate) => candidate.id === appIconId)?.ownedItemId,
       };
@@ -1242,7 +1205,7 @@ export function AppProvider({
       }
     },
     useStandardIcon: async () => {
-      const previousIcon: IconSnapshot = {
+      const previousIcon: IconSelectionSnapshot = {
         iconId: (appIconId ?? 'standard') as NativeAppIconId,
         ownedItemId: shop.find((candidate) => candidate.id === appIconId)?.ownedItemId,
       };
