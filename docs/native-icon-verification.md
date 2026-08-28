@@ -28,6 +28,9 @@ iOS necessari per applicare le sei scelte.
 - `eas whoami`: bloccato perché questo workspace non è autenticato a EAS
   (`Not logged in`, exit code 1); non è quindi disponibile nemmeno una build
   cloud da installare durante questa sessione.
+- `xcodebuild`, `xcrun` e `simctl`: comandi assenti sull'host Linux; non è
+  possibile produrre una build `.app`/`.ipa`, avviare un simulatore iOS o
+  interrogare un dispositivo Apple collegato.
 - Android: `AppIconManager` è registrato nel package React Native; il manifest
   dichiara l'alias standard attivo e cinque alias alternativi disattivati, con
   risorse mipmap in tutte le densità.
@@ -53,9 +56,9 @@ volta per lo scenario; non va simulata modificando l'inventario direttamente.
 | Android | acquisto di una nuova icona | rifiuto del bridge dopo la risposta positiva dell'acquisto | l'acquisto resta nella collezione, l'icona precedente resta visibile e una sola `icona_futura` è equipaggiata | Non eseguito: manca build/emulatore/dispositivo |
 | Android | equipaggiamento di un'icona già posseduta | rifiuto del bridge dopo l'equipaggiamento server | l'inventario torna all'icona precedente, che resta visibile; il messaggio italiano offre `Riprova` | Non eseguito: manca build/emulatore/dispositivo |
 | Android | reset con `Icona standard originale` | rifiuto del bridge durante il ritorno a `standard` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata | Non eseguito: manca build/emulatore/dispositivo |
-| iOS | acquisto di una nuova icona | rifiuto della chiamata `setAlternateIconName` | stessi risultati di Android | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
-| iOS | equipaggiamento di un'icona già posseduta | rifiuto della chiamata `setAlternateIconName` | stessi risultati di Android | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
-| iOS | reset con `Icona standard originale` | rifiuto della chiamata con nome alternativo `nil` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
+| iOS | acquisto di una nuova icona | rifiuto della chiamata `setAlternateIconName` | l'acquisto resta nella collezione, l'icona precedente resta visibile, il messaggio localizzato contiene `Riprova` e dopo la riapertura resta una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
+| iOS | equipaggiamento di un'icona già posseduta | rifiuto della chiamata `setAlternateIconName` | l'inventario torna all'icona precedente, che resta visibile; il messaggio localizzato contiene `Riprova` e dopo la riapertura resta una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
+| iOS | reset con `Icona standard originale` | rifiuto della chiamata con nome alternativo `nil` | l'icona personalizzata precedente resta visibile; il messaggio localizzato contiene `Riprova` e dopo la riapertura l'inventario resta coerente con una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
 
 ### Evidenza per host installabile
 
@@ -71,6 +74,17 @@ automatica con una prova indiretta.
 | Android | Dispositivo reale | N/E — Java/ADB assenti | N/E — Java/ADB assenti | N/E — Java/ADB assenti | N/E — nessuna build installata |
 | iOS | Simulatore | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — nessuna build installata |
 | iOS | Dispositivo reale | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — nessuna build installata |
+
+### Matrice iOS separata
+
+Queste sono le righe iOS da compilare su un host Apple. Ogni cella è
+indipendente: un esito positivo in simulatore non sostituisce quello su
+dispositivo reale, e un flusso completato non rende superati gli altri due.
+
+| Host iOS | Build/installazione | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + inventario |
+| --- | --- | --- | --- | --- | --- |
+| Simulatore | N/E — `xcodebuild`/`xcrun`/`simctl` assenti su Linux | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova`, acquisto conservato e una sola icona custom | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessun rifiuto reale con nome `nil`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessuna build installata |
+| Dispositivo reale | N/E — `xcodebuild`/firma/dispositivo Apple assenti su Linux | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova`, acquisto conservato e una sola icona custom | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessun rifiuto reale con nome `nil`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessuna build installata |
 
 Per ogni riga, dopo il rifiuto:
 
