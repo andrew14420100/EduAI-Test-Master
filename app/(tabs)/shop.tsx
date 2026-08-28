@@ -17,6 +17,13 @@ const CATEGORIES: {
   icon: AppIconName;
 }[] = [
   {
+    itemType: 'icona_futura',
+    eyebrow: 'PERSONALIZZAZIONE',
+    title: 'Icone e accenti',
+    description: `Personalizzano il simbolo del profilo e gli accenti del tuo spazio di studio.`,
+    icon: 'star',
+  },
+  {
     itemType: 'tema',
     eyebrow: 'ASPETTO',
     title: 'Temi e palette',
@@ -58,13 +65,6 @@ const CATEGORIES: {
     title: 'Distintivi',
     description: 'Testimoniano i tuoi risultati. Rimangono nella collezione per sempre.',
     icon: 'award',
-  },
-  {
-    itemType: 'icona_futura',
-    eyebrow: 'PERSONALIZZAZIONE',
-    title: 'Icone e accenti',
-    description: `Personalizzano il simbolo del profilo e gli accenti del tuo spazio di studio.`,
-    icon: 'star',
   },
 ];
 
@@ -121,7 +121,7 @@ export default function ShopScreen() {
   const { wallet, xp, level, theme, shop, buyItem, equipItem, useLightTheme } = useApp();
   const [message, setMessage] = useState<{ title: string; message: string; success: boolean } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<ShopItem['itemType']>('tema');
+  const [selectedCategory, setSelectedCategory] = useState<ShopItem['itemType']>('icona_futura');
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
   const experienceLevel = Math.min(50, Math.floor(xp / 100) + 1);
   const xpInLevel = xp % 100;
