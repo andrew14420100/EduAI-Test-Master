@@ -19,8 +19,8 @@ const CATEGORIES: {
   {
     itemType: 'icona_futura',
     eyebrow: 'PERSONALIZZAZIONE',
-    title: 'Icone e accenti',
-    description: `Personalizzano il simbolo del profilo e gli accenti del tuo spazio di studio.`,
+    title: 'Icone launcher',
+    description: `Sostituiscono l’icona mostrata accanto ai titoli e nel profilo, con equipaggiamento immediato.`,
     icon: 'star',
   },
   {
