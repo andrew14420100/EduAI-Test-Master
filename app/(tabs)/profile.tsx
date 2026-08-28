@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
-import { Pill, SectionTitle } from '@/components/Ui';
+import { Pill, ScreenEntryLoader, SectionTitle } from '@/components/Ui';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -15,6 +15,17 @@ function ticketStatusLabel(status: string) {
   if (status === 'closed') return 'Chiuso';
   if (status === 'in_progress') return 'In lavorazione';
   return 'Aperto';
+}
+
+function profileIconFor(shopItemId?: string): AppIconName {
+  switch (shopItemId) {
+    case 'app_icon_midnight': return 'moon';
+    case 'app_icon_neon': return 'zap';
+    case 'app_icon_scholar': return 'award';
+    case 'app_icon_aurora': return 'sparkles';
+    case 'app_icon_legend': return 'star';
+    default: return 'profile';
+  }
 }
 
 export default function ProfileScreen() {
@@ -53,6 +64,23 @@ export default function ProfileScreen() {
   const [updatingSound, setUpdatingSound] = useState(false);
   const avatarFrame = shop.find((item) => item.itemType === 'cornice_avatar' && item.equipped);
   const statsDecoration = shop.find((item) => item.itemType === 'decorazione_profilo' && item.equipped);
+  const equippedTitle = shop.find((item) => item.itemType === 'titolo' && item.equipped);
+  const equippedAnimation = shop.find((item) => item.itemType.startsWith('animazione') && item.equipped);
+  const equippedProfileIcon = shop.find((item) => item.itemType === 'icona_futura' && item.equipped);
+  const badges = shop.filter((item) => item.itemType === 'distintivo' && item.owned);
+  const profilePulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!avatarFrame || avatarFrame.id !== 'avatar_glow_frame') return;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(profilePulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(profilePulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [avatarFrame, profilePulse]);
 
   useEffect(() => {
     const ticket = tickets.find((item) => item.id === ticketId);
@@ -144,10 +172,20 @@ export default function ProfileScreen() {
   return (
     <>
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 100 }]} showsVerticalScrollIndicator={false}>
+        <ScreenEntryLoader label="Carico il profilo…" />
         <View style={styles.profileTop}>
-          <View style={[styles.avatar, { backgroundColor: c.primary, borderColor: avatarFrame ? (avatarFrame.rarity === 'leggendario' ? '#C77A16' : '#8B4BC2') : 'transparent', borderWidth: avatarFrame ? 3 : 0 }]}><AppIcon name="profile" size={25} color={c.primaryForeground} /></View>
+          <Animated.View style={[styles.avatar, {
+            backgroundColor: c.primary,
+            borderColor: avatarFrame ? c.accentForeground : 'transparent',
+            borderWidth: avatarFrame ? 3 : 0,
+            shadowColor: avatarFrame ? c.primary : 'transparent',
+            shadowOpacity: avatarFrame?.id === 'avatar_glow_frame' ? profilePulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.9] }) : 0,
+            shadowRadius: avatarFrame?.id === 'avatar_glow_frame' ? 12 : 0,
+            elevation: avatarFrame ? 5 : 0,
+          }]}><AppIcon name={profileIconFor(equippedProfileIcon?.id)} size={25} color={c.primaryForeground} /></Animated.View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.name, { color: c.foreground }]}>{account?.username ?? 'Il tuo profilo'}</Text>
+            {equippedTitle ? <Text style={[styles.equippedTitle, { color: c.primary }]}>{equippedTitle.title.replaceAll('"', '')}</Text> : null}
             <Text style={[styles.subtitle, { color: c.mutedForeground }]}>{account?.email ?? 'Account EduAI'}</Text>
           </View>
           <View accessibilityLabel="Percorso bloccato" style={[styles.edit, { backgroundColor: c.card }]}><AppIcon name="shield" size={15} color={c.mutedForeground} /></View>
@@ -162,11 +200,41 @@ export default function ProfileScreen() {
           <View style={[styles.rankBadge, { backgroundColor: c.accent }]}><AppIcon name="award" size={22} color={c.accentForeground} /></View>
         </View>
 
+        <View style={[styles.effectBanner, { backgroundColor: c.accent, borderColor: c.primary }]}>
+          <View style={[styles.effectIcon, { backgroundColor: c.primary }]}>
+            <AppIcon name={equippedAnimation?.icon as AppIconName ?? 'sparkles'} size={16} color={c.primaryForeground} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.eyebrow, { color: c.accentForeground }]}>EFFETTO EQUIPAGGIATO</Text>
+            <Text style={[styles.effectTitle, { color: c.accentForeground }]}>
+              {equippedAnimation?.title ?? 'Nessuna animazione selezionata'}
+            </Text>
+          </View>
+          {equippedAnimation ? <AppIcon name="circle-check" size={16} color={c.accentForeground} /> : null}
+        </View>
+
         <SectionTitle eyebrow="I tuoi dati" title="Riepilogo" />
         <View style={styles.metrics}>
           <View style={[styles.metric, { backgroundColor: c.card, borderColor: statsDecoration ? c.primary : 'transparent', borderWidth: statsDecoration ? 2 : 0 }]}><Text style={[styles.metricValue, { color: c.primary }]}>{wallet}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>punti</Text></View>
           <View style={[styles.metric, { backgroundColor: c.card, borderColor: statsDecoration ? c.primary : 'transparent', borderWidth: statsDecoration ? 2 : 0 }]}><Text style={[styles.metricValue, { color: c.foreground }]}>{xp}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>XP</Text></View>
           <View style={[styles.metric, { backgroundColor: c.card, borderColor: statsDecoration ? c.primary : 'transparent', borderWidth: statsDecoration ? 2 : 0 }]}><Text style={[styles.metricValue, { color: c.foreground }]}>{streak}</Text><Text style={[styles.small, { color: c.mutedForeground }]}>giorni attivi</Text></View>
+        </View>
+
+        <SectionTitle eyebrow="Collezione" title="Distintivi" action={`${badges.length} sbloccati`} />
+        <View style={[styles.badgesCard, { backgroundColor: c.card, borderColor: c.border }]}>
+          {badges.length ? badges.map((badge) => (
+            <View key={badge.id} style={styles.badgeItem}>
+              <View style={[styles.badgeIcon, { backgroundColor: c.accent }]}>
+                <AppIcon name={badge.icon as AppIconName} size={16} color={c.accentForeground} />
+              </View>
+              <Text style={[styles.badgeText, { color: c.foreground }]} numberOfLines={2}>{badge.title}</Text>
+            </View>
+          )) : (
+            <View style={styles.emptyBadges}>
+              <AppIcon name="award" size={17} color={c.mutedForeground} />
+              <Text style={[styles.small, { color: c.mutedForeground }]}>Sblocca un distintivo nel negozio per iniziare la collezione.</Text>
+            </View>
+          )}
         </View>
 
         <SectionTitle eyebrow="Assistenza" title="Le tue richieste" />
@@ -373,6 +441,7 @@ const styles = StyleSheet.create({
   profileTop: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   avatar: { width: 62, height: 62, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   name: { fontFamily: 'Inter_700Bold', fontSize: 21 },
+  equippedTitle: { fontFamily: 'Inter_700Bold', fontSize: 12, marginTop: 3 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 3 },
   edit: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   rank: { borderWidth: 1, borderRadius: 20, padding: 17, flexDirection: 'row', alignItems: 'center' },
@@ -380,9 +449,17 @@ const styles = StyleSheet.create({
   rankTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, marginBottom: 4 },
   small: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
   rankBadge: { width: 52, height: 52, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  effectBanner: { borderWidth: 1, borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  effectIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  effectTitle: { fontFamily: 'Inter_700Bold', fontSize: 13 },
   metrics: { flexDirection: 'row', gap: 8 },
   metric: { flex: 1, borderRadius: 16, padding: 13 },
   metricValue: { fontFamily: 'Inter_700Bold', fontSize: 25, marginBottom: 3 },
+  badgesCard: { borderWidth: 1, borderRadius: 17, padding: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  badgeItem: { width: '30%', minWidth: 82, alignItems: 'center', gap: 6 },
+  badgeIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, lineHeight: 13, textAlign: 'center' },
+  emptyBadges: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   preference: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, borderBottomWidth: 1 },
   prefIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   prefText: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 14 },

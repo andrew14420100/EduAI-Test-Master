@@ -91,6 +91,7 @@ export default function QuizScreen() {
     materials,
     level,
     wallet,
+    shop,
     completionAnimation,
     startQuizSession,
     startRecoverySession,
@@ -108,6 +109,7 @@ export default function QuizScreen() {
   const quizTitle = titleParam ?? (materialNames.length ? materialNames[0] : 'Pacchetto di studio');
 
   const levelLabel = level ? (LEVEL_LABELS[level] ?? level) : 'base';
+  const cardStyle = shop.find((item) => item.itemType === 'stile_carta' && item.equipped)?.id ?? null;
 
   // ─── Phase state ────────────────────────────────────────────────────────────
 
@@ -706,7 +708,7 @@ export default function QuizScreen() {
         )}
 
         {/* Number of questions */}
-        <View style={[styles.setupCard, { backgroundColor: c.card, borderColor: c.border }]}>
+        <View style={[styles.setupCard, cardVisualStyle(cardStyle, c)]}>
           <View style={styles.setupCardHeader}>
             <AppIcon name="question" size={15} color={c.primary} />
             <Text style={[styles.setupCardTitle, { color: c.foreground }]}>Numero di domande</Text>
@@ -740,7 +742,7 @@ export default function QuizScreen() {
         </View>
 
         {/* Duration */}
-        <View style={[styles.setupCard, { backgroundColor: c.card, borderColor: c.border }]}>
+        <View style={[styles.setupCard, cardVisualStyle(cardStyle, c)]}>
           <View style={styles.setupCardHeader}>
             <AppIcon name="clock" size={15} color={c.primary} />
             <Text style={[styles.setupCardTitle, { color: c.foreground }]}>Durata</Text>
@@ -792,7 +794,7 @@ export default function QuizScreen() {
         </View>
 
         {/* Materials */}
-        <View style={[styles.setupCard, { backgroundColor: c.card, borderColor: c.border }]}>
+        <View style={[styles.setupCard, cardVisualStyle(cardStyle, c)]}>
           <View style={styles.setupCardHeader}>
             <AppIcon name="layers" size={15} color={c.primary} />
             <Text style={[styles.setupCardTitle, { color: c.foreground }]}>Materiali inclusi</Text>
@@ -881,7 +883,7 @@ export default function QuizScreen() {
         </View>
         <ProgressBar current={currentQ + 1} total={questions.length} color={c.primary} />
 
-        <View style={[styles.questionCard, { backgroundColor: c.card, borderColor: c.border }]}>
+        <View style={[styles.questionCard, cardVisualStyle(cardStyle, c)]}>
           <Text style={[styles.questionLabel, { color: c.primary }]}>DOMANDA {currentQ + 1}</Text>
           <Text style={[styles.questionText, { color: c.foreground }]}>{q.question}</Text>
         </View>
@@ -980,16 +982,35 @@ export default function QuizScreen() {
         </View>
 
         {phase === 'quiz' && (
-          <View testID="next-question">
-            <PrimaryButton
-              onPress={goNext}
-              icon={isLast ? 'circle-check' : 'chevron-right'}
-              disabled={isLast && chosen === null}
+          <View style={styles.quizActions}>
+            <Pressable
+              testID="previous-question"
+              accessibilityRole="button"
+              accessibilityLabel="Domanda precedente"
+              disabled={currentQ === 0}
+              onPress={() => setCurrentQ((previous) => Math.max(0, previous - 1))}
+              style={({ pressed }) => [
+                styles.backQuestionButton,
+                {
+                  backgroundColor: currentQ === 0 ? c.muted : c.secondary,
+                  borderColor: c.border,
+                  opacity: currentQ === 0 ? 0.45 : pressed ? 0.72 : 1,
+                },
+              ]}
             >
-              {isLast
-                ? chosen === null ? 'Consegna senza risposta' : 'Vedi i risultati'
-                : chosen === null ? 'Salta domanda' : 'Prossima domanda'}
-            </PrimaryButton>
+              <View style={{ transform: [{ rotate: '180deg' }] }}>
+                <AppIcon name="chevron-right" size={17} color={currentQ === 0 ? c.mutedForeground : c.foreground} />
+              </View>
+              <Text style={[styles.backQuestionText, { color: currentQ === 0 ? c.mutedForeground : c.foreground }]}>Indietro</Text>
+            </Pressable>
+            <View testID="next-question" style={styles.nextQuestionButton}>
+              <PrimaryButton
+                onPress={goNext}
+                icon={isLast ? 'circle-check' : 'chevron-right'}
+              >
+                {isLast ? 'Vedi i risultati' : chosen === null ? 'Salta domanda' : 'Prossima domanda'}
+              </PrimaryButton>
+            </View>
           </View>
         )}
 
@@ -1117,10 +1138,33 @@ export default function QuizScreen() {
   return null;
 }
 
+function cardVisualStyle(cardStyle: string | null, c: ReturnType<typeof useColors>) {
+  if (cardStyle === 'card_neon') {
+    return { backgroundColor: c.card, borderColor: c.primary, borderWidth: 2, shadowColor: c.primary, shadowOpacity: 0.22, shadowRadius: 10, elevation: 3 };
+  }
+  if (cardStyle === 'card_gradient') {
+    return { backgroundColor: c.accent, borderColor: c.primary, borderWidth: 1 };
+  }
+  if (cardStyle === 'card_glass') {
+    return { backgroundColor: c.background, borderColor: c.border, borderWidth: 1, opacity: 0.94 };
+  }
+  if (cardStyle === 'card_paper') {
+    return { backgroundColor: c.secondary, borderColor: c.primary, borderWidth: 1 };
+  }
+  if (cardStyle === 'card_minimal') {
+    return { backgroundColor: c.card, borderColor: c.border, borderWidth: 1 };
+  }
+  return { backgroundColor: c.card, borderColor: c.border };
+}
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, gap: 16 },
+  quizActions: { flexDirection: 'row', alignItems: 'stretch', gap: 10 },
+  backQuestionButton: { minHeight: 54, borderRadius: 16, borderWidth: 1, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  backQuestionText: { fontFamily: 'Inter_700Bold', fontSize: 13 },
+  nextQuestionButton: { flex: 1 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   counter: { fontFamily: 'Inter_500Medium', fontSize: 13 },
 

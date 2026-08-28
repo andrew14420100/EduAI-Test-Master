@@ -1,6 +1,15 @@
 import React, { createContext, type ReactNode, useContext } from 'react';
 
-export type AppTheme = 'light' | 'dark';
+export type AppTheme =
+  | 'light'
+  | 'dark'
+  | 'neon'
+  | 'ocean'
+  | 'forest'
+  | 'sunset'
+  | 'midnight'
+  | 'ember'
+  | 'arctic';
 
 const ThemeContext = createContext<AppTheme>('light');
 

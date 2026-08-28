@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppIcon, AppIconName } from '@/components/AppIcon';
 import { useColors } from '@/hooks/useColors';
@@ -27,6 +27,24 @@ export function PrimaryButton({ children, onPress, disabled = false, icon = 'arr
   );
 }
 
+export function ScreenEntryLoader({ label = 'Aggiornamento…' }: { label?: string }) {
+  const c = useColors();
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(false), 360);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!visible) return null;
+  return (
+    <View pointerEvents="none" style={[styles.entryLoader, { backgroundColor: c.card, borderColor: c.border }]}>
+      <ActivityIndicator size="small" color={c.primary} />
+      <Text style={[styles.entryLoaderText, { color: c.mutedForeground }]}>{label}</Text>
+    </View>
+  );
+}
+
 export function SectionTitle({ eyebrow, title, action }: { eyebrow?: string; title: string; action?: string }) {
   const c = useColors();
   return <View style={styles.sectionTitle}><View><Text style={[styles.eyebrow, { color: c.primary }]}>{eyebrow}</Text><Text style={[styles.title, { color: c.foreground }]}>{title}</Text></View>{action ? <Text style={[styles.action, { color: c.mutedForeground }]}>{action}</Text> : null}</View>;
@@ -42,6 +60,8 @@ const styles = StyleSheet.create({
   eyebrow: { fontFamily: 'Inter_700Bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.6, marginBottom: 4 },
   title: { fontFamily: 'Inter_700Bold', fontSize: 23, letterSpacing: -0.5 },
   action: { fontFamily: 'Inter_500Medium', fontSize: 12, paddingBottom: 3 },
+  entryLoader: { minHeight: 38, borderWidth: 1, borderRadius: 13, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  entryLoaderText: { fontFamily: 'Inter_500Medium', fontSize: 11 },
 });
 
 export const uiStyles = styles;

@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
-import { Pill, SectionTitle } from '@/components/Ui';
+import { Pill, ScreenEntryLoader, SectionTitle } from '@/components/Ui';
 import { useApp, type ShopItem } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -60,21 +60,21 @@ const CATEGORIES: {
   },
   {
     itemType: 'icona_futura',
-    eyebrow: 'FUTURO',
-    title: 'Icone launcher',
-    description: `Icona del telefono: disponibili con il prossimo aggiornamento dell’app.`,
+    eyebrow: 'PERSONALIZZAZIONE',
+    title: 'Icone e accenti',
+    description: `Personalizzano il simbolo del profilo e gli accenti del tuo spazio di studio.`,
     icon: 'star',
   },
 ];
 
-const EQUIPPABLE_TYPES: ShopItem['itemType'][] = ['tema', 'animazione', 'animazione_completamento', 'animazione_livello', 'animazione_streak', 'animazione_upload', 'animazione_risposta', 'animazione_sblocco', 'animazione_interfaccia', 'stile_carta', 'cornice_avatar', 'decorazione_profilo', 'titolo'];
+const EQUIPPABLE_TYPES: ShopItem['itemType'][] = ['tema', 'animazione', 'animazione_completamento', 'animazione_livello', 'animazione_streak', 'animazione_upload', 'animazione_risposta', 'animazione_sblocco', 'animazione_interfaccia', 'stile_carta', 'cornice_avatar', 'decorazione_profilo', 'titolo', 'icona_futura'];
 
 function rewardDescription(item: ShopItem): string {
   if (item.itemType === 'tema') return 'Cambia immediatamente i colori e l’atmosfera dell’intera app.';
   if (item.itemType.startsWith('animazione')) return 'Effetto equipaggiabile per questo evento, con sblocco progressivo usando punti e livello.';
   if (item.itemType === 'stile_carta') return 'Modifica il modo in cui vengono visualizzate le card di materiali, quiz e laboratori.';
   if (item.itemType === 'titolo') return 'Compare sotto il tuo nome nel profilo quando lo equipaggi.';
-  if (item.itemType === 'icona_futura') return 'È una ricompensa preparata per cambiare l’icona di avvio in un futuro aggiornamento.';
+  if (item.itemType === 'icona_futura') return 'Cambia il simbolo del tuo profilo e l’accento della personalizzazione in tutta l’app.';
   return 'Resta nella tua collezione come ricordo del traguardo raggiunto.';
 }
 
@@ -124,16 +124,15 @@ export default function ShopScreen() {
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
   const experienceLevel = Math.min(50, Math.floor(xp / 100) + 1);
   const xpInLevel = xp % 100;
+  const activeThemeItem = shop.find((item) => item.itemType === 'tema' && item.equipped);
+  const activeThemeTitle = activeThemeItem?.title ?? (theme === 'light' ? 'Tema chiaro attivo' : 'Personalizzazione attiva');
+  const activeThemeIcon = activeThemeItem?.icon as AppIconName | undefined;
 
   const purchase = async (id: string, title: string, cost: number, owned: boolean) => {
     if (busyId) return;
     const selected = shop.find((item) => item.id === id);
 
     if (owned) {
-      if (selected?.itemType === 'icona_futura') {
-        setMessage({ title: 'Icona riservata', message: `${title} è nella tua collezione e potrà essere applicata con un futuro aggiornamento dell'app.`, success: true });
-        return;
-      }
       if (selected?.itemType === 'distintivo') {
         setMessage({ title: 'Già nella collezione', message: `${title} è già nel tuo profilo.`, success: true });
         return;
@@ -171,14 +170,15 @@ export default function ShopScreen() {
   const toggleTheme = async () => {
     if (!darkTheme?.owned || busyId) return;
     setBusyId('theme-toggle');
-    const result = theme === 'dark'
-      ? await useLightTheme()
-      : await equipItem(darkTheme.id);
+    const wasLight = theme === 'light';
+    const result = wasLight
+      ? await equipItem(darkTheme.id)
+      : await useLightTheme();
     setBusyId(null);
     setMessage(result.ok
       ? {
-          title: theme === 'dark' ? 'Tema chiaro attivo' : 'Tema scuro attivo',
-          message: theme === 'dark'
+           title: wasLight ? 'Tema scuro attivo' : 'Tema chiaro attivo',
+           message: wasLight
             ? `Hai ripristinato l’aspetto chiaro di EduAI.`
             : 'La modalità scura è ora attiva su tutti i tuoi dispositivi.',
           success: true,
@@ -193,6 +193,7 @@ export default function ShopScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
+        <ScreenEntryLoader label="Carico il negozio…" />
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -223,11 +224,11 @@ export default function ShopScreen() {
         {/* Active theme quick-toggle */}
         <View style={[styles.themeCard, { backgroundColor: c.card, borderColor: c.border }]}>
           <View style={[styles.themeIcon, { backgroundColor: theme === 'dark' ? c.primary : c.accent }]}>
-            <AppIcon name={theme === 'dark' ? 'moon' : 'sun'} size={19} color={theme === 'dark' ? c.primaryForeground : c.accentForeground} />
+            <AppIcon name={activeThemeIcon ?? 'sun'} size={19} color={theme === 'light' ? c.accentForeground : c.primaryForeground} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.themeLabel, { color: c.primary }]}>ASPETTO DELL'APP</Text>
-            <Text style={[styles.themeTitle, { color: c.foreground }]}>{theme === 'dark' ? 'Modalità scura attiva' : 'Tema chiaro attivo'}</Text>
+            <Text style={[styles.themeTitle, { color: c.foreground }]}>{activeThemeTitle}</Text>
             <Text style={[styles.small, { color: c.mutedForeground }]}>
               {darkTheme?.owned ? 'Puoi cambiare tema quando vuoi.' : 'Sblocca un tema dalla sezione Temi e palette.'}
             </Text>
@@ -235,16 +236,16 @@ export default function ShopScreen() {
           {darkTheme?.owned ? (
             <Pressable
               testID="interruttore-tema"
-              accessibilityLabel={theme === 'dark' ? 'Usa tema chiaro' : 'Attiva tema scuro'}
+              accessibilityLabel={theme === 'light' ? 'Attiva tema scuro' : 'Usa tema chiaro'}
               disabled={Boolean(busyId)}
               onPress={() => { void toggleTheme(); }}
               style={({ pressed }) => [
                 styles.themeButton,
-                { backgroundColor: theme === 'dark' ? c.secondary : c.primary, opacity: busyId ? 0.5 : pressed ? 0.75 : 1 },
+                { backgroundColor: theme === 'light' ? c.primary : c.secondary, opacity: busyId ? 0.5 : pressed ? 0.75 : 1 },
               ]}
             >
-              <Text style={[styles.themeButtonText, { color: theme === 'dark' ? c.secondaryForeground : c.primaryForeground }]}>
-                {theme === 'dark' ? 'Chiaro' : 'Scuro'}
+              <Text style={[styles.themeButtonText, { color: theme === 'light' ? c.primaryForeground : c.secondaryForeground }]}>
+                {theme === 'light' ? 'Scuro' : 'Chiaro'}
               </Text>
             </Pressable>
           ) : null}
@@ -294,6 +295,7 @@ export default function ShopScreen() {
         message={selectedItem ? `${selectedItem.subtitle}\n\n${rewardDescription(selectedItem)}${!selectedItem.owned && experienceLevel < requiredLevel(selectedItem) ? `\n\n🔒 Richiede Livello ${requiredLevel(selectedItem)}` : ''}` : undefined}
         icon={(selectedItem?.icon as AppIconName | undefined) ?? 'award'}
         onDismiss={() => setSelectedItem(null)}
+        children={selectedItem ? <ShopPreview item={selectedItem} c={c} /> : null}
         actions={selectedItem ? [
           { label: 'Chiudi', onPress: () => setSelectedItem(null) },
           {
@@ -372,7 +374,9 @@ function ShopItemRow({
         </Text>
         <Text style={[styles.small, { color: c.mutedForeground }]}>{item.subtitle}</Text>
       </View>
-      {item.equipped ? (
+      {busyId === item.id ? (
+        <ActivityIndicator size="small" color={c.primary} />
+      ) : item.equipped ? (
         <Pill>Attivo</Pill>
       ) : item.owned ? (
         <Pill>{equippable ? 'Equipaggia' : 'Sbloccato'}</Pill>
@@ -383,6 +387,45 @@ function ShopItemRow({
         </View>
       )}
     </Pressable>
+  );
+}
+
+function ShopPreview({ item, c }: { item: ShopItem; c: any }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+
+  const isTheme = item.itemType === 'tema';
+  const isCard = item.itemType === 'stile_carta';
+  const isFrame = item.itemType === 'cornice_avatar';
+  const isBadge = item.itemType === 'distintivo';
+  const isAnimation = item.itemType.startsWith('animazione');
+  const previewAccent = isTheme || isAnimation ? c.primary : c.accentForeground;
+  return (
+    <View style={[styles.preview, { backgroundColor: c.secondary, borderColor: c.border }]}>
+      <Text style={[styles.previewLabel, { color: c.mutedForeground }]}>ANTEPRIMA</Text>
+      <View style={[styles.previewCanvas, { backgroundColor: isTheme ? c.background : c.card, borderColor: isCard || isFrame ? c.primary : c.border }]}>
+        <Animated.View style={[styles.previewOrb, { backgroundColor: previewAccent, opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] }) }]} />
+        <View style={[styles.previewIcon, { backgroundColor: isBadge ? c.accent : c.primary }]}>
+          <AppIcon name={item.icon as AppIconName} size={18} color={isBadge ? c.accentForeground : c.primaryForeground} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.previewTitle, { color: c.foreground }]} numberOfLines={1}>{item.title.replaceAll('"', '')}</Text>
+          <Text style={[styles.previewBody, { color: c.mutedForeground }]}>
+            {isAnimation ? 'Effetto pronto all’uso' : isFrame ? 'Profilo evidenziato' : isCard ? 'Card personalizzata' : isTheme ? 'Palette applicata in tutta l’app' : isBadge ? 'Collezione traguardi' : 'Personalizzazione attiva'}
+          </Text>
+        </View>
+        <AppIcon name="circle-check" size={16} color={previewAccent} />
+      </View>
+    </View>
   );
 }
 
@@ -429,4 +472,11 @@ const styles = StyleSheet.create({
   small: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
   price: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   priceText: { fontFamily: 'Inter_700Bold', fontSize: 14 },
+  preview: { borderWidth: 1, borderRadius: 16, padding: 11, marginTop: 14 },
+  previewLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.2, marginBottom: 8 },
+  previewCanvas: { minHeight: 72, borderWidth: 1, borderRadius: 13, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 9, overflow: 'hidden' },
+  previewOrb: { position: 'absolute', width: 90, height: 90, borderRadius: 45, right: -22, top: -32 },
+  previewIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  previewTitle: { fontFamily: 'Inter_700Bold', fontSize: 12 },
+  previewBody: { fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: 3 },
 });

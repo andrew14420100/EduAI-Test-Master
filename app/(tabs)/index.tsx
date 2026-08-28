@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { AppModal } from '@/components/AppModal';
-import { IconButton, Pill, PrimaryButton, SectionTitle } from '@/components/Ui';
+import { IconButton, Pill, PrimaryButton, ScreenEntryLoader, SectionTitle } from '@/components/Ui';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -84,6 +84,7 @@ export default function HomeScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
+        <ScreenEntryLoader label="Sincronizzo il tuo spazio…" />
         <View style={styles.header}>
           <View>
             <Text style={[styles.greeting, { color: c.mutedForeground }]}>IL TUO SPAZIO DI STUDIO</Text>

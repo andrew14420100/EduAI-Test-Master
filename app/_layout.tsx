@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import Constants from 'expo-constants';
@@ -23,6 +23,7 @@ import { AppProvider, useApp } from '@/context/AppContext';
 import { customFetch, setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_VERSION } from '@/constants/app';
+import { useColors } from '@/hooks/useColors';
 
 SplashScreen.preventAutoHideAsync();
 Notifications.setNotificationHandler({
@@ -160,10 +161,24 @@ function RewardToast({
   animation: string | null;
   onDismiss: () => void;
 }) {
+  const c = useColors();
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(-14)).current;
+  const scale = useRef(new Animated.Value(0.94)).current;
+  const visualEffect = event.effectId ?? animation;
+
   useEffect(() => {
+    opacity.setValue(0);
+    translateY.setValue(-14);
+    scale.setValue(0.94);
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.spring(translateY, { toValue: 0, damping: 15, stiffness: 210, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, damping: 15, stiffness: 210, useNativeDriver: true }),
+    ]).start();
     const timer = setTimeout(onDismiss, 2800);
     return () => clearTimeout(timer);
-  }, [event.id, onDismiss]);
+  }, [event.id, onDismiss, opacity, scale, translateY]);
 
   const icon = event.kind === 'flashcard'
     ? 'flashcards'
@@ -177,24 +192,25 @@ function RewardToast({
             ? 'sparkles'
             : event.kind === 'accesso'
               ? 'lock'
-              : animation === 'anim_fire'
+              : visualEffect === 'anim_fire'
                 ? 'flame'
-                : animation === 'anim_stars'
+                : visualEffect === 'anim_stars'
                   ? 'star'
-                  : animation === 'anim_crown'
+                  : visualEffect === 'anim_crown'
                     ? 'award'
                     : 'circle-check';
 
   return (
-    <View pointerEvents="none" style={styles.rewardToast}>
-      <View style={styles.rewardIcon}>
-        <AppIcon name={icon} size={18} color="#08111F" />
+    <Animated.View pointerEvents="none" style={[styles.rewardToast, { backgroundColor: c.accent, opacity, transform: [{ translateY }, { scale }] }]}>
+      <Animated.View style={[styles.rewardBurst, { borderColor: c.primary, transform: [{ scale }] }]} />
+      <View style={[styles.rewardIcon, { backgroundColor: c.primary }]}>
+        <AppIcon name={icon} size={18} color={c.primaryForeground} />
       </View>
       <View style={styles.rewardCopy}>
-        <Text style={styles.rewardTitle}>{event.title}</Text>
-        <Text style={styles.rewardMessage}>{event.message}</Text>
+        <Text style={[styles.rewardTitle, { color: c.accentForeground }]}>{event.title}</Text>
+        <Text style={[styles.rewardMessage, { color: c.accentForeground }]}>{event.message}</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -211,16 +227,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#D5F4E8',
     shadowColor: '#000',
     shadowOpacity: 0.18,
     shadowRadius: 12,
     elevation: 6,
   },
-  rewardIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7CF6D3' },
+  rewardBurst: { position: 'absolute', left: 5, width: 48, height: 48, borderRadius: 24, borderWidth: 1, opacity: 0.45 },
+  rewardIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   rewardCopy: { flex: 1, gap: 2 },
-  rewardTitle: { color: '#086E55', fontSize: 13, fontWeight: '700' },
-  rewardMessage: { color: '#28584B', fontSize: 12, lineHeight: 16 },
+  rewardTitle: { fontSize: 13, fontWeight: '700' },
+  rewardMessage: { fontSize: 12, lineHeight: 16 },
   versionBadge: { position: 'absolute', right: 12, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(8, 17, 31, 0.08)' },
   versionText: { color: '#55716B', fontSize: 10, fontWeight: '600' },
   configurationError: { flex: 1, justifyContent: 'center', padding: 28, backgroundColor: '#F4FAF7' },

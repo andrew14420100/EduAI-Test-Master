@@ -145,6 +145,7 @@ export type RewardEvent = {
   kind: 'accesso' | 'livello' | 'livello_successivo' | 'amico' | 'verifica' | 'flashcard' | 'laboratorio' | 'negozio' | 'ricompensa' | 'assistenza';
   title: string;
   message: string;
+  effectId?: string | null;
 };
 
 const MAX_MEDIA_UPLOAD_BYTES = 250 * 1024 * 1024;
@@ -284,11 +285,11 @@ const shopCatalog: Omit<ShopItem, 'owned' | 'equipped' | 'ownedItemId'>[] = [
   { id: 'badge_grandmaster', title: 'Gran Maestro',            subtitle: 'Distintivo · 500 domande corrette', cost: 250, icon: 'star',   itemType: 'distintivo' },
 
   // ── ICONE FUTURA (launcher, prossimo aggiornamento) ──────────────────────────
-  { id: 'app_icon_midnight', title: 'Icona Mezzanotte', subtitle: 'Icona telefono: disponibile con il prossimo aggiornamento', cost: 110, icon: 'moon',       itemType: 'icona_futura' },
-  { id: 'app_icon_neon',     title: 'Icona Neon',       subtitle: 'Icona telefono: disponibile con il prossimo aggiornamento', cost: 140, icon: 'zap',        itemType: 'icona_futura' },
-  { id: 'app_icon_scholar',  title: 'Icona Studioso',   subtitle: 'Icona telefono: disponibile con il prossimo aggiornamento', cost: 170, icon: 'award',      itemType: 'icona_futura' },
-  { id: 'app_icon_aurora',   title: 'Icona Aurora',     subtitle: 'Icona telefono: disponibile con il prossimo aggiornamento', cost: 210, icon: 'sparkles',   itemType: 'icona_futura' },
-  { id: 'app_icon_legend',   title: 'Icona Leggenda',   subtitle: 'Icona telefono: disponibile con il prossimo aggiornamento', cost: 260, icon: 'star',       itemType: 'icona_futura' },
+  { id: 'app_icon_midnight', title: 'Icona Mezzanotte', subtitle: 'Simbolo profilo e accento · equipaggiabile', cost: 110, icon: 'moon',       itemType: 'icona_futura' },
+  { id: 'app_icon_neon',     title: 'Icona Neon',       subtitle: 'Simbolo profilo e accento · equipaggiabile', cost: 140, icon: 'zap',        itemType: 'icona_futura' },
+  { id: 'app_icon_scholar',  title: 'Icona Studioso',   subtitle: 'Simbolo profilo e accento · equipaggiabile', cost: 170, icon: 'award',      itemType: 'icona_futura' },
+  { id: 'app_icon_aurora',   title: 'Icona Aurora',     subtitle: 'Simbolo profilo e accento · equipaggiabile', cost: 210, icon: 'sparkles',   itemType: 'icona_futura' },
+  { id: 'app_icon_legend',   title: 'Icona Leggenda',   subtitle: 'Simbolo profilo e accento · equipaggiabile', cost: 260, icon: 'star',       itemType: 'icona_futura' },
 ];
 
 function messageFromError(error: unknown) {
@@ -376,10 +377,22 @@ function initialStoredTheme(): AppTheme | null {
   if (Platform.OS !== 'web') return null;
   try {
     const value = globalThis.localStorage?.getItem('eduai:last-theme');
-    return value === 'dark' || value === 'light' ? value : null;
+    return isAppTheme(value) ? value : null;
   } catch {
     return null;
   }
+}
+
+function isAppTheme(value: string | null): value is AppTheme {
+  return value === 'light'
+    || value === 'dark'
+    || value === 'neon'
+    || value === 'ocean'
+    || value === 'forest'
+    || value === 'sunset'
+    || value === 'midnight'
+    || value === 'ember'
+    || value === 'arctic';
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -408,9 +421,14 @@ export function AppProvider({
   const [soundEnabled, setSoundEnabledState] = useState(true);
   const [rewardEvent, setRewardEvent] = useState<RewardEvent | null>(null);
   const rewardEventIdRef = useRef(0);
-  const triggerReward = (kind: RewardEvent['kind'], title: string, message: string) => {
+  const triggerReward = (
+    kind: RewardEvent['kind'],
+    title: string,
+    message: string,
+    effectId: string | null = null,
+  ) => {
     rewardEventIdRef.current += 1;
-    setRewardEvent({ id: rewardEventIdRef.current, kind, title, message });
+    setRewardEvent({ id: rewardEventIdRef.current, kind, title, message, effectId });
   };
 
   useEffect(() => {
@@ -628,9 +646,9 @@ export function AppProvider({
     };
   }), [inventoryQuery.data]);
   const completionAnimation = shop.find((item) => item.itemType.startsWith('animazione') && item.equipped)?.id ?? null;
-  const serverTheme: AppTheme = shop.some((item) => item.id === 'dark' && item.equipped)
-    ? 'dark'
-    : 'light';
+  const serverTheme: AppTheme =
+    (shop.find((item) => item.itemType === 'tema' && item.equipped)?.id as AppTheme | undefined)
+    ?? 'light';
   const theme: AppTheme = storedTheme ?? serverTheme;
 
   useEffect(() => {
@@ -643,7 +661,7 @@ export function AppProvider({
     let cancelled = false;
     void AsyncStorage.getItem(`eduai:theme:${user.id}`).then((value) => {
       if (cancelled) return;
-      if (value === 'dark' || value === 'light') setStoredTheme(value);
+      if (isAppTheme(value)) setStoredTheme(value);
       else setStoredTheme(null);
       onThemeReady?.();
     });
@@ -1018,7 +1036,7 @@ export function AppProvider({
           data: { itemId: item.id },
         });
         await Promise.all([inventoryQuery.refetch(), profileQuery.refetch()]);
-        triggerReward('negozio', 'Premio sbloccato', 'Il nuovo oggetto è nella tua collezione.');
+        triggerReward('negozio', 'Premio sbloccato', 'Il nuovo oggetto è nella tua collezione.', item.id);
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };
@@ -1030,13 +1048,13 @@ export function AppProvider({
       try {
         await equipItemMutation.mutateAsync({ data: { ownedItemId: item.ownedItemId } });
         if (item.itemType === 'tema' && user?.id) {
-          const nextTheme: AppTheme = item.id === 'dark' ? 'dark' : 'light';
+          const nextTheme: AppTheme = isAppTheme(item.id) ? item.id : 'light';
           setStoredTheme(nextTheme);
           await AsyncStorage.setItem(`eduai:theme:${user.id}`, nextTheme);
           if (Platform.OS === 'web') globalThis.localStorage?.setItem('eduai:last-theme', nextTheme);
         }
         await inventoryQuery.refetch();
-        triggerReward('negozio', 'Oggetto equipaggiato', 'Il tuo nuovo effetto è attivo in tutta l’app.');
+        triggerReward('negozio', 'Oggetto equipaggiato', 'Il tuo nuovo effetto è attivo in tutta l’app.', item.id);
         return { ok: true };
       } catch (error) {
         return { ok: false, message: messageFromError(error) };

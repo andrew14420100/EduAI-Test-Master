@@ -12,6 +12,6 @@ import { useAppTheme } from '@/context/ThemeContext';
  */
 export function useColors() {
   const theme = useAppTheme();
-  const palette = theme === 'dark' ? colors.dark : colors.light;
+  const palette = colors[theme] ?? colors.light;
   return { ...palette, radius: colors.radius };
 }
