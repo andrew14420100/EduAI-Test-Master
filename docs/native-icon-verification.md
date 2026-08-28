@@ -1,6 +1,7 @@
 # Verifica icone launcher native
 
 Data verifica: 28 agosto 2026
+Host della verifica: Linux x86_64 (Replit workspace)
 
 ## Esito
 
@@ -19,19 +20,22 @@ iOS necessari per applicare le sei scelte.
 - `pnpm run test:icon-recovery`: superato; 5 test, 5 passati, 0 falliti.
 - `pnpm run check:react-versions`: superato.
 - `./android/gradlew assembleDebug`: bloccato prima della compilazione; l'host
-  non dispone di Java (`JAVA_HOME` non impostato e comando `java` assente).
-- `./android/gradlew --version`: stesso blocco per Java assente.
-- `eas whoami`: bloccato perché questo workspace non è autenticato a EAS; non è
-  quindi disponibile nemmeno una build cloud da installare durante questa
-  sessione.
+  non dispone di Java (`JAVA_HOME` non impostato e comando `java` assente),
+  exit code 1.
+- `./android/gradlew --version`: stesso blocco per Java assente, exit code 1.
+- La risoluzione dei comandi `adb` ed `emulator` non restituisce alcun
+  eseguibile; `ANDROID_HOME` e `ANDROID_SDK_ROOT` non sono impostati.
+- `eas whoami`: bloccato perché questo workspace non è autenticato a EAS
+  (`Not logged in`, exit code 1); non è quindi disponibile nemmeno una build
+  cloud da installare durante questa sessione.
 - Android: `AppIconManager` è registrato nel package React Native; il manifest
   dichiara l'alias standard attivo e cinque alias alternativi disattivati, con
   risorse mipmap in tutte le densità.
 - iOS: `AppIcon.appiconset` resta l'icona standard; sono presenti cinque set
   alternativi 1024×1024, `CFBundleAlternateIcons` e l'implementazione
   `setAlternateIconName`.
-- L'host è Linux e non dispone di Xcode/macOS; non è stato possibile compilare
-  né installare una build iOS.
+- L'host è Linux e non dispone di `xcodebuild`, `xcrun`, Xcode o macOS; non è
+  stato possibile compilare né installare una build iOS.
 - Non sono disponibili `adb` o un emulatore/dispositivo collegato, quindi non
   è stato possibile verificare cambio, reset o chiusura/riapertura su Android.
 
@@ -80,8 +84,13 @@ Per ogni riga, dopo il rifiuto:
 5. verificare che non risultino mai due icone personalizzate equipaggiate.
 
 Questa macchina non consente di spuntare la matrice: non dispone di Java per
-compilare Android, di `adb`/emulatore o di macOS/Xcode per compilare e
-installare iOS. Le prove automatiche sostitutive sono invece tutte superate e
-coprono i tre rollback, l'inventario serializzato, il messaggio localizzato e
-la disponibilità del retry. Le differenze tra simulatore/emulatore e
-dispositivo reale vanno registrate quando sarà disponibile un host nativo.
+compilare Android, di SDK/`adb`/emulatore o di macOS/Xcode per compilare e
+installare iOS. Di conseguenza in questa sessione non è stato possibile
+installare alcuna build, provocare un rifiuto reale del bridge, verificare
+`Riprova`, osservare l'icona nel launcher o eseguire la chiusura/riapertura
+forzata su un emulatore/simulatore o dispositivo reale. Le prove automatiche
+sono invece tutte superate e coprono i tre rollback, l'inventario serializzato,
+il messaggio localizzato e la disponibilità del retry. Le differenze tra
+simulatore/emulatore e dispositivo reale vanno registrate quando sarà
+disponibile un host nativo; le celle `N/E` non costituiscono evidenza
+installabile.
