@@ -14,9 +14,12 @@ iOS necessari per applicare le sei scelte.
 ## Controlli eseguiti
 
 - `pnpm run typecheck`: superato.
+- `pnpm run test:native-icons`: superato; mapping standard + cinque alternative
+  coerente.
+- `pnpm run test:icon-recovery`: superato; 5 test, 5 passati, 0 falliti.
 - `pnpm run check:react-versions`: superato.
-- `./android/gradlew assembleDebug`: non avviato; l'host non dispone di Java,
-  quindi Gradle termina prima della compilazione.
+- `./android/gradlew assembleDebug`: bloccato prima della compilazione; l'host
+  non dispone di Java (`JAVA_HOME` non impostato e comando `java` assente).
 - `./android/gradlew --version`: stesso blocco per Java assente.
 - Android: `AppIconManager` è registrato nel package React Native; il manifest
   dichiara l'alias standard attivo e cinque alias alternativi disattivati, con
@@ -38,14 +41,14 @@ emulatore/simulatore e almeno un dispositivo reale. La prova di rifiuto può
 essere ottenuta con un bridge nativo di debug che restituisce un errore una
 volta per lo scenario; non va simulata modificando l'inventario direttamente.
 
-| Piattaforma | Flusso | Rifiuto da verificare | Risultato atteso |
-| --- | --- | --- | --- |
-| Android | acquisto di una nuova icona | rifiuto del bridge dopo la risposta positiva dell'acquisto | l'acquisto resta nella collezione, l'icona precedente resta visibile e una sola `icona_futura` è equipaggiata |
-| Android | equipaggiamento di un'icona già posseduta | rifiuto del bridge dopo l'equipaggiamento server | l'inventario torna all'icona precedente, che resta visibile; il messaggio italiano offre `Riprova` |
-| Android | reset con `Icona standard originale` | rifiuto del bridge durante il ritorno a `standard` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata |
-| iOS | acquisto di una nuova icona | rifiuto della chiamata `setAlternateIconName` | stessi risultati di Android |
-| iOS | equipaggiamento di un'icona già posseduta | rifiuto della chiamata `setAlternateIconName` | stessi risultati di Android |
-| iOS | reset con `Icona standard originale` | rifiuto della chiamata con nome alternativo `nil` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata |
+| Piattaforma | Flusso | Rifiuto da verificare | Risultato atteso | Esito su questo host |
+| --- | --- | --- | --- | --- |
+| Android | acquisto di una nuova icona | rifiuto del bridge dopo la risposta positiva dell'acquisto | l'acquisto resta nella collezione, l'icona precedente resta visibile e una sola `icona_futura` è equipaggiata | Non eseguito: manca build/emulatore/dispositivo |
+| Android | equipaggiamento di un'icona già posseduta | rifiuto del bridge dopo l'equipaggiamento server | l'inventario torna all'icona precedente, che resta visibile; il messaggio italiano offre `Riprova` | Non eseguito: manca build/emulatore/dispositivo |
+| Android | reset con `Icona standard originale` | rifiuto del bridge durante il ritorno a `standard` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata | Non eseguito: manca build/emulatore/dispositivo |
+| iOS | acquisto di una nuova icona | rifiuto della chiamata `setAlternateIconName` | stessi risultati di Android | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
+| iOS | equipaggiamento di un'icona già posseduta | rifiuto della chiamata `setAlternateIconName` | stessi risultati di Android | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
+| iOS | reset con `Icona standard originale` | rifiuto della chiamata con nome alternativo `nil` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
 
 Per ogni riga, dopo il rifiuto:
 
