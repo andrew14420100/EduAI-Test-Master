@@ -1,0 +1,40 @@
+Evidence ID: QA-ACCOUNT-NATIVE-ICONS-2026-08-29-RUN1
+Data verifica: 29 agosto 2026
+Endpoint API: https://eduai-test-master-backend.onrender.com
+Clerk user reference: user_3IF96F0XZCakY194o916JgGuoNa
+
+Sessione QA:
+- Una sessione Clerk attiva è stata osservata per l'utente indicato.
+- La sessione è stata usata senza salvare o stampare il suo token.
+- GET /api/profile con bearer token Clerk: HTTP 200.
+- GET /api/shop/inventory con bearer token Clerk: HTTP 200.
+
+Profilo verificato:
+- username: Andrea
+- livello: Ingegneria Informatica
+- saldo: 999998094 punti
+
+Inventario iniziale verificato tramite API:
+- app_icon_aurora — icona_futura — posseduta, non equipaggiata
+- app_icon_midnight — icona_futura — posseduta, non equipaggiata
+- app_icon_legend — icona_futura — posseduta, equipaggiata
+- altre ricompense possedute: 17
+- icone_futura equipaggiate: 1
+
+Preparazione dei tre flussi:
+1. Acquisto: usare app_icon_scholar, che non risulta posseduta e può essere
+   acquistata con il saldo disponibile. L'acquisto deve essere verificato
+   separatamente dagli altri scenari.
+2. Equipaggiamento: usare app_icon_midnight oppure app_icon_aurora, già
+   possedute; app_icon_legend è il riferimento iniziale da ripristinare se
+   necessario.
+3. Ripristino: usare "Icona standard originale"; app_icon_legend deve restare
+   nella collezione ma non equipaggiata dopo il reset.
+
+Note:
+- La verifica ha eseguito solo letture autenticate sulle API remote; non sono
+  state eseguite query SQL né modifiche manuali al database.
+- Il token Clerk e l'indirizzo email non sono registrati in questo file.
+- Questa evidenza rende disponibile la sessione e il dataset QA; non dichiara
+  superati i tre flussi nativi, che richiedono ancora un host Android stabile
+  e la verifica visuale prevista dalla matrice.

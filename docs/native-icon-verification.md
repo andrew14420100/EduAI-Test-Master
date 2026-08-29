@@ -14,13 +14,32 @@ terminato prima che il Package Installer potesse completare l'installazione:
 non è quindi una prova di installazione API 36 (`ANDROID-API36-PREFLIGHT-2026-08-29-RUN1`).
 
 Nessuno dei tre flussi autenticati (acquisto, equipaggiamento, ripristino) è
-stato dichiarato superato: manca una sessione autenticata con inventario QA per
-osservare la mutazione server, il rifiuto one-shot, `Riprova`, la riapertura,
-l'icona nel launcher e l'inventario `icona_futura`. Il catalogo applicativo e
-quello server risultano comunque allineati sulle cinque alternative
+stato dichiarato superato: la sessione QA con inventario è ora disponibile,
+ma il rifiuto one-shot, `Riprova`, la riapertura, l'icona nel launcher e la
+mutazione dell'inventario `icona_futura` devono ancora essere osservati su un
+host Android stabile. Il catalogo applicativo e quello server risultano
+comunque allineati sulle cinque alternative
 (`app_icon_midnight`, `app_icon_neon`, `app_icon_scholar`, `app_icon_aurora`,
 `app_icon_legend`) più l'icona standard. Il progetto nativo contiene i bridge,
 gli alias Android e gli asset catalog iOS necessari per applicare le sei scelte.
+
+## Sessione QA e inventario iniziale
+
+È disponibile una sessione Clerk QA per il backend remoto
+`https://eduai-test-master-backend.onrender.com`. L'identificativo utente e
+l'inventario osservato sono registrati in
+`docs/evidence/qa-account-native-icons-2026-08-29.txt`; token Clerk e indirizzo
+email restano fuori dal repository.
+
+L'inventario iniziale contiene `app_icon_aurora` e `app_icon_midnight` già
+possedute ma non equipaggiate, mentre `app_icon_legend` è l'unica
+`icona_futura` equipaggiata. Il saldo consente di usare
+`app_icon_scholar` per il flusso di acquisto senza alterare manualmente il
+database. Per mantenere gli scenari separati, usare `app_icon_midnight` o
+`app_icon_aurora` per l'equipaggiamento e `Icona standard originale` per il
+ripristino. Dopo ogni scenario verificare nuovamente
+`GET /api/shop/inventory` e riportare l'esito nella matrice solo dopo la
+chiusura forzata e la riapertura dell'app.
 
 ## Pipeline macOS per la build QA
 
@@ -281,9 +300,9 @@ volta per lo scenario; non va simulata modificando l'inventario direttamente.
 
 | Piattaforma | Flusso | Rifiuto da verificare | Risultato atteso | Esito su questo host |
 | --- | --- | --- | --- | --- |
-| Android | acquisto di una nuova icona | rifiuto del bridge dopo la risposta positiva dell'acquisto | l'acquisto resta nella collezione, l'icona precedente resta visibile e una sola `icona_futura` è equipaggiata | N/E — API 24 installata, ma nessun account/inventario di test autenticato disponibile per completare l'azione reale |
-| Android | equipaggiamento di un'icona già posseduta | rifiuto del bridge dopo l'equipaggiamento server | l'inventario torna all'icona precedente, che resta visibile; il messaggio italiano offre `Riprova` | N/E — API 24 installata, ma nessun account/inventario di test autenticato disponibile per completare l'azione reale |
-| Android | reset con `Icona standard originale` | rifiuto del bridge durante il ritorno a `standard` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata | N/E — API 24 installata, ma nessun account/inventario di test autenticato disponibile per completare l'azione reale |
+| Android | acquisto di una nuova icona | rifiuto del bridge dopo la risposta positiva dell'acquisto | l'acquisto resta nella collezione, l'icona precedente resta visibile e una sola `icona_futura` è equipaggiata | N/E — sessione e inventario QA disponibili; manca ancora l'esecuzione su host Android stabile |
+| Android | equipaggiamento di un'icona già posseduta | rifiuto del bridge dopo l'equipaggiamento server | l'inventario torna all'icona precedente, che resta visibile; il messaggio italiano offre `Riprova` | N/E — sessione e inventario QA disponibili; manca ancora l'esecuzione su host Android stabile |
+| Android | reset con `Icona standard originale` | rifiuto del bridge durante il ritorno a `standard` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata | N/E — sessione e inventario QA disponibili; manca ancora l'esecuzione su host Android stabile |
 | iOS | acquisto di una nuova icona | rifiuto della chiamata `setAlternateIconName` | l'acquisto resta nella collezione, l'icona precedente resta visibile, il messaggio localizzato contiene `Riprova` e dopo la riapertura resta una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
 | iOS | equipaggiamento di un'icona già posseduta | rifiuto della chiamata `setAlternateIconName` | l'inventario torna all'icona precedente, che resta visibile; il messaggio localizzato contiene `Riprova` e dopo la riapertura resta una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
 | iOS | reset con `Icona standard originale` | rifiuto della chiamata con nome alternativo `nil` | l'icona personalizzata precedente resta visibile; il messaggio localizzato contiene `Riprova` e dopo la riapertura l'inventario resta coerente con una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
@@ -345,15 +364,19 @@ Per ogni riga, dopo il rifiuto:
    equipaggiato nell'inventario server;
 5. verificare che non risultino mai due icone personalizzate equipaggiate.
 
-La build standalone e l'avvio dell'app su API 24 sono osservabili nelle
+La sessione QA autenticata e il suo inventario remoto sono osservabili
+nell'evidenza `QA-ACCOUNT-NATIVE-ICONS-2026-08-29-RUN1`
+(`docs/evidence/qa-account-native-icons-2026-08-29.txt`). La build standalone e
+l'avvio dell'app su API 24 sono osservabili nelle
 evidenze sopra, ma l'APK non è presente nel workspace corrente: il riferimento
 riproducibile è l'hash registrato in
 `docs/evidence/android-debug-build-2026-08-29.txt`. L'AVD API 36 è stato
 identificato, ma con l'emulazione TCG senza `/dev/kvm` il `system_server` è
 terminato prima che il Package Installer restasse operativo; installazione API
 36 e flussi autenticati restano quindi `N/E`, come indicato nella matrice.
-Non sono stati simulati dati server: per completare i tre flussi serve una
-sessione autenticata con un inventario di test. La riga `Dispositivo reale`
+I dati server non sono stati simulati durante questa verifica: per completare i
+tre flussi si usa la sessione autenticata con inventario QA descritta sopra.
+La riga `Dispositivo reale`
 resta `N/E` finché non viene collegato un dispositivo. La verifica iOS resta da
 eseguire su host Apple con build firmata. Le prove automatiche sono invece
 tutte superate e coprono i tre rollback, l'inventario serializzato, il
