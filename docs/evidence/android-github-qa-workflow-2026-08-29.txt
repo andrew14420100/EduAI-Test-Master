@@ -1,0 +1,37 @@
+Android native icon QA workflow configuration evidence
+Evidence ID: ANDROID-GITHUB-QA-WORKFLOW-2026-08-29
+Recorded: 2026-08-29
+
+Workflow:
+- `.github/workflows/android-native-icon-qa.yml`
+- Workflow name: `Android native icon QA`
+- Build runner: GitHub-hosted `ubuntu-24.04`
+- Emulator matrix: API 24 (`default`, x86) and API 36 (`google_apis`, x86_64)
+- Emulator action: `reactivecircus/android-emulator-runner@v2`
+- Build command: `./android/gradlew -p android assembleDebug --no-daemon --max-workers=2 -PreactNativeArchitectures=x86,x86_64 -PqaBundle=true`
+
+Published build evidence:
+- The build job uploads `EduAITestMaster-QA-debug.apk`.
+- The same artifact contains `EduAITestMaster-QA-debug.apk.sha256` and
+  `build-metadata.txt`.
+- The API 24/API 36 jobs download and verify the exact same SHA-256 before
+  installation.
+- Artifacts are retained for 14 days and include a run ID in their names.
+
+Host/harness evidence collected per API level:
+- Android device properties, SDK/release/model, install result and package path.
+- Standalone launch and forced close/reopen logs.
+- Package/activity state after launch and reopen.
+- One deep-link delivery log for each `acquisto`, `equipaggiamento` and
+  `ripristino` scenario.
+- `flow-checklist.md` with explicit PASS/N/E fields.
+
+Scope boundary:
+- This file records the repeatable external host configuration; it is not a
+  claim that GitHub Actions was executed from the Replit workspace.
+- Deep-link delivery is not an authenticated flow result. The checklist keeps
+  bridge rejection, `Riprova`, launcher observation and server inventory as
+  `N/E` until an operator uses the QA Clerk session described in
+  `docs/evidence/qa-account-native-icons-2026-08-29.txt`.
+- The authoritative operator procedure and acceptance matrix remain in
+  `docs/native-icon-verification.md`.

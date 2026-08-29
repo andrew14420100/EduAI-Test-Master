@@ -105,6 +105,68 @@ checklist. Non classificare come "superato" un test reale solo perché la
 pipeline macOS ha compilato il simulatore o prodotto la IPA: compilazione,
 installazione e tre scenari di rifiuto restano evidenze indipendenti.
 
+## Pipeline Android con host API 24 e API 36
+
+La verifica Android ripetibile è disponibile nel workflow GitHub Actions
+`Android native icon QA` (`.github/workflows/android-native-icon-qa.yml`). Usa
+runner GitHub-hosted `ubuntu-24.04`, che forniscono un host Android separato dal
+workspace Linux, con emulatori accelerati dalla macchina virtuale del runner:
+
+- API 24: immagine `default`, architettura `x86`;
+- API 36: immagine `google_apis`, architettura `x86_64`.
+
+Il workflow può essere avviato con `workflow_dispatch` oppure dalle modifiche
+agli artefatti nativi, al codice dell’app, agli script o a questa
+documentazione. Il job di build esegue i controlli statici, `typecheck` e:
+
+```sh
+./android/gradlew -p android assembleDebug \
+  --no-daemon --max-workers=2 \
+  -PreactNativeArchitectures=x86,x86_64 \
+  -PqaBundle=true
+```
+
+`qaBundle=true` disabilita il percorso Debug che dipende da Metro e inserisce
+il bundle JavaScript nell’APK. Il job pubblica
+`EduAITestMaster-QA-debug.apk`, il file `EduAITestMaster-QA-debug.apk.sha256`
+e `build-metadata.txt` nell’artefatto
+`android-native-icon-qa-build-<run_id>`. Entrambi gli emulatori scaricano
+quella stessa APK e verificano lo SHA-256 prima dell’installazione, quindi la
+build testata è identificabile e riproducibile tra API.
+
+Ogni job API pubblica un artefatto
+`android-native-icon-qa-api<api>-<run_id>` con:
+
+- proprietà del device, versione Android, modello e risultato installazione;
+- avvio standalone, stato package/activity, chiusura forzata e riapertura;
+- log separato per la consegna dei deep link
+  `acquisto`, `equipaggiamento` e `ripristino`;
+- `flow-checklist.md`, che distingue i controlli host automatici dai campi
+  autenticati e visuali ancora da compilare.
+
+La consegna del deep link dimostra soltanto che l’harness è stato armato.
+Non è un esito del flusso: senza un account QA nella build installata non si
+possono dichiarare superati il rifiuto one-shot del bridge, `Riprova`, la
+mutazione server, l’icona mostrata dal launcher o l’inventario. Per completare
+la checklist su una run del workflow:
+
+1. scaricare l’APK e lo SHA-256 dall’artefatto di build;
+2. installare la stessa APK sull’emulatore/device Android scelto;
+3. accedere con la sessione QA e verificare l’inventario iniziale usando
+   `docs/evidence/qa-account-native-icons-2026-08-29.txt`;
+4. per ogni scenario, armare il deep link con `adb shell am start`, eseguire
+   l’azione nel negozio, verificare rifiuto, `Riprova`, chiusura forzata,
+   riapertura, launcher e `GET /api/shop/inventory`;
+5. conservare la checklist compilata insieme ai log dell’artefatto e
+   aggiungere l’ID della run a `docs/evidence/`.
+
+La configurazione e il perimetro della prova sono registrati anche in
+`docs/evidence/android-github-qa-workflow-2026-08-29.txt`. La prima esecuzione
+da questo workspace non può essere attestata: `gh` non è autenticato e il
+workspace non espone SDK, `/dev/kvm` o un device. Fino a una run GitHub/device
+farm completata, le celle dei tre flussi restano `N/E` anche se il job di
+build o il preflight dell’emulatore passa.
+
 ## Checklist di esecuzione su host Apple
 
 Creare una scheda per ogni run e conservarla insieme all'artefatto della

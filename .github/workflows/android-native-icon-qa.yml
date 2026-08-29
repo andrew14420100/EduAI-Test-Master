@@ -1,0 +1,258 @@
+name: Android native icon QA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/android-native-icon-qa.yml"
+      - "android/**"
+      - "app/**"
+      - "components/**"
+      - "context/**"
+      - "lib/**"
+      - "scripts/**"
+      - "docs/native-icon-verification.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-native-icon-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PACKAGE_NAME: com.eduai.testmaster
+  APK_NAME: EduAITestMaster-QA-debug.apk
+
+jobs:
+  build:
+    name: Build standalone Android QA APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;35.0.0"
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run native icon checks
+        run: |
+          pnpm run test:native-icons
+          pnpm run test:icon-recovery
+          pnpm run typecheck
+
+      - name: Build standalone Debug QA APK
+        run: |
+          chmod +x android/gradlew
+          ./android/gradlew -p android assembleDebug \
+            --no-daemon \
+            --max-workers=2 \
+            -PreactNativeArchitectures=x86,x86_64 \
+            -PqaBundle=true
+
+      - name: Verify and fingerprint APK
+        run: |
+          set -euo pipefail
+          apk="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$apk"
+          mkdir -p "$RUNNER_TEMP/android-native-icon-qa-build"
+          cp "$apk" "$RUNNER_TEMP/android-native-icon-qa-build/$APK_NAME"
+          (
+            cd "$RUNNER_TEMP/android-native-icon-qa-build"
+            sha256sum "$APK_NAME" > "$APK_NAME.sha256"
+          )
+          version_code=not-available
+          min_sdk=not-available
+          target_sdk=not-available
+          if command -v apkanalyzer >/dev/null 2>&1; then
+            version_code="$(apkanalyzer manifest version-code "$apk")"
+            min_sdk="$(apkanalyzer manifest min-sdk "$apk")"
+            target_sdk="$(apkanalyzer manifest target-sdk "$apk")"
+          fi
+          {
+            echo "workflow=android-native-icon-qa"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "commit=$GITHUB_SHA"
+            echo "apk=$APK_NAME"
+            echo "sha256=$(cut -d ' ' -f 1 "$RUNNER_TEMP/android-native-icon-qa-build/$APK_NAME.sha256")"
+            echo "package=$PACKAGE_NAME"
+            echo "version_code=$version_code"
+            echo "min_sdk=$min_sdk"
+            echo "target_sdk=$target_sdk"
+            echo "javascript_bundle=embedded"
+            echo "native_architectures=x86,x86_64"
+          } > "$RUNNER_TEMP/android-native-icon-qa-build/build-metadata.txt"
+          cat "$RUNNER_TEMP/android-native-icon-qa-build/build-metadata.txt"
+
+      - name: Upload standalone APK, SHA-256, and build metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-native-icon-qa-build-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/android-native-icon-qa-build/${{ env.APK_NAME }}
+            ${{ runner.temp }}/android-native-icon-qa-build/${{ env.APK_NAME }}.sha256
+            ${{ runner.temp }}/android-native-icon-qa-build/build-metadata.txt
+
+  emulator-qa:
+    name: Android API ${{ matrix.api }} host and harness preflight
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 24
+            target: default
+            arch: x86
+            profile: pixel
+          - api: 36
+            target: google_apis
+            arch: x86_64
+            profile: pixel_2
+    steps:
+      - name: Download standalone APK and fingerprint
+        uses: actions/download-artifact@v4
+        with:
+          name: android-native-icon-qa-build-${{ github.run_id }}
+          path: qa-build
+
+      - name: Start API ${{ matrix.api }} emulator and collect evidence
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          API_LEVEL: ${{ matrix.api }}
+          APK_NAME: ${{ env.APK_NAME }}
+          PACKAGE_NAME: ${{ env.PACKAGE_NAME }}
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: ${{ matrix.profile }}
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: "-no-window -no-audio -no-boot-anim -gpu swiftshader_indirect"
+          script: |
+            set -euo pipefail
+            evidence="$RUNNER_TEMP/android-native-icon-qa/$API_LEVEL"
+            mkdir -p "$evidence"
+            apk="qa-build/$APK_NAME"
+
+            trap '
+              adb logcat -d -v threadtime > "$evidence/logcat-final.log" 2>&1 || true
+              adb shell dumpsys package "$PACKAGE_NAME" > "$evidence/package-final.log" 2>&1 || true
+              adb shell dumpsys activity activities > "$evidence/activities-final.log" 2>&1 || true
+            ' EXIT
+
+            adb wait-for-device
+            cd qa-build
+            sha256sum -c "$APK_NAME.sha256" > "$evidence/apk-sha256-verify.log"
+            cd ..
+
+            {
+              echo "evidence_id=ANDROID-GITHUB-HOST-API${API_LEVEL}-${GITHUB_RUN_ID}"
+              echo "workflow_run_id=$GITHUB_RUN_ID"
+              echo "commit=$GITHUB_SHA"
+              echo "api_level=$API_LEVEL"
+              echo "runner=$RUNNER_OS"
+              echo "apk=$APK_NAME"
+              echo "apk_sha256=$(cut -d ' ' -f 1 "qa-build/$APK_NAME.sha256")"
+              adb shell getprop ro.build.version.release
+              adb shell getprop ro.build.version.sdk
+              adb shell getprop ro.product.model
+              adb shell getprop ro.kernel.qemu
+            } > "$evidence/host-metadata.log"
+
+            adb shell getprop > "$evidence/device-properties.log"
+            adb install -r "$apk" > "$evidence/install.log"
+            adb shell pm path "$PACKAGE_NAME" > "$evidence/package-path.log"
+
+            adb shell am start -W -n "$PACKAGE_NAME/.MainActivity" \
+              > "$evidence/launch.log" 2>&1
+            sleep 8
+            adb shell dumpsys package "$PACKAGE_NAME" \
+              > "$evidence/package-after-launch.log"
+            adb shell dumpsys activity activities \
+              > "$evidence/activities-after-launch.log"
+            adb shell cmd package resolve-activity --brief \
+              -a android.intent.action.MAIN \
+              -c android.intent.category.LAUNCHER \
+              > "$evidence/launcher-resolution.log" 2>&1 || true
+
+            for scenario in acquisto equipaggiamento ripristino; do
+              adb shell am start -W \
+                -a android.intent.action.VIEW \
+                -d "eduai-test-master://native-icon-test?reject=$scenario" \
+                "$PACKAGE_NAME" \
+                > "$evidence/deep-link-$scenario.log" 2>&1
+              sleep 2
+            done
+
+            adb shell am force-stop "$PACKAGE_NAME"
+            adb shell monkey -p "$PACKAGE_NAME" 1 \
+              > "$evidence/forced-reopen.log" 2>&1
+            sleep 5
+            adb shell dumpsys package "$PACKAGE_NAME" \
+              > "$evidence/package-after-reopen.log"
+
+            cat > "$evidence/flow-checklist.md" <<EOF
+            # Android native icon QA — API $API_LEVEL
+
+            Evidence ID: ANDROID-GITHUB-HOST-API${API_LEVEL}-${GITHUB_RUN_ID}
+            APK SHA-256: $(cut -d ' ' -f 1 "qa-build/$APK_NAME.sha256")
+
+            This job verifies the installable host, standalone launch, forced
+            reopen, and delivery of all three debug deep links. The authenticated
+            server mutation and visual launcher checks are intentionally manual:
+            do not mark them PASS from this preflight alone.
+
+            | Scenario | Deep link delivered | One-shot bridge rejection | Riprova succeeds | Forced reopen | Launcher matches server inventory | Status |
+            | --- | --- | --- | --- | --- | --- | --- |
+            | acquisto | PASS — deep-link-acquisto.log | N/E — execute with QA account | N/E | PASS — forced-reopen.log | N/E — inspect launcher and GET /api/shop/inventory | N/E |
+            | equipaggiamento | PASS — deep-link-equipaggiamento.log | N/E — execute with QA account | N/E | PASS — forced-reopen.log | N/E — inspect launcher and GET /api/shop/inventory | N/E |
+            | ripristino | PASS — deep-link-ripristino.log | N/E — execute with QA account | N/E | PASS — forced-reopen.log | N/E — inspect launcher and GET /api/shop/inventory | N/E |
+            EOF
+
+      - name: Upload API ${{ matrix.api }} host and harness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-native-icon-qa-api${{ matrix.api }}-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/android-native-icon-qa/${{ matrix.api }}/

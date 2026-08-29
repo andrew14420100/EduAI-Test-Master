@@ -61,6 +61,10 @@ const iosWorkflowSource = fs.readFileSync(
   path.join(here, "../.github/workflows/ios-native-icon-qa.yml"),
   "utf8",
 );
+const androidWorkflowSource = fs.readFileSync(
+  path.join(here, "../.github/workflows/android-native-icon-qa.yml"),
+  "utf8",
+);
 
 function equippedIcons(inventory: InventoryRow[]) {
   return inventory.filter((item) => item.itemId.startsWith("app_icon_") && item.equipped);
@@ -270,4 +274,20 @@ test("la pipeline macOS produce una build QA e conserva log identificabili", () 
   assert.match(iosWorkflowSource, /SKIP_BUNDLING=0/);
   assert.match(iosWorkflowSource, /actions\/upload-artifact@v4/);
   assert.match(iosWorkflowSource, /github\.run_id/);
+});
+
+test("la pipeline Android offre host API 24/API 36 e fingerprint dell’APK QA", () => {
+  assert.match(androidWorkflowSource, /runs-on: ubuntu-24\.04/);
+  assert.match(androidWorkflowSource, /reactivecircus\/android-emulator-runner@v2/);
+  assert.match(androidWorkflowSource, /api: 24/);
+  assert.match(androidWorkflowSource, /api: 36/);
+  assert.match(androidWorkflowSource, /-PqaBundle=true/);
+  assert.match(androidWorkflowSource, /sha256sum/);
+  assert.match(androidWorkflowSource, /actions\/upload-artifact@v4/);
+  assert.match(androidWorkflowSource, /EduAITestMaster-QA-debug\.apk/);
+  assert.match(androidWorkflowSource, /deep-link-\$scenario\.log/);
+  assert.match(androidWorkflowSource, /acquisto/);
+  assert.match(androidWorkflowSource, /equipaggiamento/);
+  assert.match(androidWorkflowSource, /ripristino/);
+  assert.match(androidWorkflowSource, /flow-checklist\.md/);
 });
