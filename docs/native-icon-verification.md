@@ -202,6 +202,17 @@ superati). Il preflight precedente resta disponibile come riferimento in
 `ANDROID-GRADLE-SDK-2026-08-29-RUN4`;
 non sostituiscono la prova su API 24 e API 36.
 
+Nella verifica del 29 agosto 2026 alle 18:25:54 UTC l’host corrente è stato
+ricontrollato con evidenza `ANDROID-STABLE-HOST-PREFLIGHT-2026-08-29-RUN6`
+(`docs/evidence/android-stable-host-preflight-2026-08-29.txt`). Il commit
+`22730df6b12d95875a0edd191b32540f6654caf7` non dispone di SDK Android locale,
+emulatore, AVD, dispositivo collegato o `/dev/kvm`; l’APK con hash atteso non
+è presente e `assembleDebug` fallisce prima della compilazione con `SDK
+location not found`. I controlli automatici dello stesso run sono superati:
+mapping native, recovery 13/13 e typecheck. Non sono stati generati ID di
+flusso: senza installazione e sessione QA autenticata acquisto, equipaggiamento,
+ripristino, retry, launcher, riapertura e inventario server restano `N/E`.
+
 ## Harness controllato Android e iOS
 
 L’harness è presente nelle build native di sviluppo/QA e non è un controllo

@@ -1,0 +1,34 @@
+Evidence ID: ANDROID-STABLE-HOST-PREFLIGHT-2026-08-29-RUN6
+Timestamp (UTC): 2026-08-29T18:25:54Z
+Commit: 22730df6b12d95875a0edd191b32540f6654caf7
+Host: Linux x86_64 (Replit workspace)
+
+JDK: OpenJDK 17.0.15
+ADB: Android Debug Bridge 35.0.1
+ANDROID_HOME: /home/runner/.android-sdk (directory absent)
+ANDROID_SDK_ROOT: /home/runner/.android-sdk (directory absent)
+Connected devices: none (`adb devices -l` returned only the header)
+Emulator binary: absent
+SDK manager: absent
+AVD manager: absent
+Hardware acceleration: `/dev/kvm` absent
+APK candidate: absent from `android/app/build/outputs/apk/debug/app-debug.apk`
+
+Build command:
+`./android/gradlew -p android assembleDebug --no-daemon --max-workers=1 -PreactNativeArchitectures=x86,x86_64 -PqaBundle=true`
+
+Build result: FAIL before APK compilation.
+Failure: `SDK location not found`; Gradle could not configure the Android project
+because no valid Android SDK was available.
+
+Automated checks from this same workspace:
+- `pnpm run test:native-icons`: PASS
+- `pnpm run test:icon-recovery`: PASS (13/13)
+- `pnpm run typecheck`: PASS
+
+Android installation result: NOT EXECUTED. No API 24/API 36 emulator or real
+device was available, and the previously verified APK is not present in this
+workspace.
+Authenticated flow result: NOT EXECUTED. No QA account/session with a test
+icon inventory was available. No purchase, equip, reset, retry, launcher, or
+server-inventory flow ID was generated.
