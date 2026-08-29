@@ -41,10 +41,35 @@ avviate normalmente da Xcode, che continuano a usare Metro quando il flag non
 è impostato.
 
 La build del simulatore non dimostra firma o provisioning per un iPhone. Per un
-dispositivo reale usare una build QA firmata con un profilo di provisioning
-valido e registrare i dati nella checklist seguente; non classificare come
-"superato" un test reale solo perché la pipeline macOS ha compilato il
-simulatore.
+dispositivo reale è disponibile un percorso separato e manuale nello stesso
+workflow: selezionare `Esegui anche la build IPA firmata e l'installazione su
+iPhone QA` durante `workflow_dispatch`. Il job richiede l'environment GitHub
+protetto `ios-hardware-qa`, un runner macOS self-hosted con label
+`ios-hardware-qa` e un iPhone già accoppiato. Non parte su push né quando
+l'input manuale è disattivato.
+
+Prima di abilitarlo, configurare esclusivamente nell'environment protetto questi
+segreti: `IOS_QA_CERTIFICATE_BASE64` (certificato `.p12` codificato base64),
+`IOS_QA_CERTIFICATE_PASSWORD`, `IOS_QA_PROVISIONING_PROFILE_BASE64` (profilo
+development codificato base64), `IOS_QA_TEAM_ID` e `IOS_QA_DEVICE_UDID`.
+Facoltativamente, le variabili `IOS_QA_DEVICE_NAME`,
+`IOS_QA_DEVICE_MODEL` e `IOS_QA_DEVICE_OS_VERSION` aggiungono etichette alla
+scheda. Il job usa un keychain temporaneo, verifica che il profilo autorizzi
+l'UDID, esporta una IPA `development` e installa con `xcrun devicectl`.
+Certificato, password, profilo e keychain vengono rimossi a fine job; l'artefatto
+non contiene il certificato, la password o il profilo sorgente come file
+separati, ma solo la IPA firmata (con il profilo embedded richiesto da iOS), i
+log di firma/installazione e i metadati del dispositivo.
+
+L'artefatto del percorso hardware è
+`ios-native-icon-hardware-qa-<run_id>` e conserva
+`EduAITestMaster-QA-signed.ipa`, `ios-signing-metadata.log`,
+`ios-device-metadata.log`, i log di archive/export/installazione e le
+impostazioni del harness. Il job può fallire sull'installazione se il telefono
+non è accoppiato o autorizzato, ma i log vengono comunque pubblicati per la
+checklist. Non classificare come "superato" un test reale solo perché la
+pipeline macOS ha compilato il simulatore o prodotto la IPA: compilazione,
+installazione e tre scenari di rifiuto restano evidenze indipendenti.
 
 ## Checklist di esecuzione su host Apple
 
@@ -78,17 +103,17 @@ e il nome dell'artefatto, oppure il percorso del log esportato da Xcode.
 
 ### Dispositivo iOS reale
 
-- Modello e versione iOS: `FAIL` — nessun iPhone reale disponibile in questa sessione
-- UDID dispositivo: `FAIL` — nessun dispositivo Apple collegato
-- Build/IPA installata: `FAIL` — nessuna IPA firmata disponibile
-- Team / certificato di firma: `FAIL` — dati di firma non disponibili su Linux
-- Profilo di provisioning e scadenza: `FAIL` — profilo non disponibile
-- Stato firma/installazione: `FAIL` — gate non eseguibile; non è un fallimento funzionale dell’app
-- ID log/evidenza installazione: `FAIL-2026-08-29-linux-no-apple-host` — nessun log di installazione prodotto
-- `acquisto`: `FAIL` — non eseguito; assenti rifiuto reale, `Riprova`, riapertura e verifica collezione server
-- `equipaggiamento`: `FAIL` — non eseguito; assenti rifiuto reale, `Riprova`, riapertura e verifica inventario server
-- `ripristino`: `FAIL` — non eseguito; assenti rifiuto reale con nome `nil`, `Riprova`, riapertura e verifica inventario server
-- Note: il valore `FAIL` indica il prerequisito hardware/toolchain mancante, non un comportamento del prodotto osservato come errato. Servono un host Apple, una build QA firmata, un profilo valido e un iPhone per completare la prova.
+- Modello e versione iOS: `N/E` — compilare da `ios-device-metadata.log`
+- UDID dispositivo: `N/E` — compilare da `ios-device-metadata.log`
+- Build/IPA installata: `N/E` — `EduAITestMaster-QA-signed.ipa` nell'artefatto hardware
+- Team / certificato di firma: `N/E` — compilare da `ios-signing-metadata.log`
+- Profilo di provisioning e scadenza: `N/E` — compilare da `ios-signing-metadata.log`
+- Stato firma/installazione: `N/E` — eseguire il job hardware manuale su host Apple
+- ID log/evidenza installazione: `N/E` — usare `run_id` e artefatto `ios-native-icon-hardware-qa-<run_id>`
+- `acquisto`: `N/E` — verificare rifiuto reale, `Riprova`, riapertura e inventario server
+- `equipaggiamento`: `N/E` — verificare rifiuto reale, `Riprova`, riapertura e inventario server
+- `ripristino`: `N/E` — verificare rifiuto reale, `Riprova`, riapertura e inventario server
+- Note: il job hardware richiede un host Apple, un iPhone accoppiato, un profilo development valido e l'environment GitHub protetto.
 
 Per ciascuno dei tre scenari compilare il risultato solo dopo aver verificato
 il rifiuto reale di `setAlternateIconName`, il messaggio con `Riprova`, il
@@ -245,7 +270,7 @@ automatica con una prova indiretta.
 | Android | Emulatore | N/E — Java/ADB/emulatore assenti | N/E — Java/ADB/emulatore assenti | N/E — Java/ADB/emulatore assenti | N/E — nessuna build installata |
 | Android | Dispositivo reale | N/E — Java/ADB assenti | N/E — Java/ADB assenti | N/E — Java/ADB assenti | N/E — nessuna build installata |
 | iOS | Simulatore | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — nessuna build installata |
-| iOS | Dispositivo reale | FAIL — nessun host Apple/Xcode e nessuna IPA firmata; flusso non eseguito | FAIL — nessun host Apple/Xcode e nessuna IPA firmata; flusso non eseguito | FAIL — nessun host Apple/Xcode e nessuna IPA firmata; flusso non eseguito | FAIL — nessun iPhone/build installata per verificare launcher e inventario server |
+| iOS | Dispositivo reale | N/E — job manuale `ios-hardware-qa` disponibile su runner macOS con IPA firmata | N/E — usare `ios-native-icon-hardware-qa-<run_id>` e verificare `Riprova`/riapertura dopo il rifiuto | N/E — verificare rifiuto reale, `Riprova`, riapertura e inventario server | N/E — installare la IPA e confrontare launcher, `icona_futura` e inventario server |
 
 ### Matrice iOS separata
 
@@ -256,13 +281,12 @@ dispositivo reale, e un flusso completato non rende superati gli altri due.
 | Host iOS | Build/installazione | ID log/evidenza build | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + inventario | Stato / ID log flussi |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Simulatore | N/E — `xcodebuild`/`xcrun`/`simctl` assenti su Linux | N/E — nessun run macOS disponibile | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova`, acquisto conservato e una sola icona custom | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessun rifiuto reale con nome `nil`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessuna build installata | `N/E-2026-08-29-linux` |
-| Dispositivo reale | FAIL — `xcodebuild`/firma/dispositivo Apple assenti su Linux; nessuna IPA installata | FAIL — nessun run macOS o log di installazione firmata disponibile | FAIL — nessun rifiuto reale di `setAlternateIconName`; acquisto, `Riprova`, riapertura e collezione server non verificati | FAIL — nessun rifiuto reale di `setAlternateIconName`; equipaggiamento, `Riprova`, riapertura e inventario server non verificati | FAIL — nessun rifiuto reale con nome `nil`; reset, `Riprova`, riapertura e inventario server non verificati | FAIL — nessuna build installata per confrontare launcher, `icona_futura` e unicità dell’icona | `FAIL-2026-08-29-linux-no-apple-host` |
+| Dispositivo reale | N/E — job manuale `ios-hardware-qa` disponibile su runner macOS con IPA firmata e installazione `devicectl` | N/E — usare `ios-native-icon-hardware-qa-<run_id>` con IPA, log di firma/installazione e metadati dispositivo | N/E — verificare rifiuto reale di `setAlternateIconName`, acquisto conservato, `Riprova`, riapertura e inventario server | N/E — verificare rifiuto reale di `setAlternateIconName`, `Riprova`, riapertura e inventario server | N/E — verificare rifiuto reale con nome `nil`, `Riprova`, riapertura e inventario server | N/E — installare la IPA e confrontare launcher, `icona_futura` e unicità dell’icona | `N/E` — compilare con `run_id` e nome artefatto dopo il run hardware |
 
-Quando la pipeline viene eseguita, sostituire l'ID
-`FAIL-2026-08-29-linux-no-apple-host` solo nella riga del relativo host con
+Quando la pipeline viene eseguita, compilare la riga del dispositivo reale con
 `run_id`, nome dell'artefatto, modello/iOS/UDID, IPA, certificato e profilo di
-provisioning. Per il dispositivo reale aggiungere anche il log di installazione
-firmata e i dati di provisioning; il run del simulatore non è sufficiente.
+provisioning. Aggiungere anche il log di installazione firmata e i dati di
+provisioning; il run del simulatore non è sufficiente.
 
 Per ogni riga, dopo il rifiuto:
 
@@ -282,9 +306,8 @@ installare alcuna build, provocare un rifiuto reale del bridge, verificare
 `Riprova`, osservare l'icona nel launcher o eseguire la chiusura/riapertura
 forzata su un emulatore/simulatore o dispositivo reale. Per rispettare la
 distinzione tra risultato e disponibilità dell'ambiente, la riga
-`Dispositivo reale` usa `FAIL` per il gate non eseguibile e registra l'ID
-`FAIL-2026-08-29-linux-no-apple-host`; questo non costituisce evidenza di un
-bug del prodotto. Le prove automatiche sono invece tutte superate e coprono i
-tre rollback, l'inventario serializzato, il messaggio localizzato e la
-disponibilità del retry. La conferma su iPhone resta da eseguire su host Apple
-con build firmata.
+`Dispositivo reale` resta `N/E` finché il job hardware manuale non viene
+eseguito; questo non costituisce evidenza di un bug del prodotto. Le prove
+automatiche sono invece tutte superate e coprono i tre rollback, l'inventario
+serializzato, il messaggio localizzato e la disponibilità del retry. La
+conferma su iPhone resta da eseguire su host Apple con build firmata.

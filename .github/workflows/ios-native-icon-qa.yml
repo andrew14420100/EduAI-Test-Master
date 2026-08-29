@@ -2,6 +2,12 @@ name: iOS native icon QA
 
 on:
   workflow_dispatch:
+    inputs:
+      run_hardware_qa:
+        description: "Esegui anche la build IPA firmata e l'installazione su iPhone QA"
+        required: true
+        default: false
+        type: boolean
   push:
     paths:
       - ".github/workflows/ios-native-icon-qa.yml"
@@ -83,3 +89,271 @@ jobs:
             ${{ runner.temp }}/EduAITestMaster-Debug-iphonesimulator.zip
             ${{ runner.temp }}/ios-harness-settings.log
             ${{ runner.temp }}/ios-debug-build.log
+
+  ios-hardware-qa:
+    name: Build, sign, and install iOS QA IPA on test device
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_hardware_qa == true }}
+    runs-on: [self-hosted, macOS, ios-hardware-qa]
+    environment:
+      name: ios-hardware-qa
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run static native icon checks
+        run: |
+          pnpm run test:native-icons
+          pnpm run test:icon-recovery
+
+      - name: Install CocoaPods dependencies
+        run: pod install --project-directory=ios --repo-update
+
+      - name: Verify resolved Debug and Release harness settings
+        run: pnpm run verify:ios-harness | tee "$RUNNER_TEMP/ios-harness-settings.log"
+
+      - name: Prepare ephemeral signing keychain and provisioning profile
+        id: signing
+        env:
+          IOS_QA_CERTIFICATE_BASE64: ${{ secrets.IOS_QA_CERTIFICATE_BASE64 }}
+          IOS_QA_CERTIFICATE_PASSWORD: ${{ secrets.IOS_QA_CERTIFICATE_PASSWORD }}
+          IOS_QA_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_QA_PROVISIONING_PROFILE_BASE64 }}
+          IOS_QA_TEAM_ID: ${{ secrets.IOS_QA_TEAM_ID }}
+          IOS_QA_DEVICE_UDID: ${{ secrets.IOS_QA_DEVICE_UDID }}
+        run: |
+          set -euo pipefail
+
+          : "${IOS_QA_CERTIFICATE_BASE64:?Configure IOS_QA_CERTIFICATE_BASE64 in the protected ios-hardware-qa environment}"
+          : "${IOS_QA_CERTIFICATE_PASSWORD:?Configure IOS_QA_CERTIFICATE_PASSWORD in the protected ios-hardware-qa environment}"
+          : "${IOS_QA_PROVISIONING_PROFILE_BASE64:?Configure IOS_QA_PROVISIONING_PROFILE_BASE64 in the protected ios-hardware-qa environment}"
+          : "${IOS_QA_TEAM_ID:?Configure IOS_QA_TEAM_ID in the protected ios-hardware-qa environment}"
+          : "${IOS_QA_DEVICE_UDID:?Configure IOS_QA_DEVICE_UDID in the protected ios-hardware-qa environment}"
+
+          keychain="$RUNNER_TEMP/eduai-ios-qa-${GITHUB_RUN_ID}.keychain-db"
+          certificate="$RUNNER_TEMP/eduai-ios-qa.p12"
+          profile="$RUNNER_TEMP/eduai-ios-qa.mobileprovision"
+          profile_plist="$RUNNER_TEMP/eduai-ios-qa-profile.plist"
+          profile_directory="$HOME/Library/MobileDevice/Provisioning Profiles"
+          keychain_password="$(openssl rand -hex 32)"
+
+          echo "IOS_QA_KEYCHAIN_PATH=$keychain" >> "$GITHUB_ENV"
+          printf '%s' "$IOS_QA_CERTIFICATE_BASE64" | base64 -D > "$certificate"
+          printf '%s' "$IOS_QA_PROVISIONING_PROFILE_BASE64" | base64 -D > "$profile"
+
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$certificate" \
+            -P "$IOS_QA_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security \
+            -t cert \
+            -f pkcs12 \
+            "$keychain"
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s \
+            -k "$keychain_password" \
+            "$keychain"
+          security list-keychains -d user -s "$keychain"
+
+          mkdir -p "$profile_directory"
+          security cms -D -i "$profile" -o "$profile_plist"
+          profile_uuid="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$profile_plist")"
+          profile_name="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$profile_plist")"
+          profile_team_id="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$profile_plist")"
+          profile_expiration="$(/usr/libexec/PlistBuddy -c 'Print :ExpirationDate' "$profile_plist")"
+          echo "IOS_QA_PROFILE_UUID=$profile_uuid" >> "$GITHUB_ENV"
+          echo "IOS_QA_PROFILE_NAME=$profile_name" >> "$GITHUB_ENV"
+
+          test "$profile_team_id" = "$IOS_QA_TEAM_ID"
+          if ! /usr/libexec/PlistBuddy -c 'Print :ProvisionedDevices' "$profile_plist" \
+            | grep -Fq "$IOS_QA_DEVICE_UDID"; then
+            echo "The configured QA device is not present in the provisioning profile."
+            exit 1
+          fi
+
+          cp "$profile" "$profile_directory/$profile_uuid.mobileprovision"
+
+          identities_log="$RUNNER_TEMP/ios-signing-identities.log"
+          security find-identity -v -p codesigning "$keychain" > "$identities_log"
+          if ! grep -Fq 'Apple Development' "$identities_log"; then
+            echo "The signing keychain does not contain an Apple Development identity."
+            exit 1
+          fi
+
+          {
+            echo "team_id=$IOS_QA_TEAM_ID"
+            echo "certificate_identity=Apple Development"
+            echo "provisioning_profile_name=$profile_name"
+            echo "provisioning_profile_uuid=$profile_uuid"
+            echo "provisioning_profile_expiration=$profile_expiration"
+          } > "$RUNNER_TEMP/ios-signing-metadata.log"
+
+          echo "::add-mask::$keychain_password"
+
+      - name: Capture connected QA device metadata
+        env:
+          IOS_QA_DEVICE_UDID: ${{ secrets.IOS_QA_DEVICE_UDID }}
+          IOS_QA_DEVICE_NAME: ${{ vars.IOS_QA_DEVICE_NAME }}
+          IOS_QA_DEVICE_MODEL: ${{ vars.IOS_QA_DEVICE_MODEL }}
+          IOS_QA_DEVICE_OS_VERSION: ${{ vars.IOS_QA_DEVICE_OS_VERSION }}
+        run: |
+          set -euo pipefail
+
+          device_metadata="$RUNNER_TEMP/ios-device-metadata.log"
+          {
+            echo "configured_device_name=${IOS_QA_DEVICE_NAME:-not-provided}"
+            echo "configured_device_model=${IOS_QA_DEVICE_MODEL:-not-provided}"
+            echo "configured_device_os_version=${IOS_QA_DEVICE_OS_VERSION:-not-provided}"
+            echo "configured_device_udid=$IOS_QA_DEVICE_UDID"
+            echo
+            echo "xcrun devicectl list devices:"
+          } > "$device_metadata"
+
+          set +e
+          device_list="$(xcrun devicectl list devices 2>&1)"
+          device_list_status=$?
+          set -e
+          printf '%s\n' "$device_list" >> "$device_metadata"
+          printf 'devicectl_exit_code=%s\n' "$device_list_status" >> "$device_metadata"
+          if [[ "$device_list_status" -ne 0 ]]; then
+            echo "Unable to enumerate devices with xcrun devicectl."
+            exit "$device_list_status"
+          fi
+          if ! printf '%s\n' "$device_list" | grep -Fq "$IOS_QA_DEVICE_UDID"; then
+            echo "The configured QA device is not connected to the selected macOS runner."
+            exit 1
+          fi
+
+          {
+            echo
+            echo "xcrun xctrace list devices:"
+            xcrun xctrace list devices || echo "xctrace device listing unavailable"
+          } >> "$device_metadata"
+
+      - name: Archive signed Debug QA app for iPhone
+        env:
+          IOS_QA_TEAM_ID: ${{ secrets.IOS_QA_TEAM_ID }}
+        run: |
+          set -euo pipefail
+
+          archive_path="$RUNNER_TEMP/EduAITestMaster-QA.xcarchive"
+          xcodebuild \
+            -workspace ios/EduAITestMaster.xcworkspace \
+            -scheme EduAITestMaster \
+            -configuration Debug \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$archive_path" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="$IOS_QA_TEAM_ID" \
+            CODE_SIGN_IDENTITY="Apple Development" \
+            PROVISIONING_PROFILE_SPECIFIER="$IOS_QA_PROFILE_NAME" \
+            SKIP_BUNDLING=0 \
+            archive \
+            | tee "$RUNNER_TEMP/ios-hardware-archive.log"
+
+      - name: Export signed QA IPA
+        env:
+          IOS_QA_TEAM_ID: ${{ secrets.IOS_QA_TEAM_ID }}
+        run: |
+          set -euo pipefail
+
+          export_options="$RUNNER_TEMP/ios-qa-export-options.plist"
+          export_directory="$RUNNER_TEMP/ios-qa-export"
+          archive_path="$RUNNER_TEMP/EduAITestMaster-QA.xcarchive"
+
+          cat > "$export_options" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>compileBitcode</key>
+            <false/>
+            <key>method</key>
+            <string>development</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.eduai.testmaster</key>
+              <string>$IOS_QA_PROFILE_UUID</string>
+            </dict>
+            <key>signingCertificate</key>
+            <string>Apple Development</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>$IOS_QA_TEAM_ID</string>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$archive_path" \
+            -exportOptionsPlist "$export_options" \
+            -exportPath "$export_directory" \
+            | tee "$RUNNER_TEMP/ios-hardware-export.log"
+
+          test -f "$export_directory/EduAITestMaster.ipa"
+          cp "$export_directory/EduAITestMaster.ipa" \
+            "$RUNNER_TEMP/EduAITestMaster-QA-signed.ipa"
+
+      - name: Install signed QA IPA on connected iPhone
+        if: always()
+        env:
+          IOS_QA_DEVICE_UDID: ${{ secrets.IOS_QA_DEVICE_UDID }}
+        run: |
+          set +e
+          xcrun devicectl device install app \
+            --device "$IOS_QA_DEVICE_UDID" \
+            "$RUNNER_TEMP/EduAITestMaster-QA-signed.ipa" \
+            > "$RUNNER_TEMP/ios-hardware-install.log" 2>&1
+          status=$?
+          printf '\nexit_code=%s\n' "$status" >> "$RUNNER_TEMP/ios-hardware-install.log"
+          exit "$status"
+
+      - name: Upload signed QA IPA, logs, and device metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-native-icon-hardware-qa-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/EduAITestMaster-QA-signed.ipa
+            ${{ runner.temp }}/ios-harness-settings.log
+            ${{ runner.temp }}/ios-signing-identities.log
+            ${{ runner.temp }}/ios-signing-metadata.log
+            ${{ runner.temp }}/ios-device-metadata.log
+            ${{ runner.temp }}/ios-hardware-archive.log
+            ${{ runner.temp }}/ios-hardware-export.log
+            ${{ runner.temp }}/ios-hardware-install.log
+
+      - name: Remove ephemeral signing material
+        if: always()
+        run: |
+          set +e
+          if [[ -n "${IOS_QA_KEYCHAIN_PATH:-}" ]]; then
+            security delete-keychain "$IOS_QA_KEYCHAIN_PATH"
+          fi
+          rm -f \
+            "$RUNNER_TEMP/eduai-ios-qa.p12" \
+            "$RUNNER_TEMP/eduai-ios-qa.mobileprovision" \
+            "$RUNNER_TEMP/eduai-ios-qa-profile.plist" \
+            "$RUNNER_TEMP/ios-qa-export-options.plist"
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/${IOS_QA_PROFILE_UUID:-}.mobileprovision"
