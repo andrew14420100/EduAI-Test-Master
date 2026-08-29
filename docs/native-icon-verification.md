@@ -135,14 +135,15 @@ indipendenti.
   `pnpm run check:react-versions`: tutti superati; il recovery harness ha
   riportato 13 test superati, inclusa la verifica del flag Xcode Debug/Release
   e della pipeline macOS.
-- `./android/gradlew assembleDebug`: bloccato prima della compilazione; l'host
-  non dispone di Java (`JAVA_HOME` non impostato e comando `java` assente),
-  exit code 1. Evidenza: `ANDROID-PREFLIGHT-2026-08-29`.
-- `./android/gradlew --version`: stesso blocco per Java assente, exit code 1.
-  Evidenza: `ANDROID-GRADLE-2026-08-29`.
-- La risoluzione dei comandi `adb` ed `emulator` non restituisce alcun
-  eseguibile; `ANDROID_HOME` e `ANDROID_SDK_ROOT` non sono impostati.
-  Evidenza: `ANDROID-PREFLIGHT-2026-08-29`.
+- `./android/gradlew assembleDebug --no-daemon --stacktrace`: la JVM parte con
+  OpenJDK 17, ma la configurazione nativa si arresta con `SDK location not
+  found`; la directory `/home/runner/.android-sdk` indicata da
+  `ANDROID_HOME`/`ANDROID_SDK_ROOT` non esiste, exit code 1. Evidenza:
+  `ANDROID-GRADLE-SDK-2026-08-29-RUN2`.
+- `adb` è disponibile (Android Debug Bridge 35.0.1), ma `adb devices -l`
+  restituisce solo l'intestazione senza dispositivi; `emulator` non è
+  installato, non esistono AVD o system image e `/dev/kvm` è assente.
+  Evidenza: `ANDROID-PREFLIGHT-2026-08-29-RUN2`.
 - `eas whoami`: bloccato perché questo workspace non è autenticato a EAS
   (`Not logged in`, exit code 1); non è quindi disponibile nemmeno una build
   cloud da installare durante questa sessione.
@@ -259,8 +260,8 @@ forzata e il controllo dell'inventario server.
 
 | Versione Android scelta | Build/installazione | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + icona visibile + inventario server |
 | --- | --- | --- | --- | --- | --- |
-| Android 7.0 / API 24 (minima supportata) | N/E — nessun APK o ID di build/installazione: `cd android && ./gradlew assembleDebug --no-daemon --stacktrace` si arresta in configurazione con `SDK location not found` perché `/home/runner/.android-sdk` è assente (`ANDROID-GRADLE-SDK-2026-08-29`); il tentativo di bootstrap temporaneo con `sdkmanager` termina per limite di quota e crash JVM prima di rendere disponibile l’SDK (`ANDROID-SDK-INSTALL-2026-08-29`); non sono presenti emulator, AVD o system image API 24 e `/dev/kvm` è assente (`ANDROID-HOST-PREFLIGHT-2026-08-29`) | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente su host API 24 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 24 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 24 | N/E — nessuna installazione/riapertura: manca AVD o dispositivo API 24 per confrontare launcher e `icona_futura` equipaggiata |
-| Android 16 / API 36 (recente) | N/E — nessun APK o ID di build/installazione: `cd android && ./gradlew assembleDebug --no-daemon --stacktrace` si arresta in configurazione con `SDK location not found` perché `/home/runner/.android-sdk` è assente (`ANDROID-GRADLE-SDK-2026-08-29`); il tentativo di bootstrap temporaneo con `sdkmanager` termina per limite di quota e crash JVM prima di rendere disponibile l’SDK (`ANDROID-SDK-INSTALL-2026-08-29`); non sono presenti emulator, AVD o system image API 36 e `/dev/kvm` è assente (`ANDROID-HOST-PREFLIGHT-2026-08-29`) | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente su host API 36 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 36 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 36 | N/E — nessuna installazione/riapertura: manca AVD o dispositivo API 36 per confrontare launcher e `icona_futura` equipaggiata |
+| Android 7.0 / API 24 (minima supportata) | N/E — nessun APK o ID di build/installazione: `cd android && ./gradlew assembleDebug --no-daemon --stacktrace` si arresta in configurazione con `SDK location not found` perché `/home/runner/.android-sdk` non esiste (`ANDROID-GRADLE-SDK-2026-08-29-RUN2`); `adb` 35.0.1 è disponibile ma non ci sono emulator, AVD, system image API 24 o dispositivo collegato; `/dev/kvm` è assente (`ANDROID-PREFLIGHT-2026-08-29-RUN2`) | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente su host API 24 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 24 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 24 | N/E — nessuna installazione/riapertura: manca AVD o dispositivo API 24 per confrontare launcher e `icona_futura` equipaggiata |
+| Android 16 / API 36 (recente) | N/E — nessun APK o ID di build/installazione: `cd android && ./gradlew assembleDebug --no-daemon --stacktrace` si arresta in configurazione con `SDK location not found` perché `/home/runner/.android-sdk` non esiste (`ANDROID-GRADLE-SDK-2026-08-29-RUN2`); `adb` 35.0.1 è disponibile ma non ci sono emulator, AVD, system image API 36 o dispositivo collegato; `/dev/kvm` è assente (`ANDROID-PREFLIGHT-2026-08-29-RUN2`) | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente su host API 36 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 36 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 36 | N/E — nessuna installazione/riapertura: manca AVD o dispositivo API 36 per confrontare launcher e `icona_futura` equipaggiata |
 
 ### Evidenza per host installabile
 
@@ -272,8 +273,8 @@ automatica con una prova indiretta.
 
 | Piattaforma | Host | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + inventario server |
 | --- | --- | --- | --- | --- | --- |
-| Android | Emulatore | N/E — JDK 17 e ADB 35.0.1 disponibili, ma SDK, `emulator`, system image API 24/36 e AVD non sono presenti; `/dev/kvm` non è disponibile (`ANDROID-HOST-PREFLIGHT-2026-08-29`) | N/E — nessun ID di flusso; nessun rifiuto reale del bridge e manca un AVD installabile | N/E — nessun ID di flusso; nessun rifiuto reale del bridge e manca un AVD installabile | N/E — nessuna build/AVD installabile per verificare chiusura, riapertura, launcher e inventario server |
-| Android | Dispositivo reale | N/E — JDK 17 e ADB 35.0.1 disponibili, ma `adb devices -l` non rileva dispositivi (`ANDROID-HOST-PREFLIGHT-2026-08-29`); nessun APK o ID di installazione | N/E — nessun ID di flusso; nessun rifiuto reale del bridge e nessun dispositivo collegato | N/E — nessun ID di flusso; nessun rifiuto reale del bridge e nessun dispositivo collegato | N/E — nessuna build installata né dispositivo collegato per verificare chiusura, riapertura, launcher e inventario server |
+| Android | Emulatore | N/E — JDK 17 e ADB 35.0.1 disponibili, ma SDK, `emulator`, system image API 24/36 e AVD non sono presenti; `/dev/kvm` non è disponibile (`ANDROID-PREFLIGHT-2026-08-29-RUN2`) | N/E — nessun ID di flusso; nessun rifiuto reale del bridge e manca un AVD installabile | N/E — nessun ID di flusso; nessun rifiuto reale del bridge e manca un AVD installabile | N/E — nessuna build/AVD installabile per verificare chiusura, riapertura, launcher e inventario server |
+| Android | Dispositivo reale | N/E — JDK 17 e ADB 35.0.1 disponibili, ma `adb devices -l` non rileva dispositivi (`ANDROID-PREFLIGHT-2026-08-29-RUN2`); nessun APK o ID di installazione | N/E — nessun ID di flusso; nessun rifiuto reale del bridge e nessun dispositivo collegato | N/E — nessun ID di flusso; nessun rifiuto reale del bridge e nessun dispositivo collegato | N/E — nessuna build installata né dispositivo collegato per verificare chiusura, riapertura, launcher e inventario server |
 | iOS | Simulatore | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — nessuna build installata |
 | iOS | Dispositivo reale | N/E — job manuale `ios-hardware-qa` disponibile su runner macOS con IPA firmata | N/E — usare `ios-native-icon-hardware-qa-<run_id>` e verificare `Riprova`/riapertura dopo il rifiuto | N/E — verificare rifiuto reale, `Riprova`, riapertura e inventario server | N/E — installare la IPA e confrontare launcher, `icona_futura` e inventario server |
 
@@ -304,10 +305,10 @@ Per ogni riga, dopo il rifiuto:
    equipaggiato nell'inventario server;
 5. verificare che non risultino mai due icone personalizzate equipaggiate.
 
-Questa macchina non consente di superare la matrice reale: dispone di OpenJDK 17 e
-ADB, ma non di un SDK Android utilizzabile, `emulator`/AVD o dispositivo
-collegato; inoltre non dispone di macOS/Xcode per compilare e installare iOS. Di
-conseguenza in questa sessione non è stato possibile
+Questa macchina non consente di superare la matrice reale: dispone di OpenJDK 17
+e ADB 35.0.1, ma non di un SDK Android utilizzabile, `emulator`/AVD o
+dispositivo collegato; inoltre non dispone di macOS/Xcode per compilare e
+installare iOS. Di conseguenza in questa sessione non è stato possibile
 installare alcuna build, provocare un rifiuto reale del bridge, verificare
 `Riprova`, osservare l'icona nel launcher o eseguire la chiusura/riapertura
 forzata su un emulatore/simulatore o dispositivo reale. Per rispettare la
