@@ -1,0 +1,428 @@
+PS C:\Users\Msi\StudioProjects\EduAI-Test-Master\android> Select-String -Path .\gradle-build.log `
+>>   -Pattern "What went wrong|Caused by:|Execution failed|error:" `
+>>   -Context 0,8
+
+> gradle-build.log:2557:C/C++: ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:2558:
+  gradle-build.log:2559:> Task :expo-modules-core:buildCMakeDebug[arm64-v8a]
+  gradle-build.log:2560:C/C++: CMake Warning in CMakeLists.txt:
+  gradle-build.log:2561:C/C++:   The object file directory
+  gradle-build.log:2562:C/C++:     C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/expo-modules-core@3
+.0.30_re_8fbbbf307ec271ac53fb97365819fe0f/node_modules/expo-modules-core/android/.cxx/Debug/2631v2v6/arm64-v8a/CMakeFil
+es/expo-modules-core.dir/./
+  gradle-build.log:2563:C/C++:   has 230 characters.  The maximum full path to an object file is 250
+  gradle-build.log:2564:C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  gradle-build.log:2565:C/C++:     C_/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/expo-modules-core@3
+.0.30_re_8fbbbf307ec271ac53fb97365819fe0f/node_modules/expo-modules-core/common/cpp/NativeModule.cpp.o
+> gradle-build.log:3586:C/C++: ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:3587:
+  gradle-build.log:3588:> Task :expo-modules-core:buildCMakeDebug[arm64-v8a]
+  gradle-build.log:3589:C/C++: CMake Warning in CMakeLists.txt:
+  gradle-build.log:3590:C/C++:   The object file directory
+  gradle-build.log:3591:C/C++:     C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/expo-modules-core@3
+.0.30_re_8fbbbf307ec271ac53fb97365819fe0f/node_modules/expo-modules-core/android/.cxx/Debug/2631v2v6/arm64-v8a/CMakeFil
+es/expo-modules-core.dir/./
+  gradle-build.log:3592:C/C++:   has 230 characters.  The maximum full path to an object file is 250
+  gradle-build.log:3593:C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  gradle-build.log:3594:C/C++:     C_/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/expo-modules-core@3
+.0.30_re_8fbbbf307ec271ac53fb97365819fe0f/node_modules/expo-modules-core/common/cpp/ObjectDeallocator.cpp.o
+> gradle-build.log:4069:C/C++: ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:4070:
+  gradle-build.log:4071:> Task :expo-modules-core:buildCMakeDebug[arm64-v8a] FAILED
+  gradle-build.log:4072:
+  gradle-build.log:4073:[Incubating] Problems report is available at:
+file:///C:/Users/Msi/StudioProjects/EduAI-Test-Master/android/build/reports/problems/problems-report.html
+  gradle-build.log:4074:
+  gradle-build.log:4075:FAILURE: Build completed with 4 failures.
+  gradle-build.log:4076:
+  gradle-build.log:4077:1: Task failed with an exception.
+> gradle-build.log:4079:* What went wrong:
+> gradle-build.log:4080:Execution failed for task ':app:validateSigningDebug'.
+  gradle-build.log:4081:> Keystore file 'C:\Users\Msi\StudioProjects\EduAI-Test-Master\android\app\debug.keystore' not
+found for signing
+  gradle-build.log:4082:config 'debug'.
+  gradle-build.log:4083:
+  gradle-build.log:4084:* Try:
+  gradle-build.log:4085:> Run with --info or --debug option to get more log output.
+  gradle-build.log:4086:> Run with --scan to get full insights.
+  gradle-build.log:4087:> Get more help at https://help.gradle.org.
+  gradle-build.log:4088:
+> gradle-build.log:4090:org.gradle.api.tasks.TaskExecutionException: Execution failed for task
+':app:validateSigningDebug'.
+  gradle-build.log:4091:        at
+org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecut
+  gradle-build.log:4092:er.java:130)
+  gradle-build.log:4093:        at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
+  gradle-build.log:4094:        at
+  gradle-build.log:4095:org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteAction
+sTaskExecuter.java:128)
+  gradle-build.log:4096:        at
+org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+  gradle-build.log:4097:        at
+org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskEx
+  gradle-build.log:4098:ecuter.java:41)
+> gradle-build.log:4136:Caused by: org.gradle.api.InvalidUserDataException: Keystore file
+  gradle-build.log:4137:'C:\Users\Msi\StudioProjects\EduAI-Test-Master\android\app\debug.keystore' not found for
+signing config 'debug'.
+  gradle-build.log:4138:        at
+com.android.build.gradle.internal.tasks.ValidateSigningTask.doTaskAction(ValidateSigningTask.kt:94)
+  gradle-build.log:4139:        at
+com.android.build.gradle.internal.tasks.NonIncrementalTask$taskAction$$inlined$recordTaskAction$1.invoke(BaseTask.k
+  gradle-build.log:4140:t:60)
+  gradle-build.log:4141:        at com.android.build.gradle.internal.tasks.Blocks.recordSpan(Blocks.java:51)
+  gradle-build.log:4142:        at
+com.android.build.gradle.internal.tasks.NonIncrementalTask.taskAction(NonIncrementalTask.kt:78)
+  gradle-build.log:4143:        at jdk.internal.reflect.GeneratedMethodAccessor252.invoke(Unknown Source)
+  gradle-build.log:4144:        at
+java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+> gradle-build.log:4297:* What went wrong:
+> gradle-build.log:4298:Execution failed for task ':react-native-screens:buildCMakeDebug[arm64-v8a]'.
+  gradle-build.log:4299:> com.android.ide.common.process.ProcessException: ninja: Entering directory
+`C:\Users\Msi\StudioProjects\EduAI-Test-Ma
+  gradle-build.log:4300:ster\node_modules\.pnpm\react-native-screens@4.16.0_f54b5de88bc9c13b54e2af60cd0b7ed1\node_modul
+es\react-native-screens\
+  gradle-build.log:4301:android\.cxx\Debug\1j5i6k6y\arm64-v8a'
+  gradle-build.log:4302:  [0/1] Re-running CMake...
+  gradle-build.log:4303:  -- Configuring done
+  gradle-build.log:4304:  -- Generating done
+  gradle-build.log:4305:  -- Build files have been written to:
+C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/react-native-sc
+  gradle-build.log:4306:reens@4.16.0_f54b5de88bc9c13b54e2af60cd0b7ed1/node_modules/react-native-screens/android/.cxx/De
+bug/1j5i6k6y/arm64-v8a
+> gradle-build.log:6358:  ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:6359:
+  gradle-build.log:6360:
+  gradle-build.log:6361:* Try:
+  gradle-build.log:6362:> Run with --info or --debug option to get more log output.
+  gradle-build.log:6363:> Run with --scan to get full insights.
+  gradle-build.log:6364:> Get more help at https://help.gradle.org.
+  gradle-build.log:6365:
+  gradle-build.log:6366:* Exception is:
+> gradle-build.log:6367:org.gradle.api.tasks.TaskExecutionException: Execution failed for task
+  gradle-build.log:6368:':react-native-screens:buildCMakeDebug[arm64-v8a]'.
+  gradle-build.log:6369:        at
+org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecut
+  gradle-build.log:6370:er.java:130)
+  gradle-build.log:6371:        at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
+  gradle-build.log:6372:        at
+  gradle-build.log:6373:org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteAction
+sTaskExecuter.java:128)
+  gradle-build.log:6374:        at
+org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+  gradle-build.log:6375:        at
+org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskEx
+> gradle-build.log:6417:Caused by: org.gradle.internal.UncheckedException:
+com.android.ide.common.process.ProcessException: ninja: Entering
+  gradle-build.log:6418:directory
+`C:\Users\Msi\StudioProjects\EduAI-Test-Master\node_modules\.pnpm\react-native-screens@4.16.0_f54b5de88bc9c13
+  gradle-build.log:6419:b54e2af60cd0b7ed1\node_modules\react-native-screens\android\.cxx\Debug\1j5i6k6y\arm64-v8a'
+  gradle-build.log:6420:[0/1] Re-running CMake...
+  gradle-build.log:6421:-- Configuring done
+  gradle-build.log:6422:-- Generating done
+  gradle-build.log:6423:-- Build files have been written to:
+C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/react-native-scre
+  gradle-build.log:6424:ens@4.16.0_f54b5de88bc9c13b54e2af60cd0b7ed1/node_modules/react-native-screens/android/.cxx/Debu
+g/1j5i6k6y/arm64-v8a
+  gradle-build.log:6425:[0/1] Re-running CMake...
+> gradle-build.log:8476:ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:8477:
+  gradle-build.log:8478:
+  gradle-build.log:8479:        at
+org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:69)
+  gradle-build.log:8480:        at
+org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:42)
+  gradle-build.log:8481:        at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:128)
+  gradle-build.log:8482:        at
+org.gradle.api.internal.project.taskfactory.StandardTaskAction.doExecute(StandardTaskAction.java:58)
+  gradle-build.log:8483:        at
+org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:51)
+  gradle-build.log:8484:        at
+org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:29)
+> gradle-build.log:8633:Caused by: com.android.ide.common.process.ProcessException: ninja: Entering directory
+`C:\Users\Msi\StudioProjects\EduA
+  gradle-build.log:8634:I-Test-Master\node_modules\.pnpm\react-native-screens@4.16.0_f54b5de88bc9c13b54e2af60cd0b7ed1\n
+ode_modules\react-native
+  gradle-build.log:8635:-screens\android\.cxx\Debug\1j5i6k6y\arm64-v8a'
+  gradle-build.log:8636:[0/1] Re-running CMake...
+  gradle-build.log:8637:-- Configuring done
+  gradle-build.log:8638:-- Generating done
+  gradle-build.log:8639:-- Build files have been written to:
+C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/react-native-scre
+  gradle-build.log:8640:ens@4.16.0_f54b5de88bc9c13b54e2af60cd0b7ed1/node_modules/react-native-screens/android/.cxx/Debu
+g/1j5i6k6y/arm64-v8a
+  gradle-build.log:8641:[0/1] Re-running CMake...
+> gradle-build.log:10692:ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:10693:
+  gradle-build.log:10694:
+  gradle-build.log:10695:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:288)
+  gradle-build.log:10696:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt$executeProcess$1.invoke(ExecuteProcess.kt:108)
+  gradle-build.log:10697:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt$executeProcess$1.invoke(ExecuteProcess.kt:106)
+  gradle-build.log:10698:       at
+com.android.build.gradle.internal.cxx.timing.TimingEnvironmentKt.time(TimingEnvironment.kt:32)
+  gradle-build.log:10699:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess(ExecuteProcess.kt:106)
+  gradle-build.log:10700:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess$default(ExecuteProcess.kt:85)
+> gradle-build.log:10713:Caused by: com.android.ide.common.process.ProcessException: Error while executing process
+  gradle-build.log:10714:C:\Users\Msi\AppData\Local\Android\Sdk\cmake\3.22.1\bin\ninja.exe with arguments {-C
+C:\Users\Msi\StudioProjects\EduAI-
+  gradle-build.log:10715:Test-Master\node_modules\.pnpm\react-native-screens@4.16.0_f54b5de88bc9c13b54e2af60cd0b7ed1\no
+de_modules\react-native-s
+  gradle-build.log:10716:creens\android\.cxx\Debug\1j5i6k6y\arm64-v8a rnscreens}
+  gradle-build.log:10717:       at
+com.android.build.gradle.internal.process.GradleProcessResult.buildProcessException(GradleProcessResult.java:73)
+  gradle-build.log:10718:       at
+com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:48)
+  gradle-build.log:10719:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:277)
+  gradle-build.log:10720:       ... 137 more
+> gradle-build.log:10721:Caused by: org.gradle.process.internal.ExecException: Process 'command
+  gradle-build.log:10722:'C:\Users\Msi\AppData\Local\Android\Sdk\cmake\3.22.1\bin\ninja.exe'' finished with non-zero
+exit value 1
+  gradle-build.log:10723:       at
+org.gradle.process.internal.DefaultExecHandle$ExecResultImpl.assertNormalExitValue(DefaultExecHandle.java:442)
+  gradle-build.log:10724:       at
+com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:46)
+  gradle-build.log:10725:       ... 138 more
+  gradle-build.log:10726:
+  gradle-build.log:10727:==============================================================================
+  gradle-build.log:10728:
+  gradle-build.log:10729:3: Task failed with an exception.
+> gradle-build.log:10731:* What went wrong:
+> gradle-build.log:10732:Execution failed for task ':react-native-worklets:buildCMakeDebug[arm64-v8a][worklets]'.
+  gradle-build.log:10733:> com.android.ide.common.process.ProcessException: ninja: Entering directory
+`C:\Users\Msi\StudioProjects\EduAI-Test-Ma
+  gradle-build.log:10734:ster\node_modules\.pnpm\react-native-worklets@0.5.1_e78e4ccb715d5ad75e975e69a7ec8a3a\node_modu
+les\react-native-worklets
+  gradle-build.log:10735:\android\.cxx\Debug\20224e2j\arm64-v8a'
+  gradle-build.log:10736:  [0/2] Re-checking globbed directories...
+  gradle-build.log:10737:  [1/2] Re-running CMake...
+  gradle-build.log:10738:  -- Configuring done
+  gradle-build.log:10739:  -- Generating done
+  gradle-build.log:10740:  -- Build files have been written to:
+C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/react-native-wo
+> gradle-build.log:12945:  ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:12946:
+  gradle-build.log:12947:
+  gradle-build.log:12948:* Try:
+  gradle-build.log:12949:> Run with --info or --debug option to get more log output.
+  gradle-build.log:12950:> Run with --scan to get full insights.
+  gradle-build.log:12951:> Get more help at https://help.gradle.org.
+  gradle-build.log:12952:
+  gradle-build.log:12953:* Exception is:
+> gradle-build.log:12954:org.gradle.api.tasks.TaskExecutionException: Execution failed for task
+  gradle-build.log:12955:':react-native-worklets:buildCMakeDebug[arm64-v8a][worklets]'.
+  gradle-build.log:12956:       at
+org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecut
+  gradle-build.log:12957:er.java:130)
+  gradle-build.log:12958:       at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
+  gradle-build.log:12959:       at
+  gradle-build.log:12960:org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActio
+nsTaskExecuter.java:128)
+  gradle-build.log:12961:       at
+org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+  gradle-build.log:12962:       at
+org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskEx
+> gradle-build.log:13004:Caused by: org.gradle.internal.UncheckedException:
+com.android.ide.common.process.ProcessException: ninja: Entering
+  gradle-build.log:13005:directory
+`C:\Users\Msi\StudioProjects\EduAI-Test-Master\node_modules\.pnpm\react-native-worklets@0.5.1_e78e4ccb715d5ad
+  gradle-build.log:13006:75e975e69a7ec8a3a\node_modules\react-native-worklets\android\.cxx\Debug\20224e2j\arm64-v8a'
+  gradle-build.log:13007:[0/2] Re-checking globbed directories...
+  gradle-build.log:13008:[1/2] Re-running CMake...
+  gradle-build.log:13009:-- Configuring done
+  gradle-build.log:13010:-- Generating done
+  gradle-build.log:13011:-- Build files have been written to:
+C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/react-native-work
+  gradle-build.log:13012:lets@0.5.1_e78e4ccb715d5ad75e975e69a7ec8a3a/node_modules/react-native-worklets/android/.cxx/De
+bug/20224e2j/arm64-v8a
+> gradle-build.log:15216:ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:15217:
+  gradle-build.log:15218:
+  gradle-build.log:15219:       at
+org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:69)
+  gradle-build.log:15220:       at
+org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:42)
+  gradle-build.log:15221:       at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:128)
+  gradle-build.log:15222:       at
+org.gradle.api.internal.project.taskfactory.StandardTaskAction.doExecute(StandardTaskAction.java:58)
+  gradle-build.log:15223:       at
+org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:51)
+  gradle-build.log:15224:       at
+org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:29)
+> gradle-build.log:15373:Caused by: com.android.ide.common.process.ProcessException: ninja: Entering directory
+`C:\Users\Msi\StudioProjects\EduA
+  gradle-build.log:15374:I-Test-Master\node_modules\.pnpm\react-native-worklets@0.5.1_e78e4ccb715d5ad75e975e69a7ec8a3a\
+node_modules\react-native
+  gradle-build.log:15375:-worklets\android\.cxx\Debug\20224e2j\arm64-v8a'
+  gradle-build.log:15376:[0/2] Re-checking globbed directories...
+  gradle-build.log:15377:[1/2] Re-running CMake...
+  gradle-build.log:15378:-- Configuring done
+  gradle-build.log:15379:-- Generating done
+  gradle-build.log:15380:-- Build files have been written to:
+C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/react-native-work
+  gradle-build.log:15381:lets@0.5.1_e78e4ccb715d5ad75e975e69a7ec8a3a/node_modules/react-native-worklets/android/.cxx/De
+bug/20224e2j/arm64-v8a
+> gradle-build.log:17585:ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:17586:
+  gradle-build.log:17587:
+  gradle-build.log:17588:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:288)
+  gradle-build.log:17589:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt$executeProcess$1.invoke(ExecuteProcess.kt:108)
+  gradle-build.log:17590:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt$executeProcess$1.invoke(ExecuteProcess.kt:106)
+  gradle-build.log:17591:       at
+com.android.build.gradle.internal.cxx.timing.TimingEnvironmentKt.time(TimingEnvironment.kt:32)
+  gradle-build.log:17592:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess(ExecuteProcess.kt:106)
+  gradle-build.log:17593:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess$default(ExecuteProcess.kt:85)
+> gradle-build.log:17606:Caused by: com.android.ide.common.process.ProcessException: Error while executing process
+  gradle-build.log:17607:C:\Users\Msi\AppData\Local\Android\Sdk\cmake\3.22.1\bin\ninja.exe with arguments {-C
+C:\Users\Msi\StudioProjects\EduAI-
+  gradle-build.log:17608:Test-Master\node_modules\.pnpm\react-native-worklets@0.5.1_e78e4ccb715d5ad75e975e69a7ec8a3a\no
+de_modules\react-native-w
+  gradle-build.log:17609:orklets\android\.cxx\Debug\20224e2j\arm64-v8a worklets}
+  gradle-build.log:17610:       at
+com.android.build.gradle.internal.process.GradleProcessResult.buildProcessException(GradleProcessResult.java:73)
+  gradle-build.log:17611:       at
+com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:48)
+  gradle-build.log:17612:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:277)
+  gradle-build.log:17613:       ... 137 more
+> gradle-build.log:17614:Caused by: org.gradle.process.internal.ExecException: Process 'command
+  gradle-build.log:17615:'C:\Users\Msi\AppData\Local\Android\Sdk\cmake\3.22.1\bin\ninja.exe'' finished with non-zero
+exit value 1
+  gradle-build.log:17616:       at
+org.gradle.process.internal.DefaultExecHandle$ExecResultImpl.assertNormalExitValue(DefaultExecHandle.java:442)
+  gradle-build.log:17617:       at
+com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:46)
+  gradle-build.log:17618:       ... 138 more
+  gradle-build.log:17619:
+  gradle-build.log:17620:==============================================================================
+  gradle-build.log:17621:
+  gradle-build.log:17622:4: Task failed with an exception.
+> gradle-build.log:17624:* What went wrong:
+> gradle-build.log:17625:Execution failed for task ':expo-modules-core:buildCMakeDebug[arm64-v8a]'.
+  gradle-build.log:17626:> com.android.ide.common.process.ProcessException: ninja: Entering directory
+`C:\Users\Msi\StudioProjects\EduAI-Test-Ma
+  gradle-build.log:17627:ster\node_modules\.pnpm\expo-modules-core@3.0.30_re_8fbbbf307ec271ac53fb97365819fe0f\node_modu
+les\expo-modules-core\and
+  gradle-build.log:17628:roid\.cxx\Debug\2631v2v6\arm64-v8a'
+  gradle-build.log:17629:  [0/1] Re-running CMake...
+  gradle-build.log:17630:  -- Configuring done
+  gradle-build.log:17631:  -- Generating done
+  gradle-build.log:17632:  -- Build files have been written to:
+C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/expo-modules-co
+  gradle-build.log:17633:re@3.0.30_re_8fbbbf307ec271ac53fb97365819fe0f/node_modules/expo-modules-core/android/.cxx/Debu
+g/2631v2v6/arm64-v8a
+> gradle-build.log:21314:  ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:21315:
+  gradle-build.log:21316:
+  gradle-build.log:21317:* Try:
+  gradle-build.log:21318:> Run with --info or --debug option to get more log output.
+  gradle-build.log:21319:> Run with --scan to get full insights.
+  gradle-build.log:21320:> Get more help at https://help.gradle.org.
+  gradle-build.log:21321:
+  gradle-build.log:21322:* Exception is:
+> gradle-build.log:21323:org.gradle.api.tasks.TaskExecutionException: Execution failed for task
+':expo-modules-core:buildCMakeDebug[arm64-v8a]'.
+  gradle-build.log:21324:       at
+org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecut
+  gradle-build.log:21325:er.java:130)
+  gradle-build.log:21326:       at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
+  gradle-build.log:21327:       at
+  gradle-build.log:21328:org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActio
+nsTaskExecuter.java:128)
+  gradle-build.log:21329:       at
+org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+  gradle-build.log:21330:       at
+org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskEx
+  gradle-build.log:21331:ecuter.java:41)
+> gradle-build.log:21372:Caused by: org.gradle.internal.UncheckedException:
+com.android.ide.common.process.ProcessException: ninja: Entering
+  gradle-build.log:21373:directory
+`C:\Users\Msi\StudioProjects\EduAI-Test-Master\node_modules\.pnpm\expo-modules-core@3.0.30_re_8fbbbf307ec271a
+  gradle-build.log:21374:c53fb97365819fe0f\node_modules\expo-modules-core\android\.cxx\Debug\2631v2v6\arm64-v8a'
+  gradle-build.log:21375:[0/1] Re-running CMake...
+  gradle-build.log:21376:-- Configuring done
+  gradle-build.log:21377:-- Generating done
+  gradle-build.log:21378:-- Build files have been written to:
+C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/expo-modules-core
+  gradle-build.log:21379:@3.0.30_re_8fbbbf307ec271ac53fb97365819fe0f/node_modules/expo-modules-core/android/.cxx/Debug/
+2631v2v6/arm64-v8a
+  gradle-build.log:21380:[0/1] Re-running CMake...
+> gradle-build.log:25060:ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:25061:
+  gradle-build.log:25062:
+  gradle-build.log:25063:       at
+org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:69)
+  gradle-build.log:25064:       at
+org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:42)
+  gradle-build.log:25065:       at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:128)
+  gradle-build.log:25066:       at
+org.gradle.api.internal.project.taskfactory.StandardTaskAction.doExecute(StandardTaskAction.java:58)
+  gradle-build.log:25067:       at
+org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:51)
+  gradle-build.log:25068:       at
+org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:29)
+> gradle-build.log:25217:Caused by: com.android.ide.common.process.ProcessException: ninja: Entering directory
+`C:\Users\Msi\StudioProjects\EduA
+  gradle-build.log:25218:I-Test-Master\node_modules\.pnpm\expo-modules-core@3.0.30_re_8fbbbf307ec271ac53fb97365819fe0f\
+node_modules\expo-modules
+  gradle-build.log:25219:-core\android\.cxx\Debug\2631v2v6\arm64-v8a'
+  gradle-build.log:25220:[0/1] Re-running CMake...
+  gradle-build.log:25221:-- Configuring done
+  gradle-build.log:25222:-- Generating done
+  gradle-build.log:25223:-- Build files have been written to:
+C:/Users/Msi/StudioProjects/EduAI-Test-Master/node_modules/.pnpm/expo-modules-core
+  gradle-build.log:25224:@3.0.30_re_8fbbbf307ec271ac53fb97365819fe0f/node_modules/expo-modules-core/android/.cxx/Debug/
+2631v2v6/arm64-v8a
+  gradle-build.log:25225:[0/1] Re-running CMake...
+> gradle-build.log:28912:ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  gradle-build.log:28913:
+  gradle-build.log:28914:
+  gradle-build.log:28915:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:288)
+  gradle-build.log:28916:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt$executeProcess$1.invoke(ExecuteProcess.kt:108)
+  gradle-build.log:28917:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt$executeProcess$1.invoke(ExecuteProcess.kt:106)
+  gradle-build.log:28918:       at
+com.android.build.gradle.internal.cxx.timing.TimingEnvironmentKt.time(TimingEnvironment.kt:32)
+  gradle-build.log:28919:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess(ExecuteProcess.kt:106)
+  gradle-build.log:28920:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess$default(ExecuteProcess.kt:85)
+> gradle-build.log:28933:Caused by: com.android.ide.common.process.ProcessException: Error while executing process
+  gradle-build.log:28934:C:\Users\Msi\AppData\Local\Android\Sdk\cmake\3.22.1\bin\ninja.exe with arguments {-C
+C:\Users\Msi\StudioProjects\EduAI-
+  gradle-build.log:28935:Test-Master\node_modules\.pnpm\expo-modules-core@3.0.30_re_8fbbbf307ec271ac53fb97365819fe0f\no
+de_modules\expo-modules-c
+  gradle-build.log:28936:ore\android\.cxx\Debug\2631v2v6\arm64-v8a expo-modules-core}
+  gradle-build.log:28937:       at
+com.android.build.gradle.internal.process.GradleProcessResult.buildProcessException(GradleProcessResult.java:73)
+  gradle-build.log:28938:       at
+com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:48)
+  gradle-build.log:28939:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:277)
+  gradle-build.log:28940:       ... 137 more
+> gradle-build.log:28941:Caused by: org.gradle.process.internal.ExecException: Process 'command
+  gradle-build.log:28942:'C:\Users\Msi\AppData\Local\Android\Sdk\cmake\3.22.1\bin\ninja.exe'' finished with non-zero
+exit value 1
+  gradle-build.log:28943:       at
+org.gradle.process.internal.DefaultExecHandle$ExecResultImpl.assertNormalExitValue(DefaultExecHandle.java:442)
+  gradle-build.log:28944:       at
+com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:46)
+  gradle-build.log:28945:       ... 138 more
+  gradle-build.log:28946:
+  gradle-build.log:28947:==============================================================================
+  gradle-build.log:28948:
+  gradle-build.log:28949:BUILD FAILED in 23s
+
+
+PS C:\Users\Msi\StudioProjects\EduAI-Test-Master\android>
