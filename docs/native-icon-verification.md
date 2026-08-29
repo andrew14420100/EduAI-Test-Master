@@ -112,10 +112,12 @@ indipendenti.
   e della pipeline macOS.
 - `./android/gradlew assembleDebug`: bloccato prima della compilazione; l'host
   non dispone di Java (`JAVA_HOME` non impostato e comando `java` assente),
-  exit code 1.
+  exit code 1. Evidenza: `ANDROID-PREFLIGHT-2026-08-29`.
 - `./android/gradlew --version`: stesso blocco per Java assente, exit code 1.
+  Evidenza: `ANDROID-GRADLE-2026-08-29`.
 - La risoluzione dei comandi `adb` ed `emulator` non restituisce alcun
   eseguibile; `ANDROID_HOME` e `ANDROID_SDK_ROOT` non sono impostati.
+  Evidenza: `ANDROID-PREFLIGHT-2026-08-29`.
 - `eas whoami`: bloccato perché questo workspace non è autenticato a EAS
   (`Not logged in`, exit code 1); non è quindi disponibile nemmeno una build
   cloud da installare durante questa sessione.
@@ -132,6 +134,14 @@ indipendenti.
   stato possibile compilare né installare una build iOS.
 - Non sono disponibili `adb` o un emulatore/dispositivo collegato, quindi non
   è stato possibile verificare cambio, reset o chiusura/riapertura su Android.
+  Evidenza: `ANDROID-PREFLIGHT-2026-08-29`.
+
+Gli ID `ANDROID-PREFLIGHT-2026-08-29` e `ANDROID-GRADLE-2026-08-29` sono
+osservazioni del preflight eseguito in questa sessione, non log di una build
+installata. Le evidenze automatiche del comportamento applicativo sono
+`ANDROID-STATIC-2026-08-29` (`pnpm run test:native-icons`, superato) e
+`ANDROID-RECOVERY-2026-08-29` (`pnpm run test:icon-recovery`, 13/13 superati);
+non sostituiscono la prova su API 24 e API 36.
 
 ## Harness controllato Android e iOS
 
@@ -219,8 +229,8 @@ forzata e il controllo dell'inventario server.
 
 | Versione Android scelta | Build/installazione | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + icona visibile + inventario server |
 | --- | --- | --- | --- | --- | --- |
-| Android 7.0 / API 24 (minima supportata) | N/E — Java, SDK ed emulatore assenti su questo host | N/E — nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessuna build installata per confrontare launcher e `icona_futura` equipaggiata |
-| Android 16 / API 36 (recente) | N/E — Java, SDK ed emulatore assenti su questo host | N/E — nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessuna build installata per confrontare launcher e `icona_futura` equipaggiata |
+| Android 7.0 / API 24 (minima supportata) | N/E — Java, SDK ed emulatore assenti; preflight `ANDROID-PREFLIGHT-2026-08-29` | N/E — nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessuna build installata per confrontare launcher e `icona_futura` equipaggiata |
+| Android 16 / API 36 (recente) | N/E — Java, SDK ed emulatore assenti; preflight `ANDROID-PREFLIGHT-2026-08-29` | N/E — nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessuna build installata per confrontare launcher e `icona_futura` equipaggiata |
 
 ### Evidenza per host installabile
 
