@@ -1,0 +1,85 @@
+name: iOS native icon QA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/ios-native-icon-qa.yml"
+      - "ios/**"
+      - "scripts/**"
+      - "docs/native-icon-verification.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-native-icon-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-qa:
+    name: Build and verify iOS QA app
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run static native icon checks
+        run: |
+          pnpm run test:native-icons
+          pnpm run test:icon-recovery
+
+      - name: Install CocoaPods dependencies
+        run: pod install --project-directory=ios --repo-update
+
+      - name: Verify resolved Debug and Release harness settings
+        run: pnpm run verify:ios-harness | tee "$RUNNER_TEMP/ios-harness-settings.log"
+
+      - name: Build installable Debug QA app for iOS Simulator
+        run: |
+          xcodebuild \
+            -workspace ios/EduAITestMaster.xcworkspace \
+            -scheme EduAITestMaster \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            SKIP_BUNDLING=0 \
+            build \
+            | tee "$RUNNER_TEMP/ios-debug-build.log"
+
+      - name: Package Debug QA app
+        run: |
+          app_path="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/EduAITestMaster.app"
+          test -d "$app_path"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$app_path" "$RUNNER_TEMP/EduAITestMaster-Debug-iphonesimulator.zip"
+
+      - name: Upload QA app and identifiable logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-native-icon-qa-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/EduAITestMaster-Debug-iphonesimulator.zip
+            ${{ runner.temp }}/ios-harness-settings.log
+            ${{ runner.temp }}/ios-debug-build.log

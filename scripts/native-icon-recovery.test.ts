@@ -57,6 +57,10 @@ const iosProjectSource = fs.readFileSync(
   path.join(here, "../ios/EduAITestMaster.xcodeproj/project.pbxproj"),
   "utf8",
 );
+const iosWorkflowSource = fs.readFileSync(
+  path.join(here, "../.github/workflows/ios-native-icon-qa.yml"),
+  "utf8",
+);
 
 function equippedIcons(inventory: InventoryRow[]) {
   return inventory.filter((item) => item.itemId.startsWith("app_icon_") && item.equipped);
@@ -256,4 +260,14 @@ test("il client mostra il recupero localizzato e lascia riprovare", () => {
   assert.match(shopScreenSource, /testID="recupero-icona"/);
   assert.match(shopScreenSource, /testID="riprova-icona"/);
   assert.match(shopScreenSource, /retryNativeIcon\(\)/);
+});
+
+test("la pipeline macOS produce una build QA e conserva log identificabili", () => {
+  assert.match(iosWorkflowSource, /runs-on: macos-14/);
+  assert.match(iosWorkflowSource, /pod install --project-directory=ios/);
+  assert.match(iosWorkflowSource, /pnpm run verify:ios-harness/);
+  assert.match(iosWorkflowSource, /configuration Debug/);
+  assert.match(iosWorkflowSource, /SKIP_BUNDLING=0/);
+  assert.match(iosWorkflowSource, /actions\/upload-artifact@v4/);
+  assert.match(iosWorkflowSource, /github\.run_id/);
 });

@@ -12,17 +12,104 @@ cinque alternative (`app_icon_midnight`, `app_icon_neon`,
 Il progetto nativo ora contiene i bridge, gli alias Android e gli asset catalog
 iOS necessari per applicare le sei scelte.
 
+## Pipeline macOS per la build QA
+
+La verifica installabile non dipende da questo workspace Linux: il workflow
+GitHub Actions `iOS native icon QA` (`.github/workflows/ios-native-icon-qa.yml`)
+usa un runner `macos-14`, installa le dipendenze CocoaPods, controlla i
+build settings risolti da Xcode e pubblica la build Debug per iOS Simulator
+insieme ai log. Può essere avviato con `workflow_dispatch` oppure da una
+modifica ai file nativi/documentali coinvolti.
+
+La pipeline esegue, nell'ordine:
+
+1. `pnpm run test:native-icons` e `pnpm run test:icon-recovery`;
+2. `pod install --project-directory=ios --repo-update`;
+3. `pnpm run verify:ios-harness`, che interroga Xcode per entrambe le
+   configurazioni e richiede `EDUAI_ICON_DEBUG_HARNESS_ENABLED = YES` in
+   `Debug` e `NO` in `Release`;
+4. `xcodebuild` con `-configuration Debug`, `-sdk iphonesimulator`,
+   `CODE_SIGNING_ALLOWED=NO` e `SKIP_BUNDLING=0`, producendo
+   `EduAITestMaster-Debug-iphonesimulator.zip`;
+5. upload dell'app e di `ios-harness-settings.log`/`ios-debug-build.log`
+   nell'artefatto `ios-native-icon-qa-<run_id>`.
+
+Il flag `SKIP_BUNDLING=0` è intenzionale: una build Debug lanciata dalla
+pipeline deve contenere il bundle JavaScript ed essere installabile senza un
+Metro locale. La modifica non cambia il comportamento delle build Debug
+avviate normalmente da Xcode, che continuano a usare Metro quando il flag non
+è impostato.
+
+La build del simulatore non dimostra firma o provisioning per un iPhone. Per un
+dispositivo reale usare una build QA firmata con un profilo di provisioning
+valido e registrare i dati nella checklist seguente; non classificare come
+"superato" un test reale solo perché la pipeline macOS ha compilato il
+simulatore.
+
+## Checklist di esecuzione su host Apple
+
+Creare una scheda per ogni run e conservarla insieme all'artefatto della
+pipeline. Il campo `ID log/evidenza` deve contenere il GitHub Actions run ID
+e il nome dell'artefatto, oppure il percorso del log esportato da Xcode.
+
+### Dati comuni
+
+- Run ID / ID log pipeline:
+- Commit:
+- Data e ora (UTC):
+- Versione Xcode:
+- Versione macOS:
+- Versione app / build number:
+- Account di test:
+- Endpoint API usato:
+
+### Simulatore iOS
+
+- Modello e versione iOS:
+- UDID simulatore:
+- Build installata: `EduAITestMaster-Debug-iphonesimulator.zip`
+- Firma/provisioning: `CODE_SIGNING_ALLOWED=NO` (simulatore)
+- ID log/evidenza installazione:
+- Installazione e avvio: `N/E` / `PASS` / `FAIL`
+- `acquisto`: rifiuto una volta, collezione conservata, `Riprova`, riapertura:
+- `equipaggiamento`: rifiuto una volta, inventario precedente, `Riprova`, riapertura:
+- `ripristino`: rifiuto una volta con nome `nil`, icona precedente, `Riprova`, riapertura:
+- Note:
+
+### Dispositivo iOS reale
+
+- Modello e versione iOS:
+- UDID dispositivo:
+- Build/IPA installata:
+- Team / certificato di firma:
+- Profilo di provisioning e scadenza:
+- Stato firma/installazione: `N/E` / `PASS` / `FAIL`
+- ID log/evidenza installazione:
+- `acquisto`: rifiuto una volta, collezione conservata, `Riprova`, riapertura:
+- `equipaggiamento`: rifiuto una volta, inventario precedente, `Riprova`, riapertura:
+- `ripristino`: rifiuto una volta con nome `nil`, icona precedente, `Riprova`, riapertura:
+- Note:
+
+Per ciascuno dei tre scenari compilare il risultato solo dopo aver verificato
+il rifiuto reale di `setAlternateIconName`, il messaggio con `Riprova`, il
+secondo tentativo riuscito, la chiusura forzata/riapertura e la coerenza
+dell'inventario server. Simulatore e dispositivo reale sono evidenze
+indipendenti.
+
 ## Controlli eseguiti
 
 - `pnpm run typecheck`: superato.
 - `pnpm run test:native-icons`: superato; mapping standard + cinque alternative
   coerente.
-- `pnpm run test:icon-recovery`: superato; 12 test, 12 passati, 0 falliti.
+- `pnpm run test:icon-recovery`: superato; 13 test, 13 passati, 0 falliti.
+- `pnpm run verify:ios-harness`: N/E su Linux; eseguibile nella pipeline macOS
+  dopo `pod install`, con log `ios-harness-settings.log`.
 - `pnpm run check:react-versions`: superato.
 - Nella sessione del 29 agosto 2026 sono stati rieseguiti `pnpm run
   test:native-icons`, `pnpm run test:icon-recovery`, `pnpm run typecheck` e
   `pnpm run check:react-versions`: tutti superati; il recovery harness ha
-  riportato 12 test superati, inclusa la verifica del flag Xcode Debug/Release.
+  riportato 13 test superati, inclusa la verifica del flag Xcode Debug/Release
+  e della pipeline macOS.
 - `./android/gradlew assembleDebug`: bloccato prima della compilazione; l'host
   non dispone di Java (`JAVA_HOME` non impostato e comando `java` assente),
   exit code 1.
@@ -156,10 +243,15 @@ Queste sono le righe iOS da compilare su un host Apple. Ogni cella è
 indipendente: un esito positivo in simulatore non sostituisce quello su
 dispositivo reale, e un flusso completato non rende superati gli altri due.
 
-| Host iOS | Build/installazione | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + inventario |
-| --- | --- | --- | --- | --- | --- |
-| Simulatore | N/E — `xcodebuild`/`xcrun`/`simctl` assenti su Linux | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova`, acquisto conservato e una sola icona custom | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessun rifiuto reale con nome `nil`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessuna build installata |
-| Dispositivo reale | N/E — `xcodebuild`/firma/dispositivo Apple assenti su Linux | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova`, acquisto conservato e una sola icona custom | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessun rifiuto reale con nome `nil`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessuna build installata |
+| Host iOS | Build/installazione | ID log/evidenza build | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + inventario | Stato / ID log flussi |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Simulatore | N/E — `xcodebuild`/`xcrun`/`simctl` assenti su Linux | N/E — nessun run macOS disponibile | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova`, acquisto conservato e una sola icona custom | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessun rifiuto reale con nome `nil`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessuna build installata | `N/E-2026-08-29-linux` |
+| Dispositivo reale | N/E — `xcodebuild`/firma/dispositivo Apple assenti su Linux | N/E — nessun run macOS disponibile | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova`, acquisto conservato e una sola icona custom | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessun rifiuto reale con nome `nil`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessuna build installata | `N/E-2026-08-29-linux` |
+
+Quando la pipeline viene eseguita, sostituire l'ID `N/E-2026-08-29-linux`
+solo nella riga del relativo host con `run_id` e nome dell'artefatto. Per il
+dispositivo reale aggiungere anche il log di installazione firmata e i dati
+di provisioning; il run del simulatore non è sufficiente.
 
 Per ogni riga, dopo il rifiuto:
 
