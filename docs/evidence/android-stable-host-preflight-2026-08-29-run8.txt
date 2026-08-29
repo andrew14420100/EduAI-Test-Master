@@ -1,0 +1,37 @@
+Android native icon QA stable-host preflight
+Evidence ID: ANDROID-STABLE-HOST-PREFLIGHT-2026-08-29-RUN8
+Timestamp (UTC): 2026-08-29T18:39:44Z
+Host: Linux 6.18.48 x86_64 (Replit workspace)
+
+Tooling:
+- OpenJDK 17.0.15
+- Android Debug Bridge 35.0.1
+- ANDROID_HOME=/home/runner/.android-sdk (directory absent)
+- ANDROID_SDK_ROOT=/home/runner/.android-sdk (directory absent)
+- sdkmanager: absent
+- avdmanager: absent
+- emulator: absent
+- /dev/kvm: absent
+- `adb devices -l`: no connected devices
+
+APK candidate:
+- `android/app/build/outputs/apk/debug/app-debug.apk`: absent
+- Expected historical SHA-256: 78d963bc52076a7e3253ae26e1a60656be1fe247970c1d96df8c29fdcc411f19
+
+Build command:
+`./android/gradlew -p android assembleDebug --no-daemon --max-workers=1 -PreactNativeArchitectures=x86,x86_64 -PqaBundle=true`
+
+Build result: FAIL before APK compilation.
+Failure: `SDK location not found`; Gradle could not configure the Android
+project because no valid Android SDK was available.
+
+Automated checks from the same workspace:
+- `pnpm run test:native-icons`: PASS
+- `pnpm run test:icon-recovery`: PASS (13/13)
+- `pnpm run typecheck`: PASS
+- `pnpm run check:react-versions`: PASS
+
+Native installation and authenticated flow result: NOT EXECUTED. No stable API
+24/API 36 emulator or real device was available in this run, so no new
+installation ID, deep-link flow ID, launcher observation, retry observation,
+reopen observation, or server-inventory comparison was generated.

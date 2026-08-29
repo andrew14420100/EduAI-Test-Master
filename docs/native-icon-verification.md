@@ -5,19 +5,24 @@ Host della verifica: Linux x86_64 (Replit workspace)
 
 ## Esito
 
-La build Debug standalone richiesta è stata prodotta con SHA-256
-`78d963bc52076a7e3253ae26e1a60656be1fe247970c1d96df8c29fdcc411f19` e
-installata sul host Android 7/API 24 `emulator-5554`; la relativa evidenza è
-`ANDROID-INSTALL-API24-2026-08-29-RUN2`. Sul host API 36 il preflight ha
-identificato l'AVD e ha osservato `sys.boot_completed=1`, ma `system_server` è
-terminato prima che il Package Installer potesse completare l'installazione:
-non è quindi una prova di installazione API 36 (`ANDROID-API36-PREFLIGHT-2026-08-29-RUN1`).
+Una build Debug standalone con SHA-256
+`78d963bc52076a7e3253ae26e1a60656be1fe247970c1d96df8c29fdcc411f19` è stata
+storicamente installata sul host Android 7/API 24 `emulator-5554`; la relativa
+evidenza è `ANDROID-INSTALL-API24-2026-08-29-RUN2`. Questa installazione non
+costituisce però la verifica dei flussi autenticati. Il preflight più recente
+del workspace (`ANDROID-STABLE-HOST-PREFLIGHT-2026-08-29-RUN8`) rileva che
+SDK, emulatori, `/dev/kvm` e device ADB non sono disponibili, quindi non è
+stato possibile ricostruire l’APK o eseguire API 24/API 36 in modo stabile.
+Il precedente host API 36 aveva osservato `sys.boot_completed=1`, ma
+`system_server` era terminato prima che il Package Installer potesse completare
+l'installazione (`ANDROID-API36-PREFLIGHT-2026-08-29-RUN1`).
 
 Nessuno dei tre flussi autenticati (acquisto, equipaggiamento, ripristino) è
-stato dichiarato superato: la sessione QA con inventario è ora disponibile,
-ma il rifiuto one-shot, `Riprova`, la riapertura, l'icona nel launcher e la
-mutazione dell'inventario `icona_futura` devono ancora essere osservati su un
-host Android stabile. Il catalogo applicativo e quello server risultano
+stato dichiarato superato: la sessione QA con inventario è disponibile, ma il
+rifiuto one-shot, `Riprova`, la riapertura, l'icona nel launcher e la mutazione
+dell'inventario `icona_futura` devono ancora essere osservati su un host Android
+stabile. I controlli automatici restano superati: mapping native, recovery
+(13/13), typecheck e controllo versioni React. Il catalogo applicativo e quello server risultano
 comunque allineati sulle cinque alternative
 (`app_icon_midnight`, `app_icon_neon`, `app_icon_scholar`, `app_icon_aurora`,
 `app_icon_legend`) più l'icona standard. Il progetto nativo contiene i bridge,
@@ -378,7 +383,10 @@ Per ogni riga, dopo il rifiuto:
 
 La sessione QA autenticata e il suo inventario remoto sono osservabili
 nell'evidenza `QA-ACCOUNT-NATIVE-ICONS-2026-08-29-RUN1`
-(`docs/evidence/qa-account-native-icons-2026-08-29.txt`). La build standalone e
+(`docs/evidence/qa-account-native-icons-2026-08-29.txt`). Il preflight corrente,
+compreso il fallimento del build per SDK assente e l'assenza di host collegati,
+è registrato in `ANDROID-STABLE-HOST-PREFLIGHT-2026-08-29-RUN8`
+(`docs/evidence/android-stable-host-preflight-2026-08-29-run8.txt`). La build standalone e
 l'avvio dell'app su API 24 sono osservabili nelle
 evidenze sopra, ma l'APK non è presente nel workspace corrente: il riferimento
 riproducibile è l'hash registrato in
