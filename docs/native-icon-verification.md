@@ -232,6 +232,18 @@ mapping native, recovery 13/13 e typecheck. Non sono stati generati ID di
 flusso: senza installazione e sessione QA autenticata acquisto, equipaggiamento,
 ripristino, retry, launcher, riapertura e inventario server restano `N/E`.
 
+Nella verifica successiva del 29 agosto 2026 alle 18:34:49 UTC l’host corrente
+è stato ricontrollato con evidenza
+`ANDROID-STABLE-HOST-PREFLIGHT-2026-08-29-RUN7`
+(`docs/evidence/android-stable-host-preflight-2026-08-29.txt`). Sul commit
+`115fd174f9019f2342801d45ba3c4e7790aa8534` il risultato è invariato: `adb`
+non rileva dispositivi, mancano SDK/emulatore/AVD e `/dev/kvm`; `assembleDebug`
+si arresta con `SDK location not found` prima di produrre l’APK. I controlli
+`test:native-icons`, `test:icon-recovery` (13/13) e `typecheck` sono passati.
+Non sono stati generati ID di installazione o di flusso: API 24 e API 36, il
+rifiuto one-shot, `Riprova`, riapertura, launcher e inventario server restano
+`N/E` su questo host.
+
 ## Harness controllato Android e iOS
 
 L’harness è presente nelle build native di sviluppo/QA e non è un controllo
