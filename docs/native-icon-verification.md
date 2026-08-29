@@ -22,7 +22,7 @@ iOS necessari per applicare le sei scelte.
 - Nella sessione del 29 agosto 2026 sono stati rieseguiti `pnpm run
   test:native-icons`, `pnpm run test:icon-recovery`, `pnpm run typecheck` e
   `pnpm run check:react-versions`: tutti superati; il recovery harness ha
-  riportato 12 test superati.
+  riportato 12 test superati, inclusa la verifica del flag Xcode Debug/Release.
 - `./android/gradlew assembleDebug`: bloccato prima della compilazione; l'host
   non dispone di Java (`JAVA_HOME` non impostato e comando `java` assente),
   exit code 1.

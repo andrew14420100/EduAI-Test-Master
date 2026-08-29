@@ -53,6 +53,10 @@ const iosInfoPlistSource = fs.readFileSync(
   path.join(here, "../ios/EduAITestMaster/Info.plist"),
   "utf8",
 );
+const iosProjectSource = fs.readFileSync(
+  path.join(here, "../ios/EduAITestMaster.xcodeproj/project.pbxproj"),
+  "utf8",
+);
 
 function equippedIcons(inventory: InventoryRow[]) {
   return inventory.filter((item) => item.itemId.startsWith("app_icon_") && item.equipped);
@@ -220,6 +224,14 @@ test("i bridge nativi espongono un harness debug per scenario senza alterare lâ€
   assert.match(iosModuleSource, /EduAIIconDebugHarnessEnabled/);
   assert.match(iosInfoPlistSource, /<key>EduAIIconDebugHarnessEnabled<\/key>/);
   assert.match(iosInfoPlistSource, /<string>\$\(EDUAI_ICON_DEBUG_HARNESS_ENABLED\)<\/string>/);
+  assert.match(
+    iosProjectSource,
+    /13B07F941A680F5B00A75B9A \/\* Debug \*\/[\s\S]*?EDUAI_ICON_DEBUG_HARNESS_ENABLED = YES;[\s\S]*?name = Debug;/,
+  );
+  assert.match(
+    iosProjectSource,
+    /13B07F951A680F5B00A75B9A \/\* Release \*\/[\s\S]*?EDUAI_ICON_DEBUG_HARNESS_ENABLED = NO;[\s\S]*?name = Release;/,
+  );
 });
 
 test("il server serializza e mantiene una sola icona launcher equipaggiata", () => {
