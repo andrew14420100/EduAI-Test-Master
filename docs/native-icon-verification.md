@@ -121,6 +121,20 @@ volta per lo scenario; non va simulata modificando l'inventario direttamente.
 | iOS | equipaggiamento di un'icona già posseduta | rifiuto della chiamata `setAlternateIconName` | l'inventario torna all'icona precedente, che resta visibile; il messaggio localizzato contiene `Riprova` e dopo la riapertura resta una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
 | iOS | reset con `Icona standard originale` | rifiuto della chiamata con nome alternativo `nil` | l'icona personalizzata precedente resta visibile; il messaggio localizzato contiene `Riprova` e dopo la riapertura l'inventario resta coerente con una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
 
+### Matrice Android per versione del sistema
+
+Per ridurre il rischio di differenze tra versioni Android, la verifica è
+separata tra la versione minima dichiarata dalla toolchain Expo/RN del
+progetto (API 24) e una versione recente (API 36, allineata a
+`compileSdk`/`targetSdk`). Ogni riga richiede una build installabile, il
+rifiuto controllato una tantum, il retry riuscito, la chiusura/riapertura
+forzata e il controllo dell'inventario server.
+
+| Versione Android scelta | Build/installazione | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + icona visibile + inventario server |
+| --- | --- | --- | --- | --- | --- |
+| Android 7.0 / API 24 (minima supportata) | N/E — Java, SDK ed emulatore assenti su questo host | N/E — nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessuna build installata per confrontare launcher e `icona_futura` equipaggiata |
+| Android 16 / API 36 (recente) | N/E — Java, SDK ed emulatore assenti su questo host | N/E — nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom | N/E — nessuna build installata per confrontare launcher e `icona_futura` equipaggiata |
+
 ### Evidenza per host installabile
 
 Le celle `N/E` significano “non eseguito”: non rappresentano un esito
