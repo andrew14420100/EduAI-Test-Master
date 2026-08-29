@@ -1,0 +1,18 @@
+Evidence ID: ANDROID-API24-HARNESS-2026-08-29-RUN1
+Host ID: emulator-5554
+Scenario armed: acquisto
+Deep-link result:
+Starting: Intent { act=android.intent.action.VIEW dat=eduai-test-master://native-icon-test?reject=acquisto pkg=com.eduai.testmaster }
+Warning: Activity not started, its current task has been brought to the front
+
+Foreground:
+    * TaskRecord{e24b6f4 #3 A=com.eduai.testmaster U=0 StackId=1 sz=1}
+      affinity=com.eduai.testmaster
+      intent={act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.eduai.testmaster/.MainActivity}
+      origActivity=com.eduai.testmaster/.StandardLauncher
+      realActivity=com.eduai.testmaster/.MainActivity
+
+Logcat harness/native errors:
+08-29 16:11:16.305  2653  2684 I ReactNativeJS: Running "main"
+08-29 16:11:19.774  2653  2684 W ReactNativeJS: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+08-29 16:11:34.061  1638  1649 I ActivityManager: START u0 {act=android.intent.action.VIEW dat=eduai-test-master://native-icon-test?reject=acquisto flg=0x10000000 pkg=com.eduai.testmaster cmp=com.eduai.testmaster/.MainActivity} from uid 2000 on display 0

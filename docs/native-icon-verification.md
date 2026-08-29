@@ -260,9 +260,9 @@ volta per lo scenario; non va simulata modificando l'inventario direttamente.
 
 | Piattaforma | Flusso | Rifiuto da verificare | Risultato atteso | Esito su questo host |
 | --- | --- | --- | --- | --- |
-| Android | acquisto di una nuova icona | rifiuto del bridge dopo la risposta positiva dell'acquisto | l'acquisto resta nella collezione, l'icona precedente resta visibile e una sola `icona_futura` è equipaggiata | Non eseguito: manca build/emulatore/dispositivo |
-| Android | equipaggiamento di un'icona già posseduta | rifiuto del bridge dopo l'equipaggiamento server | l'inventario torna all'icona precedente, che resta visibile; il messaggio italiano offre `Riprova` | Non eseguito: manca build/emulatore/dispositivo |
-| Android | reset con `Icona standard originale` | rifiuto del bridge durante il ritorno a `standard` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata | Non eseguito: manca build/emulatore/dispositivo |
+| Android | acquisto di una nuova icona | rifiuto del bridge dopo la risposta positiva dell'acquisto | l'acquisto resta nella collezione, l'icona precedente resta visibile e una sola `icona_futura` è equipaggiata | N/E — host installabili ora presenti, ma nessun account/inventario di test autenticato disponibile per completare l'azione reale |
+| Android | equipaggiamento di un'icona già posseduta | rifiuto del bridge dopo l'equipaggiamento server | l'inventario torna all'icona precedente, che resta visibile; il messaggio italiano offre `Riprova` | N/E — host installabili ora presenti, ma nessun account/inventario di test autenticato disponibile per completare l'azione reale |
+| Android | reset con `Icona standard originale` | rifiuto del bridge durante il ritorno a `standard` | l'icona personalizzata precedente resta visibile e resta l'unica equipaggiata | N/E — host installabili ora presenti, ma nessun account/inventario di test autenticato disponibile per completare l'azione reale |
 | iOS | acquisto di una nuova icona | rifiuto della chiamata `setAlternateIconName` | l'acquisto resta nella collezione, l'icona precedente resta visibile, il messaggio localizzato contiene `Riprova` e dopo la riapertura resta una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
 | iOS | equipaggiamento di un'icona già posseduta | rifiuto della chiamata `setAlternateIconName` | l'inventario torna all'icona precedente, che resta visibile; il messaggio localizzato contiene `Riprova` e dopo la riapertura resta una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
 | iOS | reset con `Icona standard originale` | rifiuto della chiamata con nome alternativo `nil` | l'icona personalizzata precedente resta visibile; il messaggio localizzato contiene `Riprova` e dopo la riapertura l'inventario resta coerente con una sola icona personalizzata equipaggiata | Non eseguito: manca macOS/Xcode e simulatore/dispositivo |
@@ -278,8 +278,8 @@ forzata e il controllo dell'inventario server.
 
 | Versione Android scelta | Build/installazione | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + icona visibile + inventario server |
 | --- | --- | --- | --- | --- | --- |
-| Android 7.0 / API 24 (minima supportata) | N/E — nessun APK o ID di build/installazione: `cd android && ./gradlew assembleDebug --no-daemon --stacktrace` si arresta in configurazione con `SDK location not found` perché `/home/runner/.android-sdk` non esiste (`ANDROID-GRADLE-SDK-2026-08-29-RUN5`); `adb` 35.0.1 è disponibile ma non ci sono emulator, AVD, system image API 24 o dispositivo collegato; `/dev/kvm` è assente (`ANDROID-PREFLIGHT-2026-08-29-RUN5`) | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente su host API 24 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 24 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 24 | N/E — nessuna installazione/riapertura: manca AVD o dispositivo API 24 per confrontare launcher e `icona_futura` equipaggiata |
-| Android 16 / API 36 (recente) | N/E — nessun APK o ID di build/installazione: `cd android && ./gradlew assembleDebug --no-daemon --stacktrace` si arresta in configurazione con `SDK location not found` perché `/home/runner/.android-sdk` non esiste (`ANDROID-GRADLE-SDK-2026-08-29-RUN5`); `adb` 35.0.1 è disponibile ma non ci sono emulator, AVD, system image API 36 o dispositivo collegato; `/dev/kvm` è assente (`ANDROID-PREFLIGHT-2026-08-29-RUN5`) | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare acquisto conservato, `Riprova` e icona precedente su host API 36 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 36 | N/E — nessun ID di flusso: nessun rifiuto reale del bridge; verificare `Riprova`, icona precedente e una sola icona custom su host API 36 | N/E — nessuna installazione/riapertura: manca AVD o dispositivo API 36 per confrontare launcher e `icona_futura` equipaggiata |
+| Android 7.0 / API 24 (minima supportata) | PASS — APK Debug standalone compilato con `qaBundle=true`, SHA-256 `78d963bc52076a7e3253ae26e1a60656be1fe247970c1d96df8c29fdcc411f19`; installazione riuscita su `emulator-5554`, package `com.eduai.testmaster`, `versionCode=5`, evidenza `ANDROID-INSTALL-API24-2026-08-29-RUN2` (`docs/evidence/android-api24-install-2026-08-29.txt`) | N/E — deep link `acquisto` consegnato all'Activity su `emulator-5554` (`ANDROID-API24-HARNESS-2026-08-29-RUN1`), ma senza account/inventario autenticato non è osservabile il rifiuto/retry reale | N/E — nessun account/inventario autenticato per eseguire il flusso | N/E — nessun account/inventario autenticato per eseguire il flusso | N/E — app avviata con bundle embedded e UI onboarding osservabile; manca sessione autenticata per confrontare launcher e inventario server |
+| Android 16 / API 36 (recente) | N/E — APK Debug disponibile con lo stesso SHA-256 `78d963bc52076a7e3253ae26e1a60656be1fe247970c1d96df8c29fdcc411f19`; AVD `eduai-api36` e host ADB `emulator-5556` identificati, ma l'emulatore TCG ha terminato `system_server` durante il boot e il Package Installer non ha completato (`docs/evidence/android-api36-preflight-2026-08-29.txt`) | N/E — nessun install completato su API 36 | N/E — nessun install completato su API 36 | N/E — nessun install completato su API 36 | N/E — `system_server` dell'AVD API 36 non è rimasto operativo abbastanza per installazione e riapertura |
 
 ### Evidenza per host installabile
 
@@ -323,16 +323,15 @@ Per ogni riga, dopo il rifiuto:
    equipaggiato nell'inventario server;
 5. verificare che non risultino mai due icone personalizzate equipaggiate.
 
-Questa macchina non consente di superare la matrice reale: dispone di OpenJDK 17
-e ADB 35.0.1, ma non di un SDK Android utilizzabile, `emulator`/AVD o
-dispositivo collegato; inoltre non dispone di macOS/Xcode per compilare e
-installare iOS. Di conseguenza in questa sessione non è stato possibile
-installare alcuna build, provocare un rifiuto reale del bridge, verificare
-`Riprova`, osservare l'icona nel launcher o eseguire la chiusura/riapertura
-forzata su un emulatore/simulatore o dispositivo reale. Per rispettare la
-distinzione tra risultato e disponibilità dell'ambiente, la riga
-`Dispositivo reale` resta `N/E` finché il job hardware manuale non viene
-eseguito; questo non costituisce evidenza di un bug del prodotto. Le prove
-automatiche sono invece tutte superate e coprono i tre rollback, l'inventario
-serializzato, il messaggio localizzato e la disponibilità del retry. La
-conferma su iPhone resta da eseguire su host Apple con build firmata.
+Questa macchina ora dispone di uno SDK Android locale, di `emulator`/AVD e di
+un host API 24 installabile. La build standalone e l'avvio dell'app su API 24
+sono osservabili nelle evidenze sopra. L'AVD API 36 è stato creato e
+identificato, ma con l'emulazione TCG senza `/dev/kvm` il `system_server` è
+terminato prima che il Package Installer restasse operativo; l'installazione
+API 36 e i flussi autenticati restano quindi `N/E`, come indicato nella
+matrice. Non sono stati simulati dati server: per completare i tre flussi serve
+una sessione autenticata con un inventario di test. La riga `Dispositivo reale`
+resta `N/E` finché il job hardware manuale non viene eseguito; la verifica iOS
+resta da eseguire su host Apple con build firmata. Le prove automatiche sono
+invece tutte superate e coprono i tre rollback, l'inventario serializzato, il
+messaggio localizzato e la disponibilità del retry.

@@ -1,0 +1,16 @@
+Evidence ID: ANDROID-API36-PREFLIGHT-2026-08-29-RUN1
+Host ID: emulator-5556
+AVD: eduai-api36
+System image: system-images;android-36;default;x86_64
+Android SDK: 36
+Android release: 16
+Model: Android SDK built for x86_64
+APK candidate SHA-256: 78d963bc52076a7e3253ae26e1a60656be1fe247970c1d96df8c29fdcc411f19
+APK candidate size: 142975208
+ADB host observed: emulator-5556
+Boot observation: sys.boot_completed=1 was observed.
+Install observation: Package Installer initially reported missing system providers, then
+reported StorageManager unavailable/null; no successful APK installation ID was issued.
+Runtime observation: logcat later reported system_server death while the emulator was
+running under TCG software emulation without /dev/kvm. The AVD is provisioned and
+identified, but this run is not installation evidence.

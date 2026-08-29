@@ -1,0 +1,9 @@
+Evidence ID: ANDROID-DEBUG-BUILD-2026-08-29-RUN1
+Build command: ./android/gradlew -p android assembleDebug --no-daemon --max-workers=1 -PreactNativeArchitectures=x86,x86_64 -PqaBundle=true
+Result: BUILD SUCCESSFUL
+APK: android/app/build/outputs/apk/debug/app-debug.apk
+APK size: 142975208 bytes
+APK SHA-256: 78d963bc52076a7e3253ae26e1a60656be1fe247970c1d96df8c29fdcc411f19
+JavaScript bundle: embedded by createBundleDebugJsAndAssets
+Native ABI set: x86,x86_64
+Purpose: standalone Debug APK for the API 24/API 36 emulator QA hosts.

@@ -19,6 +19,12 @@ react {
     // works correctly with Expo projects.
     cliFile = new File(["node", "--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"].execute(null, rootDir).text.trim())
     bundleCommand = "export:embed"
+    // A standalone debug APK needs its JS bundle when no Metro host is
+    // available. Keep the normal debug/Metro workflow unless the QA build
+    // explicitly opts in with -PqaBundle=true.
+    if (project.hasProperty("qaBundle") && project.property("qaBundle").toString().toBoolean()) {
+        debuggableVariants = []
+    }
 
     /* Folders */
      //   The root of your project, i.e. where "package.json" lives. Default is '../..'

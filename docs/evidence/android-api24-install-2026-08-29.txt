@@ -1,0 +1,13 @@
+Evidence ID: ANDROID-INSTALL-API24-2026-08-29-RUN2
+Host ID: emulator-5554
+AVD: eduai-api24
+Android SDK: 24
+Android release: 7.0
+Model: Android SDK built for x86
+APK SHA-256: 78d963bc52076a7e3253ae26e1a60656be1fe247970c1d96df8c29fdcc411f19
+APK size: 142975208
+Install command result: Performing Streamed Install
+Success
+Package path: package:/data/app/com.eduai.testmaster-1/base.apk
+Package metadata:     versionCode=5 minSdk=24 targetSdk=36
+JS bundle: embedded
