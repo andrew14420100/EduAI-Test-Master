@@ -1,6 +1,6 @@
 # Verifica icone launcher native
 
-Data verifica: 28 agosto 2026
+Data verifica: 29 agosto 2026
 Host della verifica: Linux x86_64 (Replit workspace)
 
 ## Esito
@@ -17,8 +17,12 @@ iOS necessari per applicare le sei scelte.
 - `pnpm run typecheck`: superato.
 - `pnpm run test:native-icons`: superato; mapping standard + cinque alternative
   coerente.
-- `pnpm run test:icon-recovery`: superato; 5 test, 5 passati, 0 falliti.
+- `pnpm run test:icon-recovery`: superato; 12 test, 12 passati, 0 falliti.
 - `pnpm run check:react-versions`: superato.
+- Nella sessione del 29 agosto 2026 sono stati rieseguiti `pnpm run
+  test:native-icons`, `pnpm run test:icon-recovery`, `pnpm run typecheck` e
+  `pnpm run check:react-versions`: tutti superati; il recovery harness ha
+  riportato 12 test superati.
 - `./android/gradlew assembleDebug`: bloccato prima della compilazione; l'host
   non dispone di Java (`JAVA_HOME` non impostato e comando `java` assente),
   exit code 1.
