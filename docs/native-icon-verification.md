@@ -42,6 +42,34 @@ iOS necessari per applicare le sei scelte.
 - Non sono disponibili `adb` o un emulatore/dispositivo collegato, quindi non
   è stato possibile verificare cambio, reset o chiusura/riapertura su Android.
 
+## Harness Android controllato
+
+L’harness è presente nella variante Android `debug` e non è un controllo
+visibile o configurabile nelle build release. Dopo aver installato una
+`debug` build e aver aperto il negozio con un account di test, armare il
+prossimo flusso dal terminale:
+
+```sh
+adb shell am start -a android.intent.action.VIEW \
+  -d "eduai-test-master://native-icon-test?reject=acquisto" \
+  com.eduai.testmaster
+```
+
+Usare `reject=equipaggiamento` per un’icona già posseduta oppure
+`reject=ripristino` per il pulsante `Icona standard originale`. Il rifiuto è
+associato all’operazione scelta, quindi la sincronizzazione dell’icona durante
+l’avvio non lo consuma. Completare quindi il flusso dalla UI: il server applica
+la mutazione reale, il bridge rifiuta una sola volta, il messaggio mostra
+`Riprova`, e il tentativo successivo non è armato e deve riuscire.
+
+Il parametro viene consumato solo quando il bridge riceve la stessa operazione;
+armare un nuovo scenario sostituisce quello precedente. Per ripetere una prova
+dopo una chiusura forzata, riaprire la debug build e inviare nuovamente il deep
+link. Non usare chiamate al database o modifiche manuali all’inventario per
+provocare il rifiuto. Il comando non abilita l’harness in una build release:
+il JavaScript di release non lo invoca e il modulo nativo rifiuta ogni
+configurazione come non disponibile.
+
 ## Verifiche ancora necessarie su host nativi
 
 Dopo l'aggiunta degli artefatti nativi, eseguire su una build installabile:

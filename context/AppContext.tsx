@@ -71,7 +71,13 @@ import {
   gamificationLevelFromXp,
   type GamificationBadge,
 } from '@/constants/progression';
-import { setNativeAppIcon, type NativeAppIconId } from '@/lib/nativeAppIcon';
+import {
+  configureNativeIconDebugRejection,
+  isNativeIconDebugScenario,
+  setNativeAppIcon,
+  type NativeAppIconId,
+  type NativeIconDebugScenario,
+} from '@/lib/nativeAppIcon';
 import {
   nativeIconErrorMessage,
   nativeIconRecoveryMessage,
@@ -677,9 +683,12 @@ export function AppProvider({
     ?? 'light';
   const theme: AppTheme = storedTheme ?? serverTheme;
 
-  const applyNativeIcon = async (iconId: NativeAppIconId): Promise<NativeIconApplyResult> => {
+  const applyNativeIcon = async (
+    iconId: NativeAppIconId,
+    debugScenario?: NativeIconDebugScenario,
+  ): Promise<NativeIconApplyResult> => {
     try {
-      await setNativeAppIcon(iconId);
+      await setNativeAppIcon(iconId, debugScenario);
       nativeIconTargetRef.current = iconId;
       setNativeIconError(null);
       return { ok: true };
@@ -758,6 +767,30 @@ export function AppProvider({
       cancelled = true;
     };
   }, [isLoaded, user?.id]);
+
+  // Android debug builds can arm one deterministic bridge rejection through
+  // eduai-test-master://native-icon-test?reject=<scenario>. The operation is
+  // passed to setIcon only after the server mutation, so startup sync cannot
+  // consume the one-shot rejection.
+  useEffect(() => {
+    if (!__DEV__ || Platform.OS !== 'android') return;
+
+    const configureFromUrl = (url: string) => {
+      const parsed = Linking.parse(url);
+      if (parsed.hostname !== 'native-icon-test') return;
+      const scenario = parsed.queryParams?.reject;
+      if (typeof scenario !== 'string' || !isNativeIconDebugScenario(scenario)) return;
+      void configureNativeIconDebugRejection(scenario).catch((error) => {
+        if (__DEV__) console.warn('Configurazione harness icona nativa non riuscita', error);
+      });
+    };
+
+    void Linking.getInitialURL().then((url) => {
+      if (url) configureFromUrl(url);
+    });
+    const subscription = Linking.addEventListener('url', ({ url }) => configureFromUrl(url));
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (!user?.id || !inventoryQuery.data) return;
@@ -1144,7 +1177,7 @@ export function AppProvider({
           data: { itemId: item.id },
         });
         if (item.itemType === 'icona_futura') {
-          const nativeResult = await applyNativeIcon(item.id as NativeAppIconId);
+          const nativeResult = await applyNativeIcon(item.id as NativeAppIconId, 'acquisto');
           if (!nativeResult.ok) {
             const rollback = await restoreIconSelection(previousIcon);
             return {
@@ -1176,7 +1209,7 @@ export function AppProvider({
           if (Platform.OS === 'web') globalThis.localStorage?.setItem('eduai:last-theme', nextTheme);
         }
         if (item.itemType === 'icona_futura') {
-          const nativeResult = await applyNativeIcon(item.id as NativeAppIconId);
+          const nativeResult = await applyNativeIcon(item.id as NativeAppIconId, 'equipaggiamento');
           if (!nativeResult.ok) {
             const rollback = await restoreIconSelection(previousIcon);
             return {
@@ -1214,7 +1247,7 @@ export function AppProvider({
           method: 'POST',
           responseType: 'auto',
         });
-        const nativeResult = await applyNativeIcon('standard');
+        const nativeResult = await applyNativeIcon('standard', 'ripristino');
         if (!nativeResult.ok) {
           const rollback = await restoreIconSelection(previousIcon);
           return {

@@ -8,6 +8,11 @@ export type NativeAppIconId =
   | 'app_icon_aurora'
   | 'app_icon_legend';
 
+export type NativeIconDebugScenario =
+  | 'acquisto'
+  | 'equipaggiamento'
+  | 'ripristino';
+
 type NativeAppIconBridgeError = {
   code?: unknown;
   message?: unknown;
@@ -28,18 +33,52 @@ export class NativeAppIconError extends Error {
 }
 
 const nativeManager = NativeModules.AppIconManager as
-  | { setIcon: (iconId: NativeAppIconId) => Promise<void> }
+  | {
+      setIcon: (
+        iconId: NativeAppIconId,
+        debugScenario?: NativeIconDebugScenario,
+      ) => Promise<void>;
+      configureDebugRejection?: (scenario: NativeIconDebugScenario) => Promise<void>;
+    }
   | undefined;
+
+export function isNativeIconDebugScenario(value: unknown): value is NativeIconDebugScenario {
+  return value === 'acquisto' || value === 'equipaggiamento' || value === 'ripristino';
+}
 
 /**
  * Expo Go and web do not have access to launcher metadata. They intentionally
  * remain a safe no-op; development/preview native builds use the real module.
  */
-export async function setNativeAppIcon(iconId: NativeAppIconId) {
+export async function setNativeAppIcon(
+  iconId: NativeAppIconId,
+  debugScenario?: NativeIconDebugScenario,
+) {
   if (Platform.OS === 'web' || !nativeManager) return;
   try {
-    await nativeManager.setIcon(iconId);
+    if (Platform.OS === 'android' && debugScenario) {
+      await nativeManager.setIcon(iconId, debugScenario);
+    } else {
+      await nativeManager.setIcon(iconId);
+    }
   } catch (error) {
     throw new NativeAppIconError(iconId, error);
+  }
+}
+
+/**
+ * Arms the Android-only bridge rejection harness. It is intentionally gated
+ * by __DEV__ so release JavaScript bundles cannot configure it.
+ */
+export async function configureNativeIconDebugRejection(
+  scenario: NativeIconDebugScenario,
+) {
+  if (!__DEV__ || Platform.OS !== 'android' || !nativeManager?.configureDebugRejection) {
+    return;
+  }
+  try {
+    await nativeManager.configureDebugRejection(scenario);
+  } catch (error) {
+    throw new NativeAppIconError('standard', error);
   }
 }

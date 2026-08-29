@@ -6,6 +6,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import java.util.concurrent.atomic.AtomicReference
 
 class AppIconManagerModule(
   private val reactContext: ReactApplicationContext,
@@ -13,12 +14,22 @@ class AppIconManagerModule(
   override fun getName(): String = MODULE_NAME
 
   @ReactMethod
-  fun setIcon(iconId: String, promise: Promise) {
+  fun setIcon(iconId: String, debugScenario: String?, promise: Promise) {
     val selectedAlias = ICON_ALIASES[iconId]
     if (selectedAlias == null) {
       promise.reject(
         "E_INVALID_ICON",
         "Unsupported launcher icon: $iconId",
+      )
+      return
+    }
+
+    if (BuildConfig.DEBUG && debugScenario != null &&
+      debugRejectionScenario.compareAndSet(debugScenario, null)
+    ) {
+      promise.reject(
+        "E_DEBUG_ICON_REJECTION",
+        "Debug bridge rejection for scenario: $debugScenario",
       )
       return
     }
@@ -51,8 +62,34 @@ class AppIconManagerModule(
     }
   }
 
+  /**
+   * Debug-only harness used by the installable Android verification matrix.
+   * The scenario is consumed only by a matching operation and exactly once.
+   */
+  @ReactMethod
+  fun configureDebugRejection(scenario: String, promise: Promise) {
+    if (!BuildConfig.DEBUG) {
+      promise.reject(
+        "E_DEBUG_HARNESS_UNAVAILABLE",
+        "The icon rejection harness is available only in debug builds.",
+      )
+      return
+    }
+    if (!DEBUG_SCENARIOS.contains(scenario)) {
+      promise.reject(
+        "E_INVALID_DEBUG_SCENARIO",
+        "Unsupported icon rejection scenario: $scenario",
+      )
+      return
+    }
+    debugRejectionScenario.set(scenario)
+    promise.resolve(null)
+  }
+
   private companion object {
     const val MODULE_NAME = "AppIconManager"
+    val DEBUG_SCENARIOS = setOf("acquisto", "equipaggiamento", "ripristino")
+    val debugRejectionScenario = AtomicReference<String?>(null)
     val ICON_ALIASES = mapOf(
       "standard" to "StandardLauncher",
       "app_icon_midnight" to "MidnightLauncher",

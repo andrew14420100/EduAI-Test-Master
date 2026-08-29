@@ -37,6 +37,14 @@ const shopScreenSource = fs.readFileSync(
   path.join(here, "../app/(tabs)/shop.tsx"),
   "utf8",
 );
+const nativeAppIconSource = fs.readFileSync(
+  path.join(here, "../lib/nativeAppIcon.ts"),
+  "utf8",
+);
+const androidModuleSource = fs.readFileSync(
+  path.join(here, "../android/app/src/main/java/com/eduai/testmaster/AppIconManagerModule.kt"),
+  "utf8",
+);
 
 function equippedIcons(inventory: InventoryRow[]) {
   return inventory.filter((item) => item.itemId.startsWith("app_icon_") && item.equipped);
@@ -149,6 +157,49 @@ for (const testCase of cases) {
     assert.match(message, new RegExp(testCase.expectedMessage.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   });
 }
+
+type DebugScenario = RecoveryCase["operation"];
+
+function createDebugRejectionHarness() {
+  let armed: DebugScenario | null = null;
+  return {
+    configure(scenario: DebugScenario) {
+      armed = scenario;
+    },
+    setIcon(operation?: DebugScenario) {
+      if (operation && operation === armed) {
+        armed = null;
+        throw new Error("E_DEBUG_ICON_REJECTION");
+      }
+    },
+  };
+}
+
+for (const scenario of ["acquisto", "equipaggiamento", "ripristino"] as const) {
+  test(`il harness Android rifiuta una sola volta nello scenario ${scenario}`, () => {
+    const harness = createDebugRejectionHarness();
+    harness.configure(scenario);
+
+    // Startup synchronization has no operation and must not consume the arm.
+    assert.doesNotThrow(() => harness.setIcon());
+    assert.throws(() => harness.setIcon(scenario), /E_DEBUG_ICON_REJECTION/);
+    assert.doesNotThrow(() => harness.setIcon(scenario));
+  });
+}
+
+test("il bridge Android espone un harness debug per scenario senza alterare l’inventario", () => {
+  assert.match(nativeAppIconSource, /NativeIconDebugScenario/);
+  assert.match(nativeAppIconSource, /configureNativeIconDebugRejection/);
+  assert.match(nativeAppIconSource, /if \(!__DEV__ \|\| Platform\.OS !== 'android'/);
+  assert.match(appContextSource, /native-icon-test\?reject=<scenario>/);
+  assert.match(appContextSource, /'acquisto'/);
+  assert.match(appContextSource, /'equipaggiamento'/);
+  assert.match(appContextSource, /'ripristino'/);
+  assert.match(androidModuleSource, /BuildConfig\.DEBUG/);
+  assert.match(androidModuleSource, /E_DEBUG_ICON_REJECTION/);
+  assert.match(androidModuleSource, /compareAndSet\(debugScenario, null\)/);
+  assert.match(androidModuleSource, /configureDebugRejection/);
+});
 
 test("il server serializza e mantiene una sola icona launcher equipaggiata", () => {
   assert.match(shopRouteSource, /lockUserThemeSelection\(tx, userId\)/);
