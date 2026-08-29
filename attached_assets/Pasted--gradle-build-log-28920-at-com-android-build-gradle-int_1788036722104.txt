@@ -1,0 +1,37 @@
+  gradle-build.log:28920:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess$default(ExecuteProcess.kt:85)
+  gradle-build.log:28921:       at
+com.android.build.gradle.internal.cxx.build.CxxRegularBuilder.executeProcessBatch(CxxRegularBuilder.kt:332)
+  gradle-build.log:28922:       at
+com.android.build.gradle.internal.cxx.build.CxxRegularBuilder.build(CxxRegularBuilder.kt:129)
+  gradle-build.log:28923:       at
+com.android.build.gradle.tasks.ExternalNativeBuildTask.doTaskAction(ExternalNativeBuildTask.kt:72)
+  gradle-build.log:28924:       at
+  gradle-build.log:28931:       at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:125)
+  gradle-build.log:28932:       ... 122 more
+> gradle-build.log:28933:Caused by: com.android.ide.common.process.ProcessException: Error while executing process
+  gradle-build.log:28934:C:\Users\Msi\AppData\Local\Android\Sdk\cmake\3.22.1\bin\ninja.exe with arguments {-C
+C:\Users\Msi\StudioProjects\EduAI-
+  gradle-build.log:28935:Test-Master\node_modules\.pnpm\expo-modules-core@3.0.30_re_8fbbbf307ec271ac53fb97365819fe0f\no
+de_modules\expo-modules-c
+  gradle-build.log:28936:ore\android\.cxx\Debug\2631v2v6\arm64-v8a expo-modules-core}
+  gradle-build.log:28937:       at
+com.android.build.gradle.internal.process.GradleProcessResult.buildProcessException(GradleProcessResult.java:73)
+  gradle-build.log:28938:       at
+com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:48)
+  gradle-build.log:28939:       at
+com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:277)
+  gradle-build.log:28940:       ... 137 more
+> gradle-build.log:28941:Caused by: org.gradle.process.internal.ExecException: Process 'command
+  gradle-build.log:28942:'C:\Users\Msi\AppData\Local\Android\Sdk\cmake\3.22.1\bin\ninja.exe'' finished with non-zero
+exit value 1
+  gradle-build.log:28943:       at
+org.gradle.process.internal.DefaultExecHandle$ExecResultImpl.assertNormalExitValue(DefaultExecHandle.java:442)
+  gradle-build.log:28944:       at
+com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:46)
+  gradle-build.log:28945:       ... 138 more
+  gradle-build.log:28946:
+  gradle-build.log:28947:==============================================================================
+  gradle-build.log:28948:
+  gradle-build.log:28949:BUILD FAILED in 23s
+

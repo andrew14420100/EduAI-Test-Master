@@ -18,3 +18,4 @@
 - [Native icon recovery tests](native-icon-recovery-tests.md) — isolate rollback orchestration so bridge rejection can be simulated across purchase, equip, and reset flows.
 - [Xcode project-file parsing](xcode-project-file-parsing.md) — match XCConfigurationList objects, not earlier target references, when validating build settings.
 - [Android native QA host](android-native-qa-host.md) — a JDK can unblock Gradle, but API-level icon QA still requires an Android SDK, ADB, and an emulator/device.
+- [Android Windows build quirks](android-windows-build-quirks.md) — install SDK packages through Android Studio; reset clock and CMake caches when Ninja keeps regenerating build.ninja.
