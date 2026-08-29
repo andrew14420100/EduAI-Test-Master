@@ -18,6 +18,7 @@ android/
 !ios/**
 !android/
 !android/**
+.android-sdk/
 *.orig.*
 *.keystore
 *.jks
