@@ -16,3 +16,4 @@
 - [Expo Go notifications](expo-go-notifications.md) — skip remote notification setup in the Store Client; keep it enabled for native development and standalone builds.
 - [Native icon recovery tests](native-icon-recovery-tests.md) — isolate rollback orchestration so bridge rejection can be simulated across purchase, equip, and reset flows.
 - [Xcode project-file parsing](xcode-project-file-parsing.md) — match XCConfigurationList objects, not earlier target references, when validating build settings.
+- [Android native QA host](android-native-qa-host.md) — a JDK can unblock Gradle, but API-level icon QA still requires an Android SDK, ADB, and an emulator/device.
