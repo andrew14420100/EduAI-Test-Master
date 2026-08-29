@@ -96,11 +96,14 @@ timeoutMs = 120000
 
 [nix]
 channel = "stable-25_05"
+packages = ["android-tools", "jdk17", "xorg.libX11", "xorg.libXext", "xorg.libXrender", "xorg.libXi", "xorg.libXrandr", "xorg.libXfixes", "xorg.libXdamage", "xorg.libXcomposite", "xorg.libXcursor", "xorg.libXtst", "xorg.libXinerama", "fontconfig", "freetype", "mesa", "pulseaudio", "libpulseaudio", "xorg.libxcb", "xorg.libxkbfile", "libxkbcommon", "libGL", "libglvnd", "nss", "glib", "libxml2", "zlib", "libpng", "libjpeg", "sqlite", "openssl", "libdrm", "libbsd"]
 
 [userenv]
 
 [userenv.shared]
 EXPO_PUBLIC_API_URL = "https://eduai-test-master-backend.onrender.com"
+ANDROID_HOME = "/home/runner/.android-sdk"
+ANDROID_SDK_ROOT = "/home/runner/.android-sdk"
 
 [objectStorage]
 defaultBucketID = "replit-objstore-d27a1861-cb19-4765-bee5-5706e1893ee9"
