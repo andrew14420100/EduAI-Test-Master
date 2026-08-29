@@ -14,6 +14,7 @@
 - [Replit Expo preview domain](replit-expo-preview-domain.md) — the preview proxy can say “Backend Not Configured” while Metro and the remote API are healthy; verify them separately.
 - [Native launcher icon boundary](native-launcher-icon-boundary.md) — Expo Go/web need a no-op bridge; real launcher switching belongs to checked-in Android aliases and iOS alternate icon sets.
 - [Expo Go notifications](expo-go-notifications.md) — skip remote notification setup in the Store Client; keep it enabled for native development and standalone builds.
+- [GitHub workflow push permissions](github-workflow-push.md) — ordinary OAuth pushes can fail on `.github/workflows`; use explicit workflow authorization or secure token handling.
 - [Native icon recovery tests](native-icon-recovery-tests.md) — isolate rollback orchestration so bridge rejection can be simulated across purchase, equip, and reset flows.
 - [Xcode project-file parsing](xcode-project-file-parsing.md) — match XCConfigurationList objects, not earlier target references, when validating build settings.
 - [Android native QA host](android-native-qa-host.md) — a JDK can unblock Gradle, but API-level icon QA still requires an Android SDK, ADB, and an emulator/device.
