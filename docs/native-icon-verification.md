@@ -149,6 +149,11 @@ indipendenti.
 - `xcodebuild`, `xcrun` e `simctl`: comandi assenti sull'host Linux; non è
   possibile produrre una build `.app`/`.ipa`, avviare un simulatore iOS o
   interrogare un dispositivo Apple collegato.
+- Il dispatch manuale non è stato avviato da questo workspace: `gh auth status`
+  ha restituito `not logged into any GitHub hosts` e
+  `gh workflow run ... -f run_hardware_qa=true` è terminato con exit code 4.
+  Non esistono quindi `run_id`, IPA o artefatto hardware da associare a questa
+  sessione; il dispatch va eseguito da un account autorizzato sul repository.
 - Android: `AppIconManager` è registrato nel package React Native; il manifest
   dichiara l'alias standard attivo e cinque alias alternativi disattivati, con
   risorse mipmap in tutte le densità.
