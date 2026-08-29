@@ -1,0 +1,49 @@
+Android native icon QA preflight
+Evidence ID: ANDROID-PREFLIGHT-2026-08-29-RUN5
+Build evidence ID: ANDROID-GRADLE-SDK-2026-08-29-RUN5
+Automatic evidence IDs: ANDROID-STATIC-2026-08-29-RUN5, ANDROID-RECOVERY-2026-08-29-RUN5
+Recorded: 2026-08-29 14:43:32 UTC
+Host: Linux x86_64, Replit workspace
+Commit under test: 4a16c9f84c06a69d7c96cd39c6fd4caeea69a663
+
+Environment:
+- OpenJDK 17.0.15
+- Android Debug Bridge 35.0.1
+- ANDROID_HOME=/home/runner/.android-sdk (directory absent)
+- ANDROID_SDK_ROOT=/home/runner/.android-sdk (directory absent)
+- sdkmanager: missing
+- avdmanager: missing
+- emulator: missing
+- /dev/kvm: missing
+
+Connected hosts:
+Command: adb devices -l
+Result: only "List of devices attached"; no emulator or ADB device detected.
+
+Build/install preflight:
+Command: cd android && ./gradlew assembleDebug --no-daemon --stacktrace
+Result: BUILD FAILED during native configuration
+Error: SDK location not found. Define a valid SDK location with an
+       ANDROID_HOME environment variable or by setting sdk.dir in
+       android/local.properties.
+APK: not produced
+Installation ID: N/E
+
+Automatic checks:
+- pnpm run test:native-icons: PASS
+- pnpm run test:icon-recovery: PASS, 13/13 tests
+- pnpm run typecheck: PASS
+- pnpm run check:react-versions: PASS
+
+Native host matrix:
+- Android 7 / API 24: N/E — no installable host
+- Android 16 / API 36: N/E — no installable host
+- Purchase, equip, and reset deep-link flows: N/E — no installed debug build
+- One-shot rejection, Riprova retry, force close/reopen, launcher icon, and
+  server inventory: N/E — no installed debug build
+
+This file records the current environment and automatic-test evidence only. It
+is not evidence of an installed APK or of a real launcher interaction. The
+previous preflight in
+docs/evidence/android-preflight-2026-08-29-run4.txt remains the reference
+requested by the task; RUN5 confirms the same limitation on the current commit.

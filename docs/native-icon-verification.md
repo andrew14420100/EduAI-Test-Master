@@ -172,14 +172,24 @@ indipendenti.
 - `adb` è disponibile, ma non risultano emulatori o dispositivi collegati,
   quindi non è stato possibile verificare cambio, reset o chiusura/riapertura
   su Android. Evidenza: `ANDROID-PREFLIGHT-2026-08-29-RUN4`.
+- Sul commit corrente `4a16c9f84c06a69d7c96cd39c6fd4caeea69a663` il preflight è
+  stato ripetuto: `./gradlew assembleDebug --no-daemon --stacktrace` fallisce
+  ancora in configurazione con `SDK location not found`, senza produrre APK;
+  `adb devices -l` resta senza dispositivi e mancano `sdkmanager`,
+  `avdmanager`, `emulator` e `/dev/kvm`. Evidenza aggiornata:
+  `ANDROID-PREFLIGHT-2026-08-29-RUN5` e
+  `ANDROID-GRADLE-SDK-2026-08-29-RUN5`
+  (`docs/evidence/android-preflight-2026-08-29-run5.txt`).
 
-Gli ID `ANDROID-PREFLIGHT-2026-08-29-RUN4` e
-`ANDROID-GRADLE-SDK-2026-08-29-RUN4` sono
-osservazioni del preflight eseguito in questa sessione, non log di una build
-installata. Le evidenze automatiche del comportamento applicativo sono
-`ANDROID-STATIC-2026-08-29-RUN4` (`pnpm run test:native-icons`, superato) e
-`ANDROID-RECOVERY-2026-08-29-RUN4` (`pnpm run test:icon-recovery`, 13/13
-superati);
+Gli ID `ANDROID-PREFLIGHT-2026-08-29-RUN5` e
+`ANDROID-GRADLE-SDK-2026-08-29-RUN5` sono
+osservazioni del preflight eseguito sul commit corrente, non log di una build
+installata. Le evidenze automatiche aggiornate sono
+`ANDROID-STATIC-2026-08-29-RUN5` (`pnpm run test:native-icons`, superato) e
+`ANDROID-RECOVERY-2026-08-29-RUN5` (`pnpm run test:icon-recovery`, 13/13
+superati). Il preflight precedente resta disponibile come riferimento in
+`ANDROID-PREFLIGHT-2026-08-29-RUN4` e
+`ANDROID-GRADLE-SDK-2026-08-29-RUN4`;
 non sostituiscono la prova su API 24 e API 36.
 
 ## Harness controllato Android e iOS
