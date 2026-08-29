@@ -2,11 +2,38 @@
 
 #import <UIKit/UIKit.h>
 
+static NSString *debugRejectionScenario = nil;
+static NSString * const debugHarnessInfoPlistKey = @"EduAIIconDebugHarnessEnabled";
+
+static BOOL debugHarnessEnabled(void) {
+#if DEBUG
+  id value = [[NSBundle mainBundle] objectForInfoDictionaryKey:debugHarnessInfoPlistKey];
+  return [value respondsToSelector:@selector(boolValue)] && [value boolValue];
+#else
+  return NO;
+#endif
+}
+
+static BOOL consumeDebugRejectionForScenario(NSString *scenario) {
+#if DEBUG
+  @synchronized ([AppIconManager class]) {
+    if (!debugHarnessEnabled() || ![debugRejectionScenario isEqualToString:scenario]) {
+      return NO;
+    }
+    debugRejectionScenario = nil;
+    return YES;
+  }
+#else
+  return NO;
+#endif
+}
+
 @implementation AppIconManager
 
 RCT_EXPORT_MODULE(AppIconManager);
 
 RCT_EXPORT_METHOD(setIcon:(NSString *)iconId
+                  debugScenario:(NSString *)debugScenario
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
@@ -36,6 +63,13 @@ RCT_EXPORT_METHOD(setIcon:(NSString *)iconId
       return;
     }
 
+    if (debugScenario != nil && consumeDebugRejectionForScenario(debugScenario)) {
+      reject(@"E_DEBUG_ICON_REJECTION",
+             [NSString stringWithFormat:@"Debug bridge rejection for scenario: %@", debugScenario],
+             nil);
+      return;
+    }
+
     [application setAlternateIconName:alternateIconName
                     completionHandler:^(NSError * _Nullable error) {
       if (error) {
@@ -45,6 +79,37 @@ RCT_EXPORT_METHOD(setIcon:(NSString *)iconId
       }
     }];
   });
+}
+
+RCT_EXPORT_METHOD(configureDebugRejection:(NSString *)scenario
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+#if DEBUG
+  if (!debugHarnessEnabled()) {
+    reject(@"E_DEBUG_HARNESS_UNAVAILABLE",
+           @"The icon rejection harness is disabled for this build.",
+           nil);
+    return;
+  }
+
+  NSSet<NSString *> *scenarios = [NSSet setWithObjects:@"acquisto", @"equipaggiamento", @"ripristino", nil];
+  if (![scenarios containsObject:scenario]) {
+    reject(@"E_INVALID_DEBUG_SCENARIO",
+           [NSString stringWithFormat:@"Unsupported icon rejection scenario: %@", scenario],
+           nil);
+    return;
+  }
+
+  @synchronized ([AppIconManager class]) {
+    debugRejectionScenario = [scenario copy];
+  }
+  resolve(nil);
+#else
+  reject(@"E_DEBUG_HARNESS_UNAVAILABLE",
+         @"The icon rejection harness is available only in debug builds.",
+         nil);
+#endif
 }
 
 @end

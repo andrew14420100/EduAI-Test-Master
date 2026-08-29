@@ -45,6 +45,14 @@ const androidModuleSource = fs.readFileSync(
   path.join(here, "../android/app/src/main/java/com/eduai/testmaster/AppIconManagerModule.kt"),
   "utf8",
 );
+const iosModuleSource = fs.readFileSync(
+  path.join(here, "../ios/EduAITestMaster/AppIconManager.m"),
+  "utf8",
+);
+const iosInfoPlistSource = fs.readFileSync(
+  path.join(here, "../ios/EduAITestMaster/Info.plist"),
+  "utf8",
+);
 
 function equippedIcons(inventory: InventoryRow[]) {
   return inventory.filter((item) => item.itemId.startsWith("app_icon_") && item.equipped);
@@ -175,22 +183,25 @@ function createDebugRejectionHarness() {
   };
 }
 
-for (const scenario of ["acquisto", "equipaggiamento", "ripristino"] as const) {
-  test(`il harness Android rifiuta una sola volta nello scenario ${scenario}`, () => {
-    const harness = createDebugRejectionHarness();
-    harness.configure(scenario);
+for (const platform of ["Android", "iOS"] as const) {
+  for (const scenario of ["acquisto", "equipaggiamento", "ripristino"] as const) {
+    test(`il harness ${platform} rifiuta una sola volta nello scenario ${scenario}`, () => {
+      const harness = createDebugRejectionHarness();
+      harness.configure(scenario);
 
-    // Startup synchronization has no operation and must not consume the arm.
-    assert.doesNotThrow(() => harness.setIcon());
-    assert.throws(() => harness.setIcon(scenario), /E_DEBUG_ICON_REJECTION/);
-    assert.doesNotThrow(() => harness.setIcon(scenario));
-  });
+      // Startup synchronization has no operation and must not consume the arm.
+      assert.doesNotThrow(() => harness.setIcon());
+      assert.throws(() => harness.setIcon(scenario), /E_DEBUG_ICON_REJECTION/);
+      assert.doesNotThrow(() => harness.setIcon(scenario));
+    });
+  }
 }
 
-test("il bridge Android espone un harness debug per scenario senza alterare l’inventario", () => {
+test("i bridge nativi espongono un harness debug per scenario senza alterare l’inventario", () => {
   assert.match(nativeAppIconSource, /NativeIconDebugScenario/);
   assert.match(nativeAppIconSource, /configureNativeIconDebugRejection/);
-  assert.match(nativeAppIconSource, /if \(!__DEV__ \|\| Platform\.OS !== 'android'/);
+  assert.match(nativeAppIconSource, /Platform\.OS === 'android' \|\| Platform\.OS === 'ios'/);
+  assert.match(nativeAppIconSource, /Platform\.OS !== 'android' && Platform\.OS !== 'ios'/);
   assert.match(appContextSource, /native-icon-test\?reject=<scenario>/);
   assert.match(appContextSource, /'acquisto'/);
   assert.match(appContextSource, /'equipaggiamento'/);
@@ -199,6 +210,16 @@ test("il bridge Android espone un harness debug per scenario senza alterare l’
   assert.match(androidModuleSource, /E_DEBUG_ICON_REJECTION/);
   assert.match(androidModuleSource, /compareAndSet\(debugScenario, null\)/);
   assert.match(androidModuleSource, /configureDebugRejection/);
+  assert.match(iosModuleSource, /debugScenario:\(NSString \*\)debugScenario/);
+  assert.match(iosModuleSource, /#if DEBUG/);
+  assert.match(iosModuleSource, /E_DEBUG_ICON_REJECTION/);
+  assert.match(iosModuleSource, /consumeDebugRejectionForScenario\(debugScenario\)/);
+  assert.match(iosModuleSource, /alternateIconName = nil/);
+  assert.match(iosModuleSource, /debugRejectionScenario = nil/);
+  assert.match(iosModuleSource, /configureDebugRejection/);
+  assert.match(iosModuleSource, /EduAIIconDebugHarnessEnabled/);
+  assert.match(iosInfoPlistSource, /<key>EduAIIconDebugHarnessEnabled<\/key>/);
+  assert.match(iosInfoPlistSource, /<string>\$\(EDUAI_ICON_DEBUG_HARNESS_ENABLED\)<\/string>/);
 });
 
 test("il server serializza e mantiene una sola icona launcher equipaggiata", () => {

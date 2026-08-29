@@ -56,7 +56,7 @@ export async function setNativeAppIcon(
 ) {
   if (Platform.OS === 'web' || !nativeManager) return;
   try {
-    if (Platform.OS === 'android' && debugScenario) {
+    if ((Platform.OS === 'android' || Platform.OS === 'ios') && debugScenario) {
       await nativeManager.setIcon(iconId, debugScenario);
     } else {
       await nativeManager.setIcon(iconId);
@@ -67,13 +67,18 @@ export async function setNativeAppIcon(
 }
 
 /**
- * Arms the Android-only bridge rejection harness. It is intentionally gated
- * by __DEV__ so release JavaScript bundles cannot configure it.
+ * Arms the native bridge rejection harness on installable development builds.
+ * It is intentionally gated by __DEV__ so release JavaScript bundles cannot
+ * configure it; the native bridge applies its own DEBUG/Info.plist guard.
  */
 export async function configureNativeIconDebugRejection(
   scenario: NativeIconDebugScenario,
 ) {
-  if (!__DEV__ || Platform.OS !== 'android' || !nativeManager?.configureDebugRejection) {
+  if (
+    !__DEV__
+    || (Platform.OS !== 'android' && Platform.OS !== 'ios')
+    || !nativeManager?.configureDebugRejection
+  ) {
     return;
   }
   try {

@@ -768,12 +768,12 @@ export function AppProvider({
     };
   }, [isLoaded, user?.id]);
 
-  // Android debug builds can arm one deterministic bridge rejection through
+  // Native debug builds can arm one deterministic bridge rejection through
   // eduai-test-master://native-icon-test?reject=<scenario>. The operation is
   // passed to setIcon only after the server mutation, so startup sync cannot
   // consume the one-shot rejection.
   useEffect(() => {
-    if (!__DEV__ || Platform.OS !== 'android') return;
+    if (!__DEV__ || (Platform.OS !== 'android' && Platform.OS !== 'ios')) return;
 
     const configureFromUrl = (url: string) => {
       const parsed = Linking.parse(url);

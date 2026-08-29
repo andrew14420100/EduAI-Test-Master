@@ -42,11 +42,11 @@ iOS necessari per applicare le sei scelte.
 - Non sono disponibili `adb` o un emulatore/dispositivo collegato, quindi non
   è stato possibile verificare cambio, reset o chiusura/riapertura su Android.
 
-## Harness Android controllato
+## Harness controllato Android e iOS
 
-L’harness è presente nella variante Android `debug` e non è un controllo
-visibile o configurabile nelle build release. Dopo aver installato una
-`debug` build e aver aperto il negozio con un account di test, armare il
+L’harness è presente nelle build native di sviluppo/QA e non è un controllo
+visibile o configurabile nelle build release. Su Android, dopo aver installato
+una `debug` build e aver aperto il negozio con un account di test, armare il
 prossimo flusso dal terminale:
 
 ```sh
@@ -55,7 +55,16 @@ adb shell am start -a android.intent.action.VIEW \
   com.eduai.testmaster
 ```
 
-Usare `reject=equipaggiamento` per un’icona già posseduta oppure
+Su iOS Simulator, usare il comando equivalente:
+
+```sh
+xcrun simctl openurl booted \
+  "eduai-test-master://native-icon-test?reject=acquisto"
+```
+
+Su un iPhone, aprire lo stesso link in Safari (o in un’app che consenta di
+aprire URL personalizzati) dopo avere installato la build QA. Usare
+`reject=equipaggiamento` per un’icona già posseduta oppure
 `reject=ripristino` per il pulsante `Icona standard originale`. Il rifiuto è
 associato all’operazione scelta, quindi la sincronizzazione dell’icona durante
 l’avvio non lo consuma. Completare quindi il flusso dalla UI: il server applica
@@ -64,11 +73,31 @@ la mutazione reale, il bridge rifiuta una sola volta, il messaggio mostra
 
 Il parametro viene consumato solo quando il bridge riceve la stessa operazione;
 armare un nuovo scenario sostituisce quello precedente. Per ripetere una prova
-dopo una chiusura forzata, riaprire la debug build e inviare nuovamente il deep
+dopo una chiusura forzata, riaprire la build QA e inviare nuovamente il deep
 link. Non usare chiamate al database o modifiche manuali all’inventario per
 provocare il rifiuto. Il comando non abilita l’harness in una build release:
-il JavaScript di release non lo invoca e il modulo nativo rifiuta ogni
-configurazione come non disponibile.
+il JavaScript di release non lo invoca, il bridge iOS è compilato senza la
+possibilità di rifiuto e il flag `EduAIIconDebugHarnessEnabled` è disattivato.
+
+### Procedura iOS per ogni scenario
+
+Ripetere i passaggi seguenti separatamente su simulatore e su almeno un iPhone
+reale:
+
+1. Installare una build QA con il flag dell’harness attivo e accedere con
+   l’account di test.
+2. Armare `acquisto`, `equipaggiamento` o `ripristino` tramite il deep link
+   sopra, quindi eseguire l’azione corrispondente nel negozio.
+3. Verificare il rifiuto reale di `setAlternateIconName`, il messaggio
+   localizzato con `Riprova` e che l’icona precedente resti visibile.
+4. Premere `Riprova`: il bridge è già riabilitato, quindi il tentativo deve
+   riuscire senza un secondo rifiuto.
+5. Per `acquisto`, verificare che l’acquisto resti nella collezione e non venga
+   addebitato di nuovo. Per `equipaggiamento` e `ripristino`, verificare che
+   l’inventario server mantenga l’icona precedente.
+6. Chiudere forzatamente e riaprire l’app; confrontare l’icona nel launcher con
+   l’elemento `icona_futura` equipaggiato e verificare che non risultino mai
+   due icone personalizzate equipaggiate.
 
 ## Verifiche ancora necessarie su host nativi
 
