@@ -93,6 +93,50 @@ function escapedRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function parseXcodeConfigurationList(source, projectOrTargetName) {
+  const listMatch = source.match(
+    new RegExp(
+      `\\/\\*\\s*${escapedRegExp(projectOrTargetName)}\\s*\\*\\/\\s*=\\s*\\{\\s*isa = XCConfigurationList;\\s*buildConfigurations = \\(([\\s\\S]*?)\\n\\s*\\);`,
+    ),
+  );
+  if (!listMatch) return new Map();
+
+  return new Map(
+    [...listMatch[1].matchAll(/^\s*([A-Za-z0-9]+)\s*\/\*\s*([^*]+?)\s*\*\/,/gm)]
+      .map((match) => [match[2].trim(), match[1]]),
+  );
+}
+
+function parseXcodeBuildConfiguration(source, id) {
+  if (!id) return null;
+  const configurationMatch = source.match(
+    new RegExp(
+      `(?:^|\\n)\\s*${escapedRegExp(id)}\\s+\\/\\*[^*]+\\*\\/\\s*=\\s*\\{\\s*isa = XCBuildConfiguration;\\s*buildSettings = \\{([\\s\\S]*?)\\n\\s*\\};\\s*name = ([^;]+);`,
+    ),
+  );
+  if (!configurationMatch) return null;
+
+  return {
+    buildSettings: configurationMatch[1],
+    name: configurationMatch[2].trim(),
+  };
+}
+
+function xcodeBuildSettingValue(buildSettings, key) {
+  return buildSettings.match(
+    new RegExp(`(?:^|\\n)\\s*${escapedRegExp(key)}\\s*=\\s*([^;]+);`),
+  )?.[1].trim();
+}
+
+function hasXcodePreprocessorDefinition(buildSettings, definition) {
+  const definitions = buildSettings.match(
+    /GCC_PREPROCESSOR_DEFINITIONS\s*=\s*\(([\s\S]*?)\);/,
+  )?.[1];
+  return definitions
+    ? new RegExp(`["']?${escapedRegExp(definition)}["']?`).test(definitions)
+    : false;
+}
+
 const serverCatalogSource = readSource(
   'artifacts/api-server/src/routes/shop.ts',
   'Catalogo server',
@@ -292,6 +336,96 @@ const plistSource = readSource(
   'ios/EduAITestMaster/Info.plist',
   'Info.plist iOS',
 );
+const iosProjectSource = readSource(
+  'ios/EduAITestMaster.xcodeproj/project.pbxproj',
+  'Configurazione Xcode iOS',
+);
+const debugHarnessPlistValue = plistSource.match(
+  /<key>EduAIIconDebugHarnessEnabled<\/key>\s*<string>([\s\S]*?)<\/string>/,
+)?.[1].trim();
+if (!debugHarnessPlistValue) {
+  errors.push(
+    'Info.plist iOS: manca la chiave EduAIIconDebugHarnessEnabled',
+  );
+} else if (debugHarnessPlistValue !== '$(EDUAI_ICON_DEBUG_HARNESS_ENABLED)') {
+  errors.push(
+    'Info.plist iOS: EduAIIconDebugHarnessEnabled deve risolvere $(EDUAI_ICON_DEBUG_HARNESS_ENABLED)',
+  );
+}
+
+const targetConfigurationIds = parseXcodeConfigurationList(
+  iosProjectSource,
+  'Build configuration list for PBXNativeTarget "EduAITestMaster"',
+);
+const projectConfigurationIds = parseXcodeConfigurationList(
+  iosProjectSource,
+  'Build configuration list for PBXProject "EduAITestMaster"',
+);
+const expectedHarnessSettings = {
+  Debug: 'YES',
+  Release: 'NO',
+};
+for (const [configurationName, expectedHarnessSetting] of Object.entries(
+  expectedHarnessSettings,
+)) {
+  const targetConfiguration = parseXcodeBuildConfiguration(
+    iosProjectSource,
+    targetConfigurationIds.get(configurationName),
+  );
+  if (!targetConfiguration) {
+    errors.push(
+      `Xcode iOS: configurazione target "${configurationName}" mancante o non elencata nel target EduAITestMaster`,
+    );
+    continue;
+  }
+
+  const actualHarnessSetting = xcodeBuildSettingValue(
+    targetConfiguration.buildSettings,
+    'EDUAI_ICON_DEBUG_HARNESS_ENABLED',
+  );
+  if (actualHarnessSetting !== expectedHarnessSetting) {
+    errors.push(
+      `Xcode iOS: target EduAITestMaster/${configurationName} deve impostare EDUAI_ICON_DEBUG_HARNESS_ENABLED = ${expectedHarnessSetting}, trovato ${actualHarnessSetting ?? '(mancante)'}`,
+    );
+  }
+
+  const plistPath = xcodeBuildSettingValue(
+    targetConfiguration.buildSettings,
+    'INFOPLIST_FILE',
+  );
+  if (plistPath !== 'EduAITestMaster/Info.plist') {
+    errors.push(
+      `Xcode iOS: target EduAITestMaster/${configurationName} deve usare EduAITestMaster/Info.plist, trovato ${plistPath ?? '(mancante)'}`,
+    );
+  }
+}
+
+for (const [configurationName, expectedDebugMacro] of [
+  ['Debug', true],
+  ['Release', false],
+]) {
+  const projectConfiguration = parseXcodeBuildConfiguration(
+    iosProjectSource,
+    projectConfigurationIds.get(configurationName),
+  );
+  if (!projectConfiguration) {
+    errors.push(
+      `Xcode iOS: configurazione progetto "${configurationName}" mancante o non elencata nel progetto EduAITestMaster`,
+    );
+    continue;
+  }
+  if (
+    hasXcodePreprocessorDefinition(
+      projectConfiguration.buildSettings,
+      'DEBUG=1',
+    ) !== expectedDebugMacro
+  ) {
+    errors.push(
+      `Xcode iOS: progetto EduAITestMaster/${configurationName} ${expectedDebugMacro ? 'deve definire' : 'non deve definire'} DEBUG=1`,
+    );
+  }
+}
+
 const primaryIconBlock = sourceBlock(
   plistSource,
   /<key>CFBundlePrimaryIcon<\/key>/,

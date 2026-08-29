@@ -15,3 +15,4 @@
 - [Native launcher icon boundary](native-launcher-icon-boundary.md) — Expo Go/web need a no-op bridge; real launcher switching belongs to checked-in Android aliases and iOS alternate icon sets.
 - [Expo Go notifications](expo-go-notifications.md) — skip remote notification setup in the Store Client; keep it enabled for native development and standalone builds.
 - [Native icon recovery tests](native-icon-recovery-tests.md) — isolate rollback orchestration so bridge rejection can be simulated across purchase, equip, and reset flows.
+- [Xcode project-file parsing](xcode-project-file-parsing.md) — match XCConfigurationList objects, not earlier target references, when validating build settings.
