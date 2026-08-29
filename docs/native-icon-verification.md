@@ -304,9 +304,10 @@ Per ogni riga, dopo il rifiuto:
    equipaggiato nell'inventario server;
 5. verificare che non risultino mai due icone personalizzate equipaggiate.
 
-Questa macchina non consente di superare la matrice reale: non dispone di Java per
-compilare Android, di SDK/`adb`/emulatore o di macOS/Xcode per compilare e
-installare iOS. Di conseguenza in questa sessione non è stato possibile
+Questa macchina non consente di superare la matrice reale: dispone di OpenJDK 17 e
+ADB, ma non di un SDK Android utilizzabile, `emulator`/AVD o dispositivo
+collegato; inoltre non dispone di macOS/Xcode per compilare e installare iOS. Di
+conseguenza in questa sessione non è stato possibile
 installare alcuna build, provocare un rifiuto reale del bridge, verificare
 `Riprova`, osservare l'icona nel launcher o eseguire la chiusura/riapertura
 forzata su un emulatore/simulatore o dispositivo reale. Per rispettare la
