@@ -78,17 +78,17 @@ e il nome dell'artefatto, oppure il percorso del log esportato da Xcode.
 
 ### Dispositivo iOS reale
 
-- Modello e versione iOS:
-- UDID dispositivo:
-- Build/IPA installata:
-- Team / certificato di firma:
-- Profilo di provisioning e scadenza:
-- Stato firma/installazione: `N/E` / `PASS` / `FAIL`
-- ID log/evidenza installazione:
-- `acquisto`: rifiuto una volta, collezione conservata, `Riprova`, riapertura:
-- `equipaggiamento`: rifiuto una volta, inventario precedente, `Riprova`, riapertura:
-- `ripristino`: rifiuto una volta con nome `nil`, icona precedente, `Riprova`, riapertura:
-- Note:
+- Modello e versione iOS: `FAIL` — nessun iPhone reale disponibile in questa sessione
+- UDID dispositivo: `FAIL` — nessun dispositivo Apple collegato
+- Build/IPA installata: `FAIL` — nessuna IPA firmata disponibile
+- Team / certificato di firma: `FAIL` — dati di firma non disponibili su Linux
+- Profilo di provisioning e scadenza: `FAIL` — profilo non disponibile
+- Stato firma/installazione: `FAIL` — gate non eseguibile; non è un fallimento funzionale dell’app
+- ID log/evidenza installazione: `FAIL-2026-08-29-linux-no-apple-host` — nessun log di installazione prodotto
+- `acquisto`: `FAIL` — non eseguito; assenti rifiuto reale, `Riprova`, riapertura e verifica collezione server
+- `equipaggiamento`: `FAIL` — non eseguito; assenti rifiuto reale, `Riprova`, riapertura e verifica inventario server
+- `ripristino`: `FAIL` — non eseguito; assenti rifiuto reale con nome `nil`, `Riprova`, riapertura e verifica inventario server
+- Note: il valore `FAIL` indica il prerequisito hardware/toolchain mancante, non un comportamento del prodotto osservato come errato. Servono un host Apple, una build QA firmata, un profilo valido e un iPhone per completare la prova.
 
 Per ciascuno dei tre scenari compilare il risultato solo dopo aver verificato
 il rifiuto reale di `setAlternateIconName`, il messaggio con `Riprova`, il
@@ -235,7 +235,7 @@ automatica con una prova indiretta.
 | Android | Emulatore | N/E — Java/ADB/emulatore assenti | N/E — Java/ADB/emulatore assenti | N/E — Java/ADB/emulatore assenti | N/E — nessuna build installata |
 | Android | Dispositivo reale | N/E — Java/ADB assenti | N/E — Java/ADB assenti | N/E — Java/ADB assenti | N/E — nessuna build installata |
 | iOS | Simulatore | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — nessuna build installata |
-| iOS | Dispositivo reale | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — macOS/Xcode assenti | N/E — nessuna build installata |
+| iOS | Dispositivo reale | FAIL — nessun host Apple/Xcode e nessuna IPA firmata; flusso non eseguito | FAIL — nessun host Apple/Xcode e nessuna IPA firmata; flusso non eseguito | FAIL — nessun host Apple/Xcode e nessuna IPA firmata; flusso non eseguito | FAIL — nessun iPhone/build installata per verificare launcher e inventario server |
 
 ### Matrice iOS separata
 
@@ -246,12 +246,13 @@ dispositivo reale, e un flusso completato non rende superati gli altri due.
 | Host iOS | Build/installazione | ID log/evidenza build | Acquisto + rifiuto/retry | Equipaggiamento + rifiuto/retry | Reset + rifiuto/retry | Riapertura forzata + inventario | Stato / ID log flussi |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Simulatore | N/E — `xcodebuild`/`xcrun`/`simctl` assenti su Linux | N/E — nessun run macOS disponibile | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova`, acquisto conservato e una sola icona custom | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessun rifiuto reale con nome `nil`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessuna build installata | `N/E-2026-08-29-linux` |
-| Dispositivo reale | N/E — `xcodebuild`/firma/dispositivo Apple assenti su Linux | N/E — nessun run macOS disponibile | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova`, acquisto conservato e una sola icona custom | N/E — nessun rifiuto reale di `setAlternateIconName`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessun rifiuto reale con nome `nil`; verificare icona precedente, `Riprova` e una sola icona custom | N/E — nessuna build installata | `N/E-2026-08-29-linux` |
+| Dispositivo reale | FAIL — `xcodebuild`/firma/dispositivo Apple assenti su Linux; nessuna IPA installata | FAIL — nessun run macOS o log di installazione firmata disponibile | FAIL — nessun rifiuto reale di `setAlternateIconName`; acquisto, `Riprova`, riapertura e collezione server non verificati | FAIL — nessun rifiuto reale di `setAlternateIconName`; equipaggiamento, `Riprova`, riapertura e inventario server non verificati | FAIL — nessun rifiuto reale con nome `nil`; reset, `Riprova`, riapertura e inventario server non verificati | FAIL — nessuna build installata per confrontare launcher, `icona_futura` e unicità dell’icona | `FAIL-2026-08-29-linux-no-apple-host` |
 
-Quando la pipeline viene eseguita, sostituire l'ID `N/E-2026-08-29-linux`
-solo nella riga del relativo host con `run_id` e nome dell'artefatto. Per il
-dispositivo reale aggiungere anche il log di installazione firmata e i dati
-di provisioning; il run del simulatore non è sufficiente.
+Quando la pipeline viene eseguita, sostituire l'ID
+`FAIL-2026-08-29-linux-no-apple-host` solo nella riga del relativo host con
+`run_id`, nome dell'artefatto, modello/iOS/UDID, IPA, certificato e profilo di
+provisioning. Per il dispositivo reale aggiungere anche il log di installazione
+firmata e i dati di provisioning; il run del simulatore non è sufficiente.
 
 Per ogni riga, dopo il rifiuto:
 
@@ -264,14 +265,16 @@ Per ogni riga, dopo il rifiuto:
    equipaggiato nell'inventario server;
 5. verificare che non risultino mai due icone personalizzate equipaggiate.
 
-Questa macchina non consente di spuntare la matrice: non dispone di Java per
+Questa macchina non consente di superare la matrice reale: non dispone di Java per
 compilare Android, di SDK/`adb`/emulatore o di macOS/Xcode per compilare e
 installare iOS. Di conseguenza in questa sessione non è stato possibile
 installare alcuna build, provocare un rifiuto reale del bridge, verificare
 `Riprova`, osservare l'icona nel launcher o eseguire la chiusura/riapertura
-forzata su un emulatore/simulatore o dispositivo reale. Le prove automatiche
-sono invece tutte superate e coprono i tre rollback, l'inventario serializzato,
-il messaggio localizzato e la disponibilità del retry. Le differenze tra
-simulatore/emulatore e dispositivo reale vanno registrate quando sarà
-disponibile un host nativo; le celle `N/E` non costituiscono evidenza
-installabile.
+forzata su un emulatore/simulatore o dispositivo reale. Per rispettare la
+distinzione tra risultato e disponibilità dell'ambiente, la riga
+`Dispositivo reale` usa `FAIL` per il gate non eseguibile e registra l'ID
+`FAIL-2026-08-29-linux-no-apple-host`; questo non costituisce evidenza di un
+bug del prodotto. Le prove automatiche sono invece tutte superate e coprono i
+tre rollback, l'inventario serializzato, il messaggio localizzato e la
+disponibilità del retry. La conferma su iPhone resta da eseguire su host Apple
+con build firmata.
